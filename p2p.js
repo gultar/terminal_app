@@ -1,120 +1,49 @@
-var port = process.env.PORT || 3030
-var express = require('express')
-var app = express()
-var server = require('http').Server(app)
-var p2pserver = require('socket.io-p2p-server').Server
-var io = require('socket.io')(server)
-var p2pclients = require('socket.io-p2p-server').clients
-var debug = require('debug')
-var hat = require('hat')
-app.use(express.static(__dirname+'/public'))
+var http = require('http')
+  , express = require('express')
+  , app = express()
+  , server = http.createServer(app)
+  , io = require('socket.io')(server)
 
-var rooms = []
-var clients = {}
+app.use(express.static(__dirname+'/views'));
 
-server.listen(port, function() {
-  console.log("Listening on %s", port);
-});
-
-io.on('connection', function(socket) {
-  clients[socket.id] = socket
-  var room = findOrCreateRoom()
-  socket.join(room.name)
-  room.playerCount++
-  room.players.push(socket)
-
-  socket.on('error', function (err) {
-    console.log("Error %s", err);
-  })
-
-  p2pserver(socket, null, room)
-
-  socket.on('disconnect', function () {
-    room.players.splice(room.players.indexOf(socket), 1)
-    removeRoom(room)
-    io.to(room.name).emit('disconnected-player')
-
-    // Move opponents to new rooms
-    // var opponents = findOpponents(room.name, socket)
-    Object.keys(room.players).forEach(function (clientId, i) {
-      room = findReadyRoom()
-      if (clients[clientId] && room) {
-        clients[clientId].join(room.name)
-      }
-    })
-  })
-
-  socket.on('message', function (data) {
-    var players = room.players.filter(function (player) {
-      return player !== socket
-    })
-    players.forEach(function (player) {
-      player.emit('message', data)
-    })
-  })
-
-  socket.on('ping', function (data) {
-    var players = room.players.filter(function (player) {
-      return player !== socket
-    })
-    players.forEach(function (player) {
-      player.emit('ping', data)
-    })
-  })
-
-  socket.on('pong', function (data) {
-    var players = room.players.filter(function (player) {
-      return player !== socket
-    })
-    players.forEach(function (player) {
-      player.emit('pong', data)
-    })
-  })
-
-  if (room.playerCount === 1) {
-    console.log("Waiting player");
-    socket.emit('waiting')
-  } else {
-    socket.emit('begin-game', true)
-    var players = room.players.filter(function (player) {
-      return player !== socket
-    })
-    players.forEach(function (player) {
-      player.emit('begin-game', false)
-    })
-  }
+app.get('/', function (req, res) {
+  res.render('index', { data: JSON.stringify(blockchain) });
 })
 
-function findOrCreateRoom () {
-  var lastRoom = findReadyRoom ()
-  if (!lastRoom || lastRoom.full) {
-    var room = {players: [], playerCount: 0, name: hat()}
-    return addRoom(room)
-  }
-  return lastRoom
-}
+app.get('/blockchain', function(req, res, next){
+  res.json(JSON.stringify(blockchain));
+  nodeAddresses.push(req.connection.remoteAddress);
+  console.log('nodeAddresses:',req);
 
-function findReadyRoom () {
-  return rooms.filter(function(room) { return room.playerCount === 1 })[0];
-}
+});
 
-function removeRoom (room) {
-  room.playerCount--
-  if (room.playerCount === 0) rooms.splice(rooms.indexOf(room), 1)
-}
+app.post('/blockchain', function(req, res){
 
-function addRoom (room) {
-  return rooms[rooms.push(room) - 1]
-}
+  let rawBlockchain = JSON.parse(req.body.blockchain);
+  // blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
+  rawBlockchain = null;
+  // saveBlockchain(blockchain);
 
-function findOpponents (room_name, socket) {
-  var players = socket.adapter.rooms[room_name]
-  console.log('PLayser: %s', JSON.stringify(players))
-  var o;
-  if (players) {
-    var o = Object.keys(players).filter(function(player) {
-      return player !== socket.id
-    })
-  }
-  return o
-}
+});
+
+var count = 0
+
+io.on('connection', function (socket) {
+  count++
+
+  io.emit('news', { msg: 'One more person is online', count: count })
+  socket.emit('private', { msg: 'Welcome you are the ' + count + ' person here' })
+
+  socket.on('private', function (data) {
+    console.log(data);
+  })
+
+  socket.on('disconnect', function() {
+    count--
+    io.emit('news', { msg: 'Someone went home', count: count })
+  })
+})
+
+server.listen(3000, function() {
+  console.log('Listening on port 3000...')
+})
