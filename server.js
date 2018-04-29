@@ -9,11 +9,7 @@ const app = express();
 const router = express.Router();
 const JSONdb = require('simple-json-db');
 
-// let currentIpAddr;
-// require('dns').lookup(require('os').hostname(), function (err, add, fam) {
-//   currentIpAddr = add;
-//   console.log('addr:', currentIpAddr);
-// })
+
 
 let nodeAddresses = [];
 
@@ -74,14 +70,14 @@ const startServer = () => {
 
   app.get('/blockchain', function(req, res, next){
     res.json(JSON.stringify(blockchain));
+    nodeAddresses.push(req.connection.remoteAddress);
+    console.log('nodeAddresses:',nodeAddresses);
   });
 
   app.post('/blockchain', function(req, res){
 
     let rawBlockchain = JSON.parse(req.body.blockchain);
     blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
-    remoteNode = new BlockchainAddress(req.connection.remoteAddress);
-    nodeAddresses.push(remoteNode);
     rawBlockchain = null;
     saveBlockchain(blockchain);
 
@@ -164,18 +160,26 @@ saveBlockchain = (blockchainReceived) => {
       });
 }
 
-let initP2PServer = () => {
-  // var server = require('http').createServer();
-  // var io = require('socket.io')(server);
-  // var p2p = require('socket.io-p2p-server').Server;
-  // server.listen(3030);
-  //
-  // io.on('connection', function(socket){
-  //   clients[socket.id] = socket;
-  //   socket.join('hello');
-  //   p2p(socket, null, room);
-  // });
+let initP2PConnection = () => {
+const https = require('https');
+  for(var i=0; i<nodeAddresses.length;i++){
+    https.get(url[i], (resp) => {
+      let data = '';
 
+      // A chunk of data has been recieved.
+      resp.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      // The whole response has been received. Print out the result.
+      resp.on('end', () => {
+        console.log(JSON.parse(data).explanation);
+      });
+
+    }).on("error", (err) => {
+      console.log("Error: " + err.message);
+    });
+  }
 
 }
 
@@ -220,4 +224,3 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 initBlockchain();
 startServer();
-initP2PServer();
