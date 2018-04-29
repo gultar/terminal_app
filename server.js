@@ -3,11 +3,19 @@ const express = require('express');
 const fs = require('fs');
 const find = require('find-process');
 const Blockchain = require('./backend/blockchain');
+const BlockchainAddress = require('./backend/blockchain-address');
 const bodyParser = require('body-parser');
 const app = express();
 const router = express.Router();
 const JSONdb = require('simple-json-db');
 
+// let currentIpAddr;
+// require('dns').lookup(require('os').hostname(), function (err, add, fam) {
+//   currentIpAddr = add;
+//   console.log('addr:', currentIpAddr);
+// })
+
+let nodeAddresses = [];
 
 
 
@@ -60,6 +68,7 @@ const startServer = () => {
   app.use(express.static(__dirname+'/views'));
 
   app.get('/', function(req, res, next) {
+
       res.render('index', { data: JSON.stringify(blockchain) });
   });
 
@@ -71,6 +80,8 @@ const startServer = () => {
 
     let rawBlockchain = JSON.parse(req.body.blockchain);
     blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
+    remoteNode = new BlockchainAddress(req.connection.remoteAddress);
+    nodeAddresses.push(remoteNode);
     rawBlockchain = null;
     saveBlockchain(blockchain);
 
@@ -154,16 +165,18 @@ saveBlockchain = (blockchainReceived) => {
 }
 
 let initP2PServer = () => {
-  var server = require('http').createServer();
-  var io = require('socket.io')(server);
-  var p2p = require('socket.io-p2p-server').Server;
-  server.listen(3030);
+  // var server = require('http').createServer();
+  // var io = require('socket.io')(server);
+  // var p2p = require('socket.io-p2p-server').Server;
+  // server.listen(3030);
+  //
+  // io.on('connection', function(socket){
+  //   clients[socket.id] = socket;
+  //   socket.join('hello');
+  //   p2p(socket, null, room);
+  // });
 
-  io.on('connection', function(socket){
-    clients[socket.id] = socket;
-    socket.join('hello');
-    p2p(socket, null, room);
-  });
+
 }
 
 let fetchFromDistantNode = () => {
@@ -176,6 +189,10 @@ let fetchFromDistantNode = () => {
   } else {
       console.log("Status de la réponse: %d (%s)", req.status, req.statusText);
   }
+}
+
+let getRemoteIpAddr = () => {
+
 }
 
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
@@ -196,6 +213,8 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   }
 
 }
+
+
 
 
 

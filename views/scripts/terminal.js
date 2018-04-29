@@ -1,7 +1,7 @@
 var cryptos = [{}];
 var blockchain;
 const blockchainURL = 'http://localhost:5000/blockchain';
-const otherNodesAddresses = ['http://169.254.139.53:5000', 'http://192.168.0.153:5000']
+const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain']
 var sachaAddress = new BlockchainAddress('192.168.1.154', 0, 0);
 var hexagrams = [{}];
 var backgroundUrl = $('body').css("background-image");
@@ -559,7 +559,7 @@ function fetchBlockchainFromServer(){
 
 function fetchFromDistantNode(url){
   $.get(url).then(function(data){
-
+    console.log('Data:',data);
     rawBlockchain = JSON.parse(data);
     console.log(sachaAddress);
     distantBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
@@ -629,7 +629,9 @@ window.onload = function() {
     console.log('Fetching blockchain...');
     fetchBlockchainFromServer(); //"192.168.0.153:5000/blockchain"
     console.log('Also fetching blockchain from remote node');
-    fetchFromDistantNode('https://192.168.0.153:5000/blockchain');
+    for(var i=0; i<otherNodesAddresses.length;i++){
+      fetchFromDistantNode(otherNodesAddresses[i]);
+    }
     //fetch my address from localstorage after page reload
     var localStoredSachaAddress = localStorage.getItem('savedSachaAddress');
     var rawSachaAddress = JSON.parse(localStoredSachaAddress);
