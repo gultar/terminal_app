@@ -170,8 +170,8 @@ let initP2PNode = (blockchainFromNode) => {
 
     wss.on('connection', function connection(ws) {
 
-      ws.on('message', function incoming(blockchainReceived, blocky) {
-        console.log('received: %s', blocky);
+      ws.on('message', function incoming(blockchainReceived) {
+        console.log('received: %s', blockchainReceived);
 
       });
 
@@ -251,7 +251,7 @@ startServer();
 setTimeout(
 function(){
   console.log('Inititating p2p connections', blockchain);
-  initP2PNode();
-  pingAllPeers();
+  initP2PNode(blockchain);
+  pingAllPeers(blockchain);
 }
 , 6000);
