@@ -170,22 +170,48 @@ let initP2PNode = (blockchainFromNode) => {
 
     wss.on('connection', function connection(ws) {
 
-      ws.on('message', function incoming(blockchainReceived) {
-        console.log('received: %s', blockchainReceived);
+      ws.on('message', function incoming(peerMsg) {
 
+        console.log('Msg from peer: %s', peerMsg);
       });
 
-    ws.send(JSON.stringify(blockchainFromNode)); //
+
+
+
+      wss.broadcast = function broadcast(data) {
+        wss.clients.forEach(function each(client) {
+          if (client.readyState === WebSocket.OPEN) {
+            console.log('broadcasting');
+            client.send(data);
+          }
+        });
+      };
+      // wss.broadcast(blockchainFromNode);
+
+      ws.on('message', function incoming(data) {
+        // Broadcast to everyone else.
+        wss.clients.forEach(function each(client) {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(data);
+          }
+        });
+      });
+
     });
+
+// Broadcast to all.
+
+
+
 
 }
 
-function peerConnect(i, blockchain){
+function peerConnect(i){
     return function(){
         peers[peersid[i]] = new WebSocket(peerAddr[i]);
         peers[peersid[i]].on('open', function(){
-            console.log(JSON.stringify(blockchain));
-            peers[peersid[i]].send(JSON.stringify(blockchain)); //
+            console.log('Sending: ', peerAddr);
+            peers[peersid[i]].send(peerAddr); //
         });
 
 		peers[peersid[i]].on('message', function(data){
@@ -250,7 +276,7 @@ initBlockchain();
 startServer();
 setTimeout(
 function(){
-  console.log('Inititating p2p connections', blockchain);
+  console.log('Inititating p2p connections');
   initP2PNode(blockchain);
   pingAllPeers(blockchain);
 }
