@@ -163,29 +163,29 @@ saveBlockchain = (blockchainReceived) => {
       });
 }
 
-let initP2PNode = () => {
+let initP2PNode = (blockchainFromNode) => {
 
     let WebSocketServer = require('ws').Server,
         wss = new WebSocketServer({ port: 8080 });
 
     wss.on('connection', function connection(ws) {
 
-      ws.on('message', function incoming(blockchainReceived) {
-        console.log('received: %s', blockchainReceived);
+      ws.on('message', function incoming(blockchainReceived, blocky) {
+        console.log('received: %s', blocky);
 
       });
 
-    ws.send(JSON.stringify(blockchain));
+    ws.send(JSON.stringify(blockchainFromNode)); //
     });
 
 }
 
-function peerConnect(i){
+function peerConnect(i, blockchain){
     return function(){
         peers[peersid[i]] = new WebSocket(peerAddr[i]);
         peers[peersid[i]].on('open', function(){
             console.log(JSON.stringify(blockchain));
-            peers[peersid[i]].send(JSON.stringify(blockchain));
+            peers[peersid[i]].send(JSON.stringify(blockchain)); //
         });
 
 		peers[peersid[i]].on('message', function(data){
@@ -194,9 +194,9 @@ function peerConnect(i){
     }
 }
 
-function pingAllPeers(){
+function pingAllPeers(blockchain){
   for(var i in peersid){
-      peers[peersid[i]] = peerConnect(i);
+      peers[peersid[i]] = peerConnect(i, blockchain);
   }
 
   for(var j in peersid){
@@ -226,7 +226,13 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
   if(receivedBlockchain){
       if(storedBlockchain.chain.length >= receivedBlockchain.chain.length){
-      longestBlockchain = storedBlockchain;
+        if(storedBlockchain.pendingTransactions.length >= receivedBlockchain.pendingTransactions.length){
+
+            longestBlockchain = storedBlockchain;
+        }
+        else{
+          longestBlockchain = receivedBlockchain;
+        }
     }
     else{
       longestBlockchain = receivedBlockchain;
@@ -242,5 +248,10 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 initBlockchain();
 startServer();
-initP2PNode();
-pingAllPeers();
+setTimeout(
+function(){
+  console.log('Inititating p2p connections', blockchain);
+  initP2PNode();
+  pingAllPeers();
+}
+, 6000);
