@@ -102,7 +102,7 @@ process.on('uncaughtException', (error) => {
   }
 })
 
-loadBlockchainFromServer = async () => {
+loadBlockchainFromServer = () => {
   fs.exists('blockchain.json', function(exists){
 
         if(exists){
