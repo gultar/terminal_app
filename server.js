@@ -8,10 +8,13 @@ const bodyParser = require('body-parser');
 const app = express();
 const router = express.Router();
 const JSONdb = require('simple-json-db');
-
-
+const p2pServer = require('./p2p-server');
+const WebSocket = require('ws');
 
 let nodeAddresses = [];
+let peers = {};
+let peersid = ['raspiOne', 'raspiTwo'];
+let peerAddr = ['ws://169.254.139.53:8080', 'ws://169.254.139.53:8081'];
 
 
 
@@ -28,7 +31,8 @@ var allowCrossDomain = function(req, res, next) {
 app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
 app.use(allowCrossDomain);
-//Request blockchain to peers
+
+//Request blockchain from peers
 
 
 //fetch blockchain from file
@@ -71,7 +75,7 @@ const startServer = () => {
   app.get('/blockchain', function(req, res, next){
     res.json(JSON.stringify(blockchain));
     nodeAddresses.push(req.connection.remoteAddress);
-    console.log('nodeAddresses:',nodeAddresses);
+
   });
 
   app.post('/blockchain', function(req, res){
@@ -80,7 +84,6 @@ const startServer = () => {
     blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
     rawBlockchain = null;
     saveBlockchain(blockchain);
-
   });
 
 }
@@ -160,28 +163,47 @@ saveBlockchain = (blockchainReceived) => {
       });
 }
 
-let initP2PConnection = () => {
-const https = require('https');
-  for(var i=0; i<nodeAddresses.length;i++){
-    https.get(url[i], (resp) => {
-      let data = '';
+let initP2PNode = () => {
 
-      // A chunk of data has been recieved.
-      resp.on('data', (chunk) => {
-        data += chunk;
+    let WebSocketServer = require('ws').Server,
+        wss = new WebSocketServer({ port: 8080 });
+
+    wss.on('connection', function connection(ws) {
+
+      ws.on('message', function incoming(blockchainReceived) {
+        console.log('received: %s', blockchainReceived);
+
       });
 
-      // The whole response has been received. Print out the result.
-      resp.on('end', () => {
-        console.log(JSON.parse(data).explanation);
-      });
-
-    }).on("error", (err) => {
-      console.log("Error: " + err.message);
+    ws.send(JSON.stringify(blockchain));
     });
-  }
 
 }
+
+function peerConnect(i){
+    return function(){
+        peers[peersid[i]] = new WebSocket(peerAddr[i]);
+        peers[peersid[i]].on('open', function(){
+            console.log(JSON.stringify(blockchain));
+            peers[peersid[i]].send(JSON.stringify(blockchain));
+        });
+
+		peers[peersid[i]].on('message', function(data){
+			console.log('Received', data);
+		});
+    }
+}
+
+function pingAllPeers(){
+  for(var i in peersid){
+      peers[peersid[i]] = peerConnect(i);
+  }
+
+  for(var j in peersid){
+      peers[peersid[j]]();
+  }
+}
+
 
 let fetchFromDistantNode = () => {
   const req = new XMLHttpRequest();
@@ -195,8 +217,8 @@ let fetchFromDistantNode = () => {
   }
 }
 
-let getRemoteIpAddr = () => {
-
+let stripIPAddr = (ip) => {
+  var ipV4 = ip.substr()
 }
 
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
@@ -218,9 +240,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 }
 
-
-
-
-
 initBlockchain();
 startServer();
+initP2PNode();
+pingAllPeers();
