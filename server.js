@@ -2,8 +2,8 @@
 const express = require('express');
 const fs = require('fs');
 const find = require('find-process');
-const Blockchain = require('./backend/blockchain');
-const BlockchainAddress = require('./backend/blockchain-address');
+const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
+// const BlockchainAddress = require('./backend/blockchain-address');
 const bodyParser = require('body-parser');
 const app = express();
 const router = express.Router();
@@ -40,7 +40,7 @@ let blockchain;
 let blockchainFetched;
 
 const initBlockchain = () => {
-  const db = new JSONdb('/path/to/your/database.json');
+  const db = new JSONdb('./blockchain.json');
 
   console.log('Initiating blockchain');
   blockchainFetched = loadBlockchainFromServer()
@@ -59,7 +59,6 @@ const initBlockchain = () => {
   }, 4000);
 
 
-
 };
 
 const startServer = () => {
@@ -74,17 +73,58 @@ const startServer = () => {
 
   app.get('/blockchain', function(req, res, next){
     res.json(JSON.stringify(blockchain));
-    nodeAddresses.push(req.connection.remoteAddress);
 
   });
 
   app.post('/blockchain', function(req, res){
-
     let rawBlockchain = JSON.parse(req.body.blockchain);
     blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
     rawBlockchain = null;
     saveBlockchain(blockchain);
   });
+
+  app.post('/transaction', function(req, res){
+    if(typeof blockchain !== 'undefined'){
+      let transReceived = JSON.parse(req.body.transaction);
+      blockchain.createTransaction( new Transaction(transReceived.fromAddress, transReceived.toAddress, transReceived.amount, transReceived.data))
+      transReceived = null;
+      saveBlockchain(blockchain);
+    }else{
+      res.status(400);
+      res.send('Blockchain not loaded or loading...');
+    }
+
+  })
+
+  app.post('/mine', function(req, res){
+    let rawMiningAddr = JSON.parse(req.body.address);
+
+    miningAddr = new BlockchainAddress(rawMiningAddr.address, rawMiningAddr.blocksMined, rawMiningAddr.balance);
+    console.log(miningAddr);
+    var miningSuccess;
+    var waitingOutputOnce = true;
+
+    if(typeof blockchain != 'undefined'){
+      console.log('Block:', blockchain);
+      miningSuccess = blockchain.minePendingTransactions(miningAddr);
+      if(miningSuccess){
+        res.send(JSON.stringify(blockchain));
+        console.log('Block mined: ' + blockchain.getLatestBlock().hash);
+        console.log(miningAddr.address + ' mined ' + miningAddr.getBlocksMined() + ' blocks');
+        console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
+        saveBlockchain(blockchain);
+        return true;
+      }else{
+        if(waitingOutputOnce){
+          console.log('Waiting for other transactons to occur');
+          waitingOutputOnce = false;
+          res.status(400);
+          res.send('Waiting for other transactons to occur');
+        }
+
+      }
+    }
+  })
 
 }
 
@@ -110,7 +150,6 @@ loadBlockchainFromServer = () => {
             fs.readFile('blockchain.json', function readFileCallback(err, data){
               console.log('Reading from blockchain.json file...');
               blockchainFetched = JSON.parse(data);
-              console.log('------FromFile:',blockchainFetched);
             if (err){
                 console.log(err);
             }
@@ -120,7 +159,6 @@ loadBlockchainFromServer = () => {
         } else {
           console.log('Generating new blockchain')
             let newBlockchain = new Blockchain()
-            console.log(newBlockchain)
             saveBlockchain(newBlockchain);
             console.log("file does not exist")
             return false;
@@ -129,7 +167,6 @@ loadBlockchainFromServer = () => {
 }
 
 saveBlockchain = (blockchainReceived) => {
-  console.log('Saving: ', blockchainReceived);
   fs.exists('blockchain.json', function(exists){
       if(exists){
           console.log("Saving Blockchain data to existing File");
@@ -140,9 +177,7 @@ saveBlockchain = (blockchainReceived) => {
           }
 
           let blockchainFromFile = JSON.parse(data);
-          console.log('BlockchainFromFile: ', blockchainFromFile);
           let blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
-          console.log('Longest blockchain is :',blockchain);
           let json = JSON.stringify(blockchain);
           if(json != undefined){
             console.log('Writing to file...');
@@ -176,17 +211,16 @@ let initP2PNode = (blockchainFromNode) => {
       });
 
 
+      // wss.broadcast = function broadcast(data) {
+        // wss.clients.forEach(function each(client) {
+        //   console.log('Going through clients');
+        //   if (client.readyState === WebSocket.OPEN) {
+        //     console.log('broadcasting');
+        //     client.send(data);
+        //   }
+        // });
+      // };
 
-
-      wss.broadcast = function broadcast(data) {
-        wss.clients.forEach(function each(client) {
-          if (client.readyState === WebSocket.OPEN) {
-            console.log('broadcasting');
-            client.send(data);
-          }
-        });
-      };
-      // wss.broadcast(blockchainFromNode);
 
       ws.on('message', function incoming(data) {
         // Broadcast to everyone else.
@@ -196,14 +230,11 @@ let initP2PNode = (blockchainFromNode) => {
           }
         });
       });
-
+      wss.send(blockchainFromNode);
+      wss.broadcast('Hello biatches');
     });
 
 // Broadcast to all.
-
-
-
-
 }
 
 function peerConnect(i){

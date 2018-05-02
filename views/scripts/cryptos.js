@@ -70,12 +70,10 @@ function getSelectedCryptos(cryptoOne, cryptoTwo=false, cryptoThree=false,
     (cryptoTen ? ','+cryptoTen : '')+
     '&tsyms=BTC,USD,EUR,CAD',
     function(data){
-      console.log(data);
 
-
-      blockchain.createTransaction(new Transaction('https://min-api.cryptocompare.com/data/pricemulti?fsyms=', '192.168.1.69', data[cryptoOne].USD, JSON.stringify(data)))
+      //blockchain.createTransaction(new Transaction('https://min-api.cryptocompare.com/data/pricemulti?fsyms=', '192.168.1.69', data[cryptoOne].USD, JSON.stringify(data)))
+      sendTransaction('https://min-api.cryptocompare.com/data/pricemulti?fsyms=', '192.168.1.69', data[cryptoOne].USD, JSON.stringify(data))
       
-
        updateCryptoValues(cryptoOne, data[cryptoOne]);
       (cryptoTwo ? updateCryptoValues(cryptoTwo, data[cryptoTwo]) : '');
       (cryptoThree ? updateCryptoValues(cryptoThree, data[cryptoThree]) : '');

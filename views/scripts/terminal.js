@@ -2,7 +2,9 @@ var cryptos = [{}];
 var blockchain;
 const blockchainURL = 'http://localhost:5000/blockchain';
 const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain']
-var sachaAddress = new BlockchainAddress('192.168.1.154', 0, 0);
+var ip = myIP();
+console.log('IP:',ip);
+var sachaAddress = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 var hexagrams = [{}];
 var backgroundUrl = $('body').css("background-image");
 
@@ -261,7 +263,8 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           break;
 
         case 'mine':
-          runMine(args, cmd);
+          // runMine(args, cmd);
+          startMining(sachaAddress);
           break;
 
         case 'show-blocks':
@@ -544,8 +547,6 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
 
 function fetchBlockchainFromServer(){
-
-
     console.log('Fetching from localnode')
     $.get('http://localhost:5000/blockchain').then(function(data){
 
@@ -558,13 +559,14 @@ function fetchBlockchainFromServer(){
 }
 
 function fetchFromDistantNode(url){
+  console.log('Fetching from :', url);
   $.get(url).then(function(data){
-    console.log('Data:',data);
+    //console.log('Data:',data);
     rawBlockchain = JSON.parse(data);
     console.log(sachaAddress);
     distantBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
     blockchain = longestChain(blockchain, distantBlockchain);
-    console.log(blockchain);
+    console.log('Longest blockchain has that many blocks:',blockchain.chain.length);
   })
 }
 
@@ -588,6 +590,66 @@ function sendBlockchainToRemoteNode(url){
   $.post(url, { blockchain: JSON.stringify(blockchain)}, function(data, status){
     console.log('Blockchain Sent: ', data);
   });
+}
+
+function startMining(blockchainAddr){
+  var updatedBlockchain;
+  var waitingOutputOnce = true;
+  output('Starting the miner...');
+  setInterval(function(){
+    if(blockchain.pendingTransactions.length >= blockchain.blockSize){
+      $.post('http://localhost:5000/mine', { address: JSON.stringify(blockchainAddr)}, function(data, status, response){
+          if(status === 'success'){
+            //gets the updated blockchain
+            updatedBlockchain = JSON.parse(response.responseText);
+            console.log('Latest Block Hash:', updatedBlockchain);
+            blockchain = new Blockchain(updatedBlockchain.chain, updatedBlockchain.pendingTransactions, updatedBlockchain.blockbase);
+            //fetches the latest hash & output the mining address' stats
+            var latestBlock = getLatestBlock(blockchain);
+            console.log("Length of updated blockchain:",updatedBlockchain.length);
+
+            output('Block mined: ' + latestBlock.hash);
+            output(sachaAddress.address + ' mined ' + sachaAddress.blocksMined + ' blocks');
+            output('\nBalance of '+sachaAddress.address+' is '+ sachaAddress.balance);
+
+            saveBlockchainToServer();
+            sendBlockchainToRemoteNode();
+
+            return true;
+          }else{
+            if(waitingOutputOnce){
+              output('Waiting for other transactons to occur');
+              waitingOutputOnce = false;
+            }
+          }
+
+
+      });
+    }else{
+      if(waitingOutputOnce){
+        output('Waiting for other transactons to occur');
+        waitingOutputOnce = false;
+      }
+    }
+  },5000);
+
+}
+
+function sendTransaction(fromAddress, toAddress, amount, data=''){
+  var transactToSend = {
+    fromAddress : fromAddress,
+    toAddress : toAddress,
+    amount : amount,
+    data : data
+  }
+
+  $.post('http://localhost:5000/transaction', { transaction: JSON.stringify(transactToSend) }, function(data, status, response){
+    if(status === 'success'){
+      console.log('Transaction sent to blockchain');
+    }
+  })
+
+
 }
 
 function initPeerConnection(){
@@ -671,4 +733,24 @@ function longestChain(localBlockchain=false, distantBlockchain=false){
     //no distant blockchain, revert to local version
     return localBlockchain;
   }
+}
+
+function getLatestBlock(blockchain){
+  var lengthChain = blockchain.chain.length;
+  return blockchain.chain[lengthChain - 1];
+}
+
+function listenForChangeOnBlockchain(){
+  setInterval(function(){
+    $.get('http://localhost:5000/blockchain').then(function(data){
+
+      rawBlockchain = JSON.parse(data);
+
+      if(rawBlockchain.chain.length >= blockchain.chain.length && rawBlockchain.pendingTransactions.length >= blockchain.pendingTransactions.length){
+        console.log('Updated blockchain');
+        blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
+      }
+
+    })
+  }, 1000)
 }
