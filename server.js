@@ -269,7 +269,7 @@ let queryAllNodesForBlockchain = (blockchainFromFile) => {
   console.log('Querying all nodes for blockchain...');
   for(let i=0; i < nodeAddresses.length; i++){
     nodeBlockchain = fetchFromDistantNode(nodeAddresses[i]);
-    if(nodeAddresses.isChainValid()){
+    if(nodeBlockchain.isChainValid()){
       longestBlockchain = compareBlockchains(longestBlockchain, nodeAddresses);
     }else{
       //invalid blockchain
