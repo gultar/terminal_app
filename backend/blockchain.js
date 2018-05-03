@@ -45,13 +45,15 @@ class Block{
 
 
 /////////////////////Blockchain///////////////////////
-module.exports = class Blockchain{
-  constructor(chain=false, pendingTransactions=false){
+class Blockchain{
+  constructor(chain=false, pendingTransactions=false, blockbase=[{}]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: []);
     this.miningReward = 50;
-    this.nodeAddresses = [{}]; //Stores all the node addresses of the P2P network
+    this.nodeAddresses = []; //Stores all the node addresses of the P2P network
+    this.blockSize = 10; //Minimum Number of transactions per block
+    this.blockbase = blockbase; //Blockchain database;
   }
 
   createGenesisBlock(){
@@ -68,23 +70,42 @@ module.exports = class Blockchain{
     this.chain.push(newBlock);
   }
 
+  hasEnoughTransactionsToMine(){
+    if(this.pendingTransactions.length >= this.blockSize){
+      return true
+    }else{
+      return false;
+    }
+  }
+
   minePendingTransactions(miningRewardAddress){
-    let block = new Block(Date.now(), this.pendingTransactions);
-    block.previousHash = this.getLatestBlock().hash;
-    block.mineBlock(this.difficulty);
+    if(this.hasEnoughTransactionsToMine()){
+      let block = new Block(Date.now(), this.pendingTransactions);
+      block.previousHash = this.getLatestBlock().hash;
+      block.mineBlock(this.difficulty);
 
-    miningRewardAddress.minedOneBlock();
-    miningRewardAddress.setBalance(this.miningReward);
+      miningRewardAddress.minedOneBlock();
+      miningRewardAddress.setBalance(this.miningReward);
 
-    console.log("Block successfully mined!");
-    this.chain.push(block);
-    this.pendingTransactions = [
-      new Transaction(null, miningRewardAddress.address, this.miningReward, "")
-    ];
+      console.log("Block successfully mined!");
+      this.chain.push(block);
+      this.pendingTransactions = [
+        new Transaction(null, miningRewardAddress.address, this.miningReward, "")
+      ];
+      return true;
+    }else{
+      console.log('Waiting for other transactions...');
+      return false;
+    }
+
   }
 
   createTransaction(transaction){
     this.pendingTransactions.push(transaction);
+  }
+
+  addNodeAddress(address){
+    this.nodeAddresses.push(address);
   }
 
   getBalanceOfAddress(address){
@@ -93,6 +114,9 @@ module.exports = class Blockchain{
     for(const block of this.chain){
       console.log(block);
       for(const trans of block.transactions){
+        // for(let i=0; i<block.transactions.length){
+        //
+        // }
         console.log('Trans: ' + trans.data);
         if(trans.fromAddress === address){
           console.log("sending "+trans.amount);
@@ -106,6 +130,10 @@ module.exports = class Blockchain{
       }
     }
     return balance;
+  }
+
+  addBlockbaseRecord(address){
+
   }
 
   isChainValid(){
@@ -179,10 +207,9 @@ class BlockbaseRecord{
 }
 
 
-
-
-
 function RecalculateHash(block){
   console.log(sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString())
   return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
 }
+
+module.exports = { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord};
