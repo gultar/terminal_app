@@ -3,20 +3,18 @@ const express = require('express');
 const fs = require('fs');
 const find = require('find-process');
 const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
-// const BlockchainAddress = require('./backend/blockchain-address');
 const bodyParser = require('body-parser');
 const app = express();
 const router = express.Router();
 const JSONdb = require('simple-json-db');
 const p2pServer = require('./p2p-server');
 const WebSocket = require('ws');
+const { getIPAddress } = require('./backend/ipFinder.js');
 
-let nodeAddresses = [];
+let nodeAddresses = [getIPAddress(), '192.168.0.153', '169.254.139.53'];
 let peers = {};
 let peersid = ['raspiOne', 'raspiTwo'];
 let peerAddr = ['ws://169.254.139.53:8080', 'ws://169.254.139.53:8081'];
-
-
 
 const PORT = 5000;
 
@@ -50,6 +48,7 @@ const initBlockchain = () => {
     if(!blockchainFetched){
       console.log('No blockchain is available');
       blockchain = new Blockchain();
+      blockchain.addNodeAddress()
 
     }else{
       blockchain = new Blockchain(blockchainFetched.chain, blockchainFetched.pendingTransactions, blockchainFetched.nodeAddresses);
@@ -57,7 +56,6 @@ const initBlockchain = () => {
     }
 
   }, 4000);
-
 
 };
 
@@ -73,7 +71,6 @@ const startServer = () => {
 
   app.get('/blockchain', function(req, res, next){
     res.json(JSON.stringify(blockchain));
-
   });
 
   app.post('/blockchain', function(req, res){
@@ -116,10 +113,10 @@ const startServer = () => {
         return true;
       }else{
         if(waitingOutputOnce){
-          console.log('Waiting for other transactons to occur');
+          console.log('Waiting for other transactions to occur');
           waitingOutputOnce = false;
           res.status(400);
-          res.send('Waiting for other transactons to occur');
+          res.send('Waiting for other transactions to occur');
         }
 
       }
@@ -210,18 +207,6 @@ let initP2PNode = (blockchainFromNode) => {
         console.log('Msg from peer: %s', peerMsg);
       });
 
-
-      // wss.broadcast = function broadcast(data) {
-        // wss.clients.forEach(function each(client) {
-        //   console.log('Going through clients');
-        //   if (client.readyState === WebSocket.OPEN) {
-        //     console.log('broadcasting');
-        //     client.send(data);
-        //   }
-        // });
-      // };
-
-
       ws.on('message', function incoming(data) {
         // Broadcast to everyone else.
         wss.clients.forEach(function each(client) {
@@ -231,7 +216,6 @@ let initP2PNode = (blockchainFromNode) => {
         });
       });
       wss.send(blockchainFromNode);
-      wss.broadcast('Hello biatches');
     });
 
 // Broadcast to all.
@@ -262,20 +246,38 @@ function pingAllPeers(blockchain){
 }
 
 
-let fetchFromDistantNode = () => {
+let fetchFromDistantNode = (address) => {
   const req = new XMLHttpRequest();
-  req.open('GET', '192.168.0.153:5000/blockchain', false);
+  req.open('GET', address + ':5000/blockchain', false);
   req.send(null);
 
   if (req.status === 200) {
       console.log("Réponse reçue: %s", req.responseText);
+
+      rawBlockchainFromPeerNode = JSON.parse(req.responseText);
+
+     return new Blockchain(rawBlockchainFromPeerNode.chain, rawBlockchainFromPeerNode.pendingTransactions, rawBlockchainFromPeerNode.blockbase);
+
+
   } else {
       console.log("Status de la réponse: %d (%s)", req.status, req.statusText);
   }
 }
 
-let stripIPAddr = (ip) => {
-  var ipV4 = ip.substr()
+let queryAllNodesForBlockchain = (blockchainFromFile) => {
+  let longestBlockchain = blockchainFromFile;
+  console.log('Querying all nodes for blockchain...');
+  for(let i=0; i < nodeAddresses.length; i++){
+    nodeBlockchain = fetchFromDistantNode(nodeAddresses[i]);
+    if(nodeAddresses.isChainValid()){
+      longestBlockchain = compareBlockchains(longestBlockchain, nodeAddresses);
+    }else{
+      //invalid blockchain
+      console.log('Address: ' + nodeAddresses[i] + ' has an invalid blockchain');
+    }
+
+  }
+  blockchain = longestBlockchain;
 }
 
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
@@ -307,6 +309,7 @@ initBlockchain();
 startServer();
 setTimeout(
 function(){
+  queryAllNodesForBlockchain(blockchain)
   console.log('Inititating p2p connections');
   initP2PNode(blockchain);
   pingAllPeers(blockchain);

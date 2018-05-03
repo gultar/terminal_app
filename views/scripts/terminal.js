@@ -2,7 +2,7 @@ var cryptos = [{}];
 var blockchain;
 const blockchainURL = 'http://localhost:5000/blockchain';
 const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain']
-var ip = myIP();
+var ip = '192.168.0.112'
 console.log('IP:',ip);
 var sachaAddress = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 var hexagrams = [{}];
@@ -62,7 +62,6 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
     "<span class'help-line'><b class='help-cmd'>background</b> ----- Changes the background image. Usage: background URL. Ex: background http://www.nafpaktia.com/data/wallpapers/40/860159.jpg</span>",
     "<span class'help-line'><b class='help-cmd'>weather</b> -------- Outputs current weather data from a specific location. Usage: weather City Country. Ex: weather Quebec Canada.</span>",
     "<span class'help-line'><b class='help-cmd'>show-blocks</b> ---- Displays all current blocks on the blockchain. Options: <b>-e or expand</b></span>",
-    "<span class'help-line'><b class='help-cmd'>flush-blocks</b> --- Flushes all the blocks on the blockchain</span>",
     "<span class'help-line'><b class='help-cmd'>mine</b> ----------- Mines the current transactions</span>",
     "<span class'help-line'><b class='help-cmd'>game-of-life</b> --- Displays a Conway's Game of Life</span>"
 
@@ -263,18 +262,13 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           break;
 
         case 'mine':
-          // runMine(args, cmd);
           startMining(sachaAddress);
           break;
 
         case 'show-blocks':
           runShowBlocks(args, cmd);
           break;
-        case 'flush-blocks':
-          blockchain = new Blockchain();
-          sachaAddress = new BlockchainAddress('192.168.0.154', 0, 0);
-          blockchain.addNodeAddress(sachaAddress);
-          break;
+
         case 'valid-blocks':
           if(blockchain.isChainValid()){
             output('Blockchain still valid');
@@ -283,8 +277,8 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
             output('Blockchain not valid - Check console for info');
           }
           break;
+
         case 'show-transact':
-        output('----------Pending Transactions----------')
           runShowTransact();
           break;
         case 'node-update-blockchain':
@@ -336,11 +330,16 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
       function runIching(args, cmd){
         if(args[0]){
-          var myHex = new Hexagram();
-          fetchHexFromFireBase(args[0]);
-          myHex.setTextAndTitle();
-          //blockchain.createTransaction(new Transaction('blockchain', '192.168.1.69', 0, myHex));
-          drawIchingLines(myHex);
+          if(args[0] == '-c' || args[0] == 'chart'){
+            output('<img src="./images/trigramchart-clear.gif" alt="chart">');
+          }else{
+            var myHex = new Hexagram();
+            fetchHexFromFireBase(args[0]);
+            myHex.setTextAndTitle();
+            //blockchain.createTransaction(new Transaction('blockchain', '192.168.1.69', 0, myHex));
+            drawIchingLines(myHex);
+          }
+
           return;
         }
         var myHex = new Hexagram();
@@ -399,32 +398,32 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         fetchWeatherData(args[0], args[1]);
       }
 
-      function runMine(args=null, cmd=null){
-        var miningSuccess;
-        var waitingOutputOnce = true;
-        output('Starting the miner... ');
-        setTimeout(function(){
-
-          setInterval(function(){
-            miningSuccess = blockchain.minePendingTransactions(sachaAddress);
-            if(miningSuccess){
-              output('Block mined: ' + blockchain.getLatestBlock().hash);
-              output(sachaAddress.address + ' mined ' + sachaAddress.getBlocksMined() + ' blocks');
-              output('\nBalance of '+sachaAddress.address+' is '+ sachaAddress.getBalance());
-              saveBlockchainToServer();
-              sendBlockchainToRemoteNode();
-              return true;
-            }else{
-              if(waitingOutputOnce){
-                output('Waiting for other transactons to occur');
-                waitingOutputOnce = false;
-              }
-
-            }
-
-          }, 10000)
-        }, 1000);
-      }
+      // function runMine(args=null, cmd=null){
+      //   var miningSuccess;
+      //   var waitingOutputOnce = true;
+      //   output('Starting the miner... ');
+      //   setTimeout(function(){
+      //
+      //     setInterval(function(){
+      //       miningSuccess = blockchain.minePendingTransactions(sachaAddress);
+      //       if(miningSuccess){
+      //         output('Block mined: ' + blockchain.getLatestBlock().hash);
+      //         output(sachaAddress.address + ' mined ' + sachaAddress.getBlocksMined() + ' blocks');
+      //         output('\nBalance of '+sachaAddress.address+' is '+ sachaAddress.getBalance());
+      //         saveBlockchainToServer();
+      //         sendBlockchainToRemoteNode();
+      //         return true;
+      //       }else{
+      //         if(waitingOutputOnce){
+      //           output('Waiting for other transactons to occur');
+      //           waitingOutputOnce = false;
+      //         }
+      //
+      //       }
+      //
+      //     }, 10000)
+      //   }, 1000);
+      // }
 
     function runShowBlocks(args=false, cmd=false){
       output("<span class='output-header'>BLOCKCHAIN</span>"); //<br><hr>
@@ -445,6 +444,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       var transIndex = 0;
 
 
+      output('----------Pending Transactions----------')
       blockchain.pendingTransactions.forEach(function(transaction){
 
         var transactionKeys = Object.keys(transaction);
@@ -561,12 +561,13 @@ function fetchBlockchainFromServer(){
 function fetchFromDistantNode(url){
   console.log('Fetching from :', url);
   $.get(url).then(function(data){
-    //console.log('Data:',data);
+
     rawBlockchain = JSON.parse(data);
     console.log(sachaAddress);
     distantBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
     blockchain = longestChain(blockchain, distantBlockchain);
     console.log('Longest blockchain has that many blocks:',blockchain.chain.length);
+
   })
 }
 
@@ -669,30 +670,28 @@ function initPeerConnection(){
   });
 }
 
-// function initBlockbase(){
-//   var adapter = new LocalStorage('../../blockchain.json');
-//   var db = low(adapter);
-// }
 
 window.onbeforeunload = function() {
-
+    runClear();
     localStorage.setItem('savedSachaAddress', JSON.stringify(sachaAddress));
     localStorage.setItem('savedBackground', $('body').css("background-image"));
     //saving the blockchain to server, then to file
+
     saveBlockchainToServer();
 
 }
 
 window.onload = function() {
 
-
     //fetching the blockchain from server which fetches it from file or other peers
     console.log('Fetching blockchain...');
     fetchBlockchainFromServer(); //"192.168.0.153:5000/blockchain"
+
     console.log('Also fetching blockchain from remote node');
     for(var i=0; i<otherNodesAddresses.length;i++){
       fetchFromDistantNode(otherNodesAddresses[i]);
     }
+
     //fetch my address from localstorage after page reload
     var localStoredSachaAddress = localStorage.getItem('savedSachaAddress');
     var rawSachaAddress = JSON.parse(localStoredSachaAddress);
