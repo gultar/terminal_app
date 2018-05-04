@@ -1,7 +1,7 @@
 var cryptos = [{}];
 var blockchain;
 const blockchainURL = 'http://localhost:5000/blockchain';
-const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain']
+const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain']
 var ip = '192.168.0.112'
 console.log('IP:',ip);
 var sachaAddress = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
@@ -728,5 +728,5 @@ function listenForChangeOnBlockchain(){
       }
 
     })
-  }, 1000)
+  }, 10000)
 }

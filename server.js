@@ -425,10 +425,10 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 initBlockchain();
 startServer();
 setTimeout(
-function(){
-  queryAllNodesForBlockchain(blockchain)
-  console.log('Inititating p2p connections');
-  initP2PNode(blockchain);
-  pingAllPeers(blockchain);
-}
+  function(){
+    queryAllNodesForBlockchain(blockchain);
+    console.log('Inititating p2p connections');
+    initP2PNode(blockchain);
+    pingAllPeers(blockchain);
+  }
 , 6000);
