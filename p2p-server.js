@@ -1,11 +1,12 @@
 let WebSocket = require('ws');
 let peers = {};
 let peersid = ['raspiOne', 'raspiTwo'];
-let peerAddr = ['ws://169.254.139.53:8080', 'ws://169.254.139.53:8081'];
+//let peerAddr = ['ws://169.254.139.53:8080', 'ws://169.254.139.53:8081'];
+let peerAddr = ['ws://192.168.0.153:8080', 'ws://169.254.105.109:8080',
+'ws://169.254.139.53:8080', 'ws://192.168.0.112:8080', 'ws://192.168.1.75:8080', 'ws://192.168.1.68:8080'];
 
 
-
-module.exports = function initP2PServer(){
+function initP2PServer(){
   let WebSocketServer = require('ws').Server,
       wss = new WebSocketServer({ port: 8080 });
 
@@ -19,8 +20,8 @@ module.exports = function initP2PServer(){
   });
 
 }
-
-
+ initP2PServer();
+ pingAllPeers();
 
 function peerConnect(i){
     return function(){
@@ -35,7 +36,7 @@ function peerConnect(i){
     }
 }
 
-module.exports = function pingAllPeers(){
+function pingAllPeers(){
   for(var i in peersid){
       peers[peersid[i]] = peerConnect(i);
   }
