@@ -723,7 +723,15 @@ function listenForChangeOnBlockchain(){
 
       if(rawBlockchain.chain.length >= blockchain.chain.length && rawBlockchain.pendingTransactions.length >= blockchain.pendingTransactions.length){
 
-        blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
+        var newBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
+        if(newBlockchain.chain > blockchain.chain){
+          //check if pendingTransactions are longer too
+        }else if(newBlockchain.chain < blockchain.chain){
+
+        }else{
+          blockchain = newBlockchain;
+        }
+
         //saveBlockchainToServer();
       }
 

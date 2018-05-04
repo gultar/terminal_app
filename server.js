@@ -13,7 +13,7 @@ const WebSocket = require('ws');
 const { getIPAddress } = require('./backend/ipFinder.js');
 const http = require('http');
 
-let nodeAddresses = [getIPAddress(), '192.168.0.153', '169.254.139.53', '192.168.0.112'];
+let nodeAddresses = [getIPAddress(), '192.168.0.153', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68'];
 let connectedNodes = [];
 
 let peers = {};
