@@ -142,13 +142,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
     x.send(options.data);
   }
 
-  function clearAll() {
-    for (var i = setTimeout(function() {}, 0); i > 0; i--) {
-      window.clearInterval(i);
-      window.clearTimeout(i);
-      if (window.cancelAnimationFrame) window.cancelAnimationFrame(i);
-    }
-  }
+
 
 
   function validateArgs(cmd){
@@ -284,7 +278,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         case 'node-update-blockchain':
         output('Sending blockchain remotely...');
           sendBlockchainToRemoteNode();
-          initPeerConnection();
+
           break;
         default:
           if (cmd) {
@@ -397,33 +391,6 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         }
         fetchWeatherData(args[0], args[1]);
       }
-
-      // function runMine(args=null, cmd=null){
-      //   var miningSuccess;
-      //   var waitingOutputOnce = true;
-      //   output('Starting the miner... ');
-      //   setTimeout(function(){
-      //
-      //     setInterval(function(){
-      //       miningSuccess = blockchain.minePendingTransactions(sachaAddress);
-      //       if(miningSuccess){
-      //         output('Block mined: ' + blockchain.getLatestBlock().hash);
-      //         output(sachaAddress.address + ' mined ' + sachaAddress.getBlocksMined() + ' blocks');
-      //         output('\nBalance of '+sachaAddress.address+' is '+ sachaAddress.getBalance());
-      //         saveBlockchainToServer();
-      //         sendBlockchainToRemoteNode();
-      //         return true;
-      //       }else{
-      //         if(waitingOutputOnce){
-      //           output('Waiting for other transactons to occur');
-      //           waitingOutputOnce = false;
-      //         }
-      //
-      //       }
-      //
-      //     }, 10000)
-      //   }, 1000);
-      // }
 
     function runShowBlocks(args=false, cmd=false){
       output("<span class='output-header'>BLOCKCHAIN</span>"); //<br><hr>
@@ -563,10 +530,10 @@ function fetchFromDistantNode(url){
   $.get(url).then(function(data){
 
     rawBlockchain = JSON.parse(data);
-    console.log(sachaAddress);
+    console.log(sachaAddress, url);
     distantBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
     blockchain = longestChain(blockchain, distantBlockchain);
-    console.log('Longest blockchain has that many blocks:',blockchain.chain.length);
+    console.log('Longest blockchain has that many blocks:',blockchain.chain.length, url);
 
   })
 }
@@ -589,7 +556,7 @@ function saveBlockchainToServer(){
 function sendBlockchainToRemoteNode(url){
   console.log('Sending blockchain remotely...');
   $.post(url, { blockchain: JSON.stringify(blockchain)}, function(data, status){
-    console.log('Blockchain Sent: ', data);
+    
   });
 }
 
@@ -654,7 +621,7 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
 }
 
 function initPeerConnection(){
-  var socket = io('http://192.168.0.153:3030/');
+  var socket = io('http://localhost:8080/');
   var p2p = new P2P(socket);
 
   p2p.on('ready', function(){
@@ -670,9 +637,17 @@ function initPeerConnection(){
   });
 }
 
+function clearAll() {
+  for (var i = setTimeout(function() {}, 0); i > 0; i--) {
+    window.clearInterval(i);
+    window.clearTimeout(i);
+    if (window.cancelAnimationFrame) window.cancelAnimationFrame(i);
+  }
+}
+
 
 window.onbeforeunload = function() {
-    runClear();
+    clearAll();
     localStorage.setItem('savedSachaAddress', JSON.stringify(sachaAddress));
     localStorage.setItem('savedBackground', $('body').css("background-image"));
     //saving the blockchain to server, then to file
@@ -696,10 +671,11 @@ window.onload = function() {
     var localStoredSachaAddress = localStorage.getItem('savedSachaAddress');
     var rawSachaAddress = JSON.parse(localStoredSachaAddress);
     sachaAddress = new BlockchainAddress(rawSachaAddress.address, rawSachaAddress.blocksMined,  rawSachaAddress.balance);
-
+    listenForChangeOnBlockchain();
     //Give blockchain some time to be fetched from server - It can be pretty big
     if(blockchain){
       blockchain.addNodeAddress(sachaAddress);
+
     }else{
       setTimeout(function(){
         if(blockchain){
@@ -746,8 +722,9 @@ function listenForChangeOnBlockchain(){
       rawBlockchain = JSON.parse(data);
 
       if(rawBlockchain.chain.length >= blockchain.chain.length && rawBlockchain.pendingTransactions.length >= blockchain.pendingTransactions.length){
-        console.log('Updated blockchain');
+
         blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
+        //saveBlockchainToServer();
       }
 
     })

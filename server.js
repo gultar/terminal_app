@@ -6,16 +6,20 @@ const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require(
 const bodyParser = require('body-parser');
 const app = express();
 const router = express.Router();
+const axios = require('axios');
 const JSONdb = require('simple-json-db');
 const p2pServer = require('./p2p-server');
 const WebSocket = require('ws');
 const { getIPAddress } = require('./backend/ipFinder.js');
+const http = require('http');
 
 let nodeAddresses = [getIPAddress(), '192.168.0.153', '169.254.139.53'];
+let connectedNodes = [];
+
 let peers = {};
 let peersid = ['raspiOne', 'raspiTwo'];
 let peerAddr = ['ws://169.254.139.53:8080', 'ws://169.254.139.53:8081'];
-
+let nodeBlockchainList = [];
 const PORT = 5000;
 
 var allowCrossDomain = function(req, res, next) {
@@ -74,10 +78,18 @@ const startServer = () => {
   });
 
   app.post('/blockchain', function(req, res){
-    let rawBlockchain = JSON.parse(req.body.blockchain);
-    blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
-    rawBlockchain = null;
-    saveBlockchain(blockchain);
+
+    if(typeof req.body.blockchain !== 'undefined'){
+      let rawBlockchain = JSON.parse(req.body.blockchain);
+      var receivedBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
+      rawBlockchain = null;
+      blockchain = compareBlockchains(blockchain, receivedBlockchain);
+      console.log('A node sent a copy of the blockchain');
+      saveBlockchain(blockchain);
+    }else{
+      console.log('Blockchain received from node is undefined');
+    }
+
   });
 
   app.post('/transaction', function(req, res){
@@ -88,40 +100,56 @@ const startServer = () => {
       saveBlockchain(blockchain);
     }else{
       res.status(400);
-      res.send('Blockchain not loaded or loading...');
+      res.send('Transaction not loaded or loading...');
     }
 
   })
 
   app.post('/mine', function(req, res){
-    let rawMiningAddr = JSON.parse(req.body.address);
+    if(connectedNodes.length > 0){
+      let rawMiningAddr = JSON.parse(req.body.address);
 
-    miningAddr = new BlockchainAddress(rawMiningAddr.address, rawMiningAddr.blocksMined, rawMiningAddr.balance);
-    console.log(miningAddr);
-    var miningSuccess;
-    var waitingOutputOnce = true;
+      miningAddr = new BlockchainAddress(rawMiningAddr.address, rawMiningAddr.blocksMined, rawMiningAddr.balance);
+      console.log(miningAddr);
+      var miningSuccess;
+      var waitingOutputOnce = true;
 
-    if(typeof blockchain != 'undefined'){
-      console.log('Block:', blockchain);
-      miningSuccess = blockchain.minePendingTransactions(miningAddr);
-      if(miningSuccess){
-        res.send(JSON.stringify(blockchain));
-        console.log('Block mined: ' + blockchain.getLatestBlock().hash);
-        console.log(miningAddr.address + ' mined ' + miningAddr.getBlocksMined() + ' blocks');
-        console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
-        saveBlockchain(blockchain);
-        return true;
-      }else{
-        if(waitingOutputOnce){
-          console.log('Waiting for other transactions to occur');
-          waitingOutputOnce = false;
-          res.status(400);
-          res.send('Waiting for other transactions to occur');
+      if(typeof blockchain != 'undefined'){
+        console.log('Block:', blockchain);
+        miningSuccess = blockchain.minePendingTransactions(miningAddr);
+        if(miningSuccess){
+          res.send(JSON.stringify(blockchain));
+          console.log('Block mined: ' + blockchain.getLatestBlock().hash);
+          console.log(miningAddr.address + ' mined ' + miningAddr.getBlocksMined() + ' blocks');
+          console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
+          saveBlockchain(blockchain);
+          return true;
+        }else{
+          if(waitingOutputOnce){
+            console.log('Waiting for other transactions to occur');
+            waitingOutputOnce = false;
+            res.status(400);
+            res.send('Waiting for other transactions to occur');
+          }
+
         }
-
-      }
     }
+
+  }else{
+    console.log('ERROR: Need at least one other node to mine');
+    res.status(400);
+    res.send('ERROR: Need at least one other node to mine');
+  }
+
+
+
   })
+
+  app.on('uncaughtException', function (exception) {
+    console.log(exception); // to see your exception details in the console
+    // if you are on production, maybe you can send the exception details to your
+    // email as well ?
+  });
 
 }
 
@@ -247,50 +275,139 @@ function pingAllPeers(blockchain){
 
 
 let fetchFromDistantNode = (address) => {
-  const req = new XMLHttpRequest();
-  req.open('GET', address + ':5000/blockchain', false);
-  req.send(null);
 
-  if (req.status === 200) {
-      console.log("Réponse reçue: %s", req.responseText);
-
-      rawBlockchainFromPeerNode = JSON.parse(req.responseText);
-
-     return new Blockchain(rawBlockchainFromPeerNode.chain, rawBlockchainFromPeerNode.pendingTransactions, rawBlockchainFromPeerNode.blockbase);
+  let rawReceivedBlockchain = false;
+  var body = '';
+  http.get({
+      host: address,
+      path: '/blockchain',
+      port: 5000
+  }, function(resp){
 
 
-  } else {
-      console.log("Status de la réponse: %d (%s)", req.status, req.statusText);
-  }
+     resp.on('data', function(chunk){
+         body += chunk;
+     });
+
+     resp.on('end', function(){
+
+       rawReceivedBlockchain = JSON.parse(body);
+       if(typeof rawReceivedBlockchain !== 'undefined'){
+         rawReceivedBlockchain = JSON.parse(rawReceivedBlockchain);
+         let receivedBlockchain = new Blockchain(rawReceivedBlockchain.chain, rawReceivedBlockchain.pendingTransactions, rawReceivedBlockchain.blockbase);
+         nodeBlockchainList.push(receivedBlockchain);
+         console.log('Received a blockchain from ', address);
+       }else{
+         console.log('Received an undefined blockchain');
+       }
+
+     });
+  }).on('error', function(err){
+      console.log('error ' + err)
+  })
+
+
 }
 
 let queryAllNodesForBlockchain = (blockchainFromFile) => {
   let longestBlockchain = blockchainFromFile;
-  console.log('Querying all nodes for blockchain...');
+  console.log('Querying all nodes for blockchain...', nodeAddresses);
   for(let i=0; i < nodeAddresses.length; i++){
-    nodeBlockchain = fetchFromDistantNode(nodeAddresses[i]);
-    if(nodeBlockchain.isChainValid()){
-      longestBlockchain = compareBlockchains(longestBlockchain, nodeAddresses);
-    }else{
-      //invalid blockchain
-      console.log('Address: ' + nodeAddresses[i] + ' has an invalid blockchain');
+
+    if(nodeAddresses[i] !== getIPAddress()){
+      console.log('Fetching from:', nodeAddresses[i])
+      fetchFromDistantNode(nodeAddresses[i], longestBlockchain);
+
+      setTimeout(function(){
+        if(nodeBlockchainList[i].isChainValid()){
+          longestBlockchain = compareBlockchains(longestBlockchain, nodeBlockchainList[i]);
+          connectedNodes.push(nodeAddresses[i]);
+        }else{
+          //invalid blockchain
+          console.log('Address: ' + nodeAddresses[i] + ' has an invalid blockchain');
+        }
+      },4000)
+
     }
 
   }
   blockchain = longestBlockchain;
 }
 
+let sendBlockchainToAllNodes = (blockchainToSend) => {
+  for(let i=0; i < nodeAddresses.length; i++){
+
+    if(blockchain.isChainValid()){
+      sendDataToNode(nodeAddresses[i]+':5000/blockchain', blockchainToSend);
+    }else{
+      //invalid blockchain
+      console.log('Address: ' + nodeAddresses[i] + ' has an invalid blockchain');
+    }
+
+  }
+}
+
+let broadcastNewBlock = (block) => {
+
+}
+//Modify it whether it's a block or the whole blockchain
+let sendDataToNode = (address, path, data) => {
+
+  var options = {
+    hostname: address,
+    port: 5000,
+    path: path,
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    }
+  };
+  var req = http.request(options, function(res) {
+    console.log('Status: ' + res.statusCode);
+    console.log('Headers: ' + JSON.stringify(res.headers));
+    res.setEncoding('utf8');
+    res.on('data', function (body) {
+      // console.log('Body: ' + body);
+    });
+  });
+  req.on('error', function(e) {
+    //console.log('problem with request: ' + e.message);
+  });
+  // write data to request body
+  req.write(JSON.stringify(data));
+  req.end();
+
+}
+
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   let longestBlockchain;
 
   if(receivedBlockchain){
-      if(storedBlockchain.chain.length >= receivedBlockchain.chain.length){
-        if(storedBlockchain.pendingTransactions.length >= receivedBlockchain.pendingTransactions.length){
+    if(storedBlockchain.chain.length > receivedBlockchain.chain.length){
+        if(storedBlockchain.pendingTransactions.length > receivedBlockchain.pendingTransactions.length){
 
             longestBlockchain = storedBlockchain;
         }
         else{
           longestBlockchain = receivedBlockchain;
+        }
+    }
+    else if(storedBlockchain.chain.length == receivedBlockchain.chain.length){ //Same nb of blocks
+        let lastStoredBlock = storedBlockchain.getLatestBlock();
+        let lastReceivedBlock = receivedBlockchain.getLatestBlock();
+        if(lastStoredBlock.hash === lastReceivedBlock.hash){ //Same blocks - it's fine
+          longestBlockchain = storedBlockchain;
+        }else{                                              //Different blocks - Find the lastest and modify it
+          if(lastStoredBlock.timestamp > lastReceivedBlock.timestamp){
+            longestChain = receivedBlockchain;
+            lastStoredBlock.previousHash = lastReceivedBlock.hash;
+            receivedBlockchain.addBlock(lastStoredBlock);
+
+          }else{
+            longestChain = storedBlockchain;
+            lastReceivedBlock.previousHash = lastStoredBlock.hash;
+            receivedBlockchain.addBlock(lastReceivedBlock);
+          }
         }
     }
     else{
