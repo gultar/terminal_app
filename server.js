@@ -260,9 +260,10 @@ saveBlockchain = (blockchainReceived) => {
 
             let blockchainFromFile = JSON.parse(data);
             blockchainFromFile = new Blockchain(blockchainFromFile.chain, blockchainFromFile.pendingTransactions, blockchainFromFile.blockbase);
-            let blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
+            blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
+            sendBlockchainToAllNodes(blockchain);
             let json = JSON.stringify(blockchain);
-            
+
             if(json != undefined){
               console.log('Writing to file...');
               fs.writeFile('blockchain.json', json);
