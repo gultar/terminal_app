@@ -434,7 +434,7 @@ setTimeout(
   function(){
     //queryAllNodesForBlockchain(blockchain);
     console.log('Inititating p2p connections');
-    initP2PNode(peerAddr);
+    initP2PNode(blockchain);
     pingAllPeers();
   }
 , 6000);
