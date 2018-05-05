@@ -671,7 +671,7 @@ window.onload = function() {
     var localStoredSachaAddress = localStorage.getItem('savedSachaAddress');
     var rawSachaAddress = JSON.parse(localStoredSachaAddress);
     sachaAddress = new BlockchainAddress(rawSachaAddress.address, rawSachaAddress.blocksMined,  rawSachaAddress.balance);
-    listenForChangeOnBlockchain();
+    // listenForChangeOnBlockchain();
     //Give blockchain some time to be fetched from server - It can be pretty big
     if(blockchain){
       blockchain.addNodeAddress(sachaAddress);
