@@ -5,17 +5,39 @@ const express = require('express');
 const http = require('http');
 const url = require('url');
 const WebSocket = require('ws');
+const bodyParser = require('body-parser');
+
 
 const app = express();
 //let peerAddr = ['ws://169.254.139.53:8080', 'ws://169.254.139.53:8081'];
 // let peerAddr = ['ws://192.168.0.153:8080', 'ws://169.254.105.109:8080','ws://169.254.139.53:8080', 'ws://192.168.0.112:8080', 'ws://192.168.1.75:8080', 'ws://192.168.1.68:8080'];
 let peerAddr = ['ws://192.168.1.75:8080','ws://192.168.1.68:8080'];
 
+
+var allowCrossDomain = function(req, res, next) {
+    res.header('Access-Control-Allow-Origin', "*");
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    next();
+}
+
+
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
+app.use(allowCrossDomain);
+
 function initP2PServer(blockchain){
 
 
-  app.use(function (req, res) {
-    res.send({ msg: "hello" });
+  app.use(express.static(__dirname+'/views'));
+
+  app.get('/', function(req, res, next) {
+
+      res.render('index', { data: JSON.stringify(blockchain) });
+  });
+
+  app.get('/blockchain', function(req, res, next){
+    res.json(JSON.stringify(blockchain));
   });
 
   const server = http.createServer(app);
@@ -30,7 +52,7 @@ function initP2PServer(blockchain){
     wss.broadcast = function broadcast(data) {
         wss.clients.forEach(function each(client) {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(ip);
+            client.send(blockchain.chain.length,ip);
           }
         });
       };
