@@ -8,7 +8,7 @@ const app = express();
 const router = express.Router();
 const axios = require('axios');
 const JSONdb = require('simple-json-db');
-const p2pServer = require('./p2p-server');
+const { initP2PServer, pingAllPeers } = require('./p2p-server');
 const WebSocket = require('ws');
 const { getIPAddress } = require('./backend/ipFinder.js');
 const http = require('http');
@@ -223,61 +223,61 @@ saveBlockchain = (blockchainReceived) => {
       });
 }
 
-let initP2PNode = (blockchainFromNode) => {
+// let initP2PNode = (blockchainFromNode) => {
+//
+//
+//   let WebSocketServer = require('ws').Server,
+//       wss = new WebSocketServer({ port: 8080 });
+//
+//     // Broadcast to all.
+//     wss.broadcast = function broadcast(data) {
+//       wss.clients.forEach(function each(client) {
+//         if (client.readyState === WebSocket.OPEN) {
+//           client.send(data);
+//         }
+//       });
+//     };
+//
+//     // wss.broadcast('Hey!');
+//
+//     wss.on('connection', function connection(ws) {
+//       ws.on('message', function incoming(data) {
+//         // Broadcast to everyone else.
+//         wss.broadcast(JSON.stringify(blockchainFromNode));
+//
+//       });
+//     });
+//
+//
+//     wss.on('error', function(err){
+//       console.log('ERROR:', err);
+//     });
+// // Broadcast to all.
+// }
 
-
-  let WebSocketServer = require('ws').Server,
-      wss = new WebSocketServer({ port: 8080 });
-
-    // Broadcast to all.
-    wss.broadcast = function broadcast(data) {
-      wss.clients.forEach(function each(client) {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(data);
-        }
-      });
-    };
-
-    // wss.broadcast('Hey!');
-
-    wss.on('connection', function connection(ws) {
-      ws.on('message', function incoming(data) {
-        // Broadcast to everyone else.
-        wss.broadcast(JSON.stringify(blockchainFromNode));
-
-      });
-    });
-
-
-    wss.on('error', function(err){
-      console.log('ERROR:', err);
-    });
-// Broadcast to all.
-}
-
-function peerConnect(i, blockchainFromNode){
-    return function(){
-        peers[peersid[i]] = new WebSocket(peerAddr[i]);
-        peers[peersid[i]].on('open', function(){
-            console.log('Sending: ', peerAddr);
-            peers[peersid[i]].send(JSON.stringify(blockchainFromNode)); //
-        });
-
-		peers[peersid[i]].on('message', function(data){
-			console.log('Received', data.value);
-		});
-    }
-}
-
-function pingAllPeers(blockchain){
-  for(var i in peersid){
-      peers[peersid[i]] = peerConnect(i, blockchain);
-  }
-
-  for(var j in peersid){
-      peers[peersid[j]]();
-  }
-}
+// function peerConnect(i, blockchainFromNode){
+//     return function(){
+//         peers[peersid[i]] = new WebSocket(peerAddr[i]);
+//         peers[peersid[i]].on('open', function(){
+//             console.log('Sending: ', peerAddr);
+//             peers[peersid[i]].send(JSON.stringify(blockchainFromNode)); //
+//         });
+//
+// 		peers[peersid[i]].on('message', function(data){
+// 			console.log('Received', data.value);
+// 		});
+//     }
+// }
+//
+// function pingAllPeers(blockchain){
+//   for(var i in peersid){
+//       peers[peersid[i]] = peerConnect(i, blockchain);
+//   }
+//
+//   for(var j in peersid){
+//       peers[peersid[j]]();
+//   }
+// }
 
 
 let fetchFromDistantNode = (address) => {
@@ -429,12 +429,12 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 }
 
 initBlockchain();
-startServer();
+// startServer();
 setTimeout(
   function(){
     //queryAllNodesForBlockchain(blockchain);
     console.log('Inititating p2p connections');
-    initP2PNode(blockchain);
-    pingAllPeers(blockchain);
+    initP2PNode({'test':'blockchain'});
+    pingAllPeers();
   }
 , 6000);
