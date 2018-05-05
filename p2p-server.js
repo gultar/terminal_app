@@ -16,6 +16,10 @@ function initP2PServer(){
       console.log('received: %s', message);
     });
 
+  wss.on('error', function(err){
+    console.log('ERROR:', err);
+  });
+
   ws.send('something');
   });
 
@@ -33,6 +37,10 @@ function peerConnect(i){
 		peers[peersid[i]].on('message', function(data){
 			console.log('Received', data);
 		});
+
+    peers[peersid[i]].on('error', function(err){
+      console.log('ERROR CLIENT:', err);
+    })
     }
 }
 
