@@ -30,7 +30,7 @@ function peerConnect(i){
     return function(){
         peers[peersid[i]] = new WebSocket(peerAddr[i]);
         peers[peersid[i]].on('open', function(){
-            peers[peersid[i]].send(peersid[i]);
+            peers[peersid[i]].send(peerAddr[i]);
         });
 
 		peers[peersid[i]].on('message', function(data){
