@@ -225,36 +225,42 @@ saveBlockchain = (blockchainReceived) => {
 
 let initP2PNode = (blockchainFromNode) => {
 
-    let WebSocketServer = require('ws').Server,
-        wss = new WebSocketServer({ port: 8080 });
+
+  let WebSocketServer = require('ws').Server,
+      wss = new WebSocketServer({ port: 8080 });
+
+    // Broadcast to all.
+    wss.broadcast = function broadcast(data) {
+      wss.clients.forEach(function each(client) {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(data);
+        }
+      });
+    };
+
+    // wss.broadcast('Hey!');
 
     wss.on('connection', function connection(ws) {
-
-      ws.on('message', function incoming(peerMsg) {
-
-        console.log('Msg from peer: %s', peerMsg);
-      });
-
       ws.on('message', function incoming(data) {
         // Broadcast to everyone else.
-        wss.clients.forEach(function each(client) {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(data);
-          }
-        });
+        wss.broadcast(JSON.stringify(blockchainFromNode));
+
       });
-      wss.send(blockchainFromNode);
     });
 
+
+    wss.on('error', function(err){
+      console.log('ERROR:', err);
+    });
 // Broadcast to all.
 }
 
-function peerConnect(i){
+function peerConnect(i, blockchainFromNode){
     return function(){
         peers[peersid[i]] = new WebSocket(peerAddr[i]);
         peers[peersid[i]].on('open', function(){
             console.log('Sending: ', peerAddr);
-            peers[peersid[i]].send(peerAddr); //
+            peers[peersid[i]].send(JSON.stringify(blockchainFromNode)); //
         });
 
 		peers[peersid[i]].on('message', function(data){
