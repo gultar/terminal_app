@@ -30,7 +30,7 @@ function initP2PServer(blockchain){
     wss.broadcast = function broadcast(data) {
         wss.clients.forEach(function each(client) {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(data, ip);
+            client.send(ip);
           }
         });
       };
