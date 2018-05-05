@@ -432,7 +432,7 @@ initBlockchain();
 startServer();
 setTimeout(
   function(){
-    queryAllNodesForBlockchain(blockchain);
+    //queryAllNodesForBlockchain(blockchain);
     console.log('Inititating p2p connections');
     initP2PNode(blockchain);
     pingAllPeers(blockchain);

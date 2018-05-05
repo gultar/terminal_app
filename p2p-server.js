@@ -63,4 +63,7 @@ function pingAllPeers(){
   }
 }
 
+initP2PServer({'test':'test'});
+pingAllPeers({'client':'client'});
+
 module.exports = { initP2PServer, pingAllPeers }
