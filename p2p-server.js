@@ -14,20 +14,25 @@ const app = express();
 let peerAddr = ['ws://192.168.1.75:8080','ws://192.168.1.68:8080'];
 
 
-var allowCrossDomain = function(req, res, next) {
-    res.header('Access-Control-Allow-Origin', "*");
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    next();
-}
+// var allowCrossDomain = function(req, res, next) {
+//     res.header('Access-Control-Allow-Origin', "*");
+//     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+//     res.header('Access-Control-Allow-Headers', 'Content-Type');
+//     next();
+// }
 
 
 app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
-app.use(allowCrossDomain);
+// app.use(allowCrossDomain);
 
 function initP2PServer(blockchain){
 
+
+
+
+  const server = http.createServer(app);
+  const wss = new WebSocket.Server({ server });
 
   app.use(express.static(__dirname+'/views'));
 
@@ -36,12 +41,10 @@ function initP2PServer(blockchain){
       res.render('index', { data: JSON.stringify(blockchain) });
   });
 
+
   app.get('/blockchain', function(req, res, next){
     res.json(JSON.stringify(blockchain));
   });
-
-  const server = http.createServer(app);
-  const wss = new WebSocket.Server({ server });
 
   wss.on('connection', function connection(ws, req) {
     const location = url.parse(req.url, true);
@@ -64,6 +67,10 @@ function initP2PServer(blockchain){
 
 
   });
+
+  app.get('/broadcast',(req, res)=>{
+    wss.broadcast('Hello');
+  })
 
   server.listen(8080, function listening() {
     console.log('Listening on %d', server.address().port);

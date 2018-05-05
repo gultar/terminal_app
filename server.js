@@ -232,12 +232,20 @@ loadBlockchainFromServer = () => {
             });
         } else {
           console.log('Generating new blockchain')
-            let newBlockchain = new Blockchain()
+            let newBlockchain = new Blockchain();
+            seedNodeList(newBlockchain);
+            blockchain = newBlockchain;
             saveBlockchain(newBlockchain);
             console.log("file does not exist")
             return false;
         }
       });
+}
+
+seedNodeList = (blockchain) => {
+  for(var i=0; i < nodeAddresses.length; i++){
+    blockchain.addNodeAddress(nodeAddresses[i]);
+  }
 }
 
 saveBlockchain = (blockchainReceived) => {
@@ -246,19 +254,21 @@ saveBlockchain = (blockchainReceived) => {
           console.log("Saving Blockchain data to existing File");
           fs.readFile('blockchain.json', function readFileCallback(err, data){
             console.log('Reading blockchain.json file...');
-          if (err){
-              console.log(err);
-          }
+            if (err){
+                console.log(err);
+            }
 
-          let blockchainFromFile = JSON.parse(data);
-          let blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
-          let json = JSON.stringify(blockchain);
-          if(json != undefined){
-            console.log('Writing to file...');
-            fs.writeFile('blockchain.json', json);
-          }
+            let blockchainFromFile = JSON.parse(data);
+            blockchainFromFile = new Blockchain(blockchainFromFile.chain, blockchainFromFile.pendingTransactions, blockchainFromFile.blockbase);
+            let blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
+            let json = JSON.stringify(blockchain);
+            
+            if(json != undefined){
+              console.log('Writing to file...');
+              fs.writeFile('blockchain.json', json);
+            }
 
-          });
+            });
       } else {
           console.log("Creating new Blockchain file and saving to it")
           let json = JSON.stringify(blockchainReceived);
@@ -452,7 +462,7 @@ setTimeout(
   function(){
     queryAllNodesForBlockchain(blockchain);
     console.log('Inititating p2p connections');
-    // initP2PServer(blockchain);
+    initP2PServer(blockchain);
     pingAllPeers();
   }
 , 6000);

@@ -7,6 +7,8 @@ console.log('IP:',ip);
 var sachaAddress = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 var hexagrams = [{}];
 var backgroundUrl = $('body').css("background-image");
+var connection = new WebSocket('ws://192.168.1.68:8080');
+
 
 
 function fireKey(el,key)
@@ -621,20 +623,21 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
 }
 
 function initPeerConnection(){
-  var socket = io('http://localhost:8080/');
-  var p2p = new P2P(socket);
 
-  p2p.on('ready', function(){
-    p2p.usePeerConnection = true;
-    p2psocket.emit('peer-obj', 'Hello there. I am ' + p2psocket.peerId)//p2p.emit('peer-obj', { peerId: peerId });
-    p2p.emit('peer-msg', 'Hello World');
-  })
+  console.log(connection);
+  connection.onopen = function (event) {
+    connection.send('Connected?', event.currentTarget.url);
+  };
 
-  // this event will be triggered over the socket transport
-  // until `usePeerConnection` is set to `true`
-  p2p.on('peer-msg', function(data){
-    console.log(data);
-  });
+  // Log errors
+  connection.onerror = function (error) {
+    console.error('WebSocket Error ' + error);
+  };
+
+  // Log messages from the server
+  connection.onmessage = function (e) {
+    console.log('From Server:',e)
+  };
 }
 
 function clearAll() {
@@ -671,7 +674,7 @@ window.onload = function() {
     var localStoredSachaAddress = localStorage.getItem('savedSachaAddress');
     var rawSachaAddress = JSON.parse(localStoredSachaAddress);
     sachaAddress = new BlockchainAddress(rawSachaAddress.address, rawSachaAddress.blocksMined,  rawSachaAddress.balance);
-    // listenForChangeOnBlockchain();
+    listenForChangeOnBlockchain();
     //Give blockchain some time to be fetched from server - It can be pretty big
     if(blockchain){
       blockchain.addNodeAddress(sachaAddress);
@@ -718,21 +721,25 @@ function getLatestBlock(blockchain){
 function listenForChangeOnBlockchain(){
   setInterval(function(){
     $.get('http://localhost:5000/blockchain').then(function(data){
+      if(data != JSON.stringify(blockchain)){
 
-      rawBlockchain = JSON.parse(data);
 
-      if(rawBlockchain.chain.length >= blockchain.chain.length && rawBlockchain.pendingTransactions.length >= blockchain.pendingTransactions.length){
+        rawBlockchain = JSON.parse(data);
 
-        var newBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
-        if(newBlockchain.chain > blockchain.chain){
-          //check if pendingTransactions are longer too
-        }else if(newBlockchain.chain < blockchain.chain){
+        if(rawBlockchain.chain.length >= blockchain.chain.length && rawBlockchain.pendingTransactions.length >= blockchain.pendingTransactions.length){
 
-        }else{
-          blockchain = newBlockchain;
+          var newBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
+          if(newBlockchain.chain > blockchain.chain){
+            //check if pendingTransactions are longer too
+          }else if(newBlockchain.chain < blockchain.chain){
+
+          }else{
+            blockchain = newBlockchain;
+          }
+
+          //saveBlockchainToServer();
         }
 
-        //saveBlockchainToServer();
       }
 
     })
