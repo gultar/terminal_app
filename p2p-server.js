@@ -63,4 +63,4 @@ function pingAllPeers(){
   }
 }
 
-module.exports = { WebSocketServer, pingAllPeers }
+module.exports = { initP2PServer, pingAllPeers }
