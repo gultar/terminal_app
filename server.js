@@ -52,7 +52,7 @@ const initBlockchain = () => {
     if(!blockchainFetched){
       console.log('No blockchain is available');
       blockchain = new Blockchain();
-      blockchain.addNodeAddress()
+      seedNodeList(blockchain);
 
     }else{
       blockchain = new Blockchain(blockchainFetched.chain, blockchainFetched.pendingTransactions, blockchainFetched.nodeAddresses);
@@ -75,6 +75,14 @@ const startServer = () => {
 
   app.get('/blockchain', function(req, res, next){
     res.json(JSON.stringify(blockchain));
+  });
+
+  app.post('/broadcast', function(req, res, next){
+
+    let rawBlockchainToSend = JSON.parse(req.body.blockchain);
+    let blockchainToSend = new Blockchain(rawBlockchainToSend.chain, rawBlockchainToSend.pendingTransactions, rawBlockchainToSend.blockbase)
+
+    sendBlockchainToAllNodes(blockchainToSend);
   });
 
   app.post('/blockchain', function(req, res){
@@ -261,7 +269,7 @@ saveBlockchain = (blockchainReceived) => {
             let blockchainFromFile = JSON.parse(data);
             blockchainFromFile = new Blockchain(blockchainFromFile.chain, blockchainFromFile.pendingTransactions, blockchainFromFile.blockbase);
             blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
-            sendBlockchainToAllNodes(blockchain);
+
             let json = JSON.stringify(blockchain);
 
             if(json != undefined){
@@ -372,8 +380,8 @@ let queryAllNodesForBlockchain = (blockchainFromFile) => {
 let sendBlockchainToAllNodes = (blockchainToSend) => {
   for(let i=0; i < nodeAddresses.length; i++){
 
-    if(blockchain.isChainValid()){
-      sendDataToNode(nodeAddresses[i]+':5000/blockchain', blockchainToSend);
+    if(blockchainToSend.isChainValid()){
+      sendDataToNode(nodeAddresses[i], '/blockchain', blockchainToSend);
     }else{
       //invalid blockchain
       console.log('Address: ' + nodeAddresses[i] + ' has an invalid blockchain');
@@ -398,8 +406,8 @@ let sendDataToNode = (address, path, data) => {
     }
   };
   var req = http.request(options, function(res) {
-    console.log('Status: ' + res.statusCode);
-    console.log('Headers: ' + JSON.stringify(res.headers));
+    // console.log('Status: ' + res.statusCode);
+    // console.log('Headers: ' + JSON.stringify(res.headers));
     res.setEncoding('utf8');
     res.on('data', function (body) {
       // console.log('Body: ' + body);

@@ -6,12 +6,12 @@ const http = require('http');
 const url = require('url');
 const WebSocket = require('ws');
 const bodyParser = require('body-parser');
-
+const expressWs = require('express-ws')(app);
 
 const app = express();
 //let peerAddr = ['ws://169.254.139.53:8080', 'ws://169.254.139.53:8081'];
-// let peerAddr = ['ws://192.168.0.153:8080', 'ws://169.254.105.109:8080','ws://169.254.139.53:8080', 'ws://192.168.0.112:8080', 'ws://192.168.1.75:8080', 'ws://192.168.1.68:8080'];
-let peerAddr = ['ws://192.168.1.75:8080','ws://192.168.1.68:8080'];
+let peerAddr = ['ws://192.168.0.153:8080', 'ws://169.254.105.109:8080','ws://169.254.139.53:8080', 'ws://192.168.0.112:8080', 'ws://192.168.1.75:8080', 'ws://192.168.1.68:8080', 'ws://192.168.0.154:8080'];
+// let peerAddr = ['ws://192.168.1.75:8080','ws://192.168.1.68:8080'];
 
 
 // var allowCrossDomain = function(req, res, next) {
@@ -68,7 +68,7 @@ function initP2PServer(blockchain){
 
   });
 
-  app.get('/broadcast',(req, res)=>{
+  app.ws('/broadcast',(req, res)=>{
     wss.broadcast('Hello');
   })
 
@@ -109,7 +109,7 @@ function pingAllPeers(){
   }
 }
 //
-// initP2PServer({'test':'test'});
-// pingAllPeers({'client':'client'});
+initP2PServer({'test':'test'});
+pingAllPeers({'client':'client'});
 
 module.exports = { initP2PServer, pingAllPeers }

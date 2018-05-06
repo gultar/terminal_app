@@ -1,7 +1,7 @@
 var cryptos = [{}];
 var blockchain;
 const blockchainURL = 'http://localhost:5000/blockchain';
-const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain']
+const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain', 'http://192.168.1.68:5000/blockchain', 'http://192.168.1.75:5000/blockchain']
 var ip = '192.168.0.112'
 console.log('IP:',ip);
 var sachaAddress = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
@@ -556,8 +556,8 @@ function saveBlockchainToServer(){
 }
 
 function sendBlockchainToRemoteNode(url){
-  console.log('Sending blockchain remotely...');
-  $.post(url, { blockchain: JSON.stringify(blockchain)}, function(data, status){
+  console.log('Sending blockchain remotely...', blockchain);
+  $.post(url, { 'blockchain': JSON.stringify(blockchain)}, function(data, status){
 
   });
 }
