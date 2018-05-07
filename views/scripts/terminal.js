@@ -555,9 +555,9 @@ function saveBlockchainToServer(){
   //sendBlockchainToRemoteNode();
 }
 
-function sendBlockchainToRemoteNode(url){
+function sendBlockchainToRemoteNode(url, blockchain){
   console.log('Sending blockchain remotely...', blockchain);
-  $.post(url, { blockchain: JSON.stringify(blockchain)}, function(data, status){
+  $.post(url, { blockchain: JSON.stringify(blockchain)}, function(data){
 
   });
 }
