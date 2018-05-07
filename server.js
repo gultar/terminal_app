@@ -86,7 +86,7 @@ const startServer = () => {
   });
 
   app.post('/blockchain', function(req, res){
-
+    console.log('Blockchain------:', req.body.blockchain);
     if(typeof req.body.blockchain !== 'undefined'){
       let rawBlockchain = JSON.parse(req.body.blockchain);
       var receivedBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
