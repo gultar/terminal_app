@@ -79,14 +79,12 @@ const startServer = () => {
 
   app.post('/broadcast', function(req, res, next){
 
-    let rawBlockchainToSend = JSON.parse(req.body.blockchain);
-    let blockchainToSend = new Blockchain(rawBlockchainToSend.chain, rawBlockchainToSend.pendingTransactions, rawBlockchainToSend.blockbase)
-
-    sendBlockchainToAllNodes(blockchainToSend);
+    let rawBlockchainToBroadcast = JSON.parse(req.body.blockchain);
+    let blockchainToBroadcast = new Blockchain(rawBlockchainToBroadcast.chain, rawBlockchainToBroadcast.pendingTransactions, rawBlockchainToBroadcast.blockbase);
+    sendBlockchainToAllNodes(blockchainToBroadcast);
   });
 
   app.post('/blockchain', function(req, res){
-    console.log('Blockchain------:', req.body.blockchain);
     if(typeof req.body.blockchain !== 'undefined'){
       let rawBlockchain = JSON.parse(req.body.blockchain);
       var receivedBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
@@ -405,12 +403,13 @@ let sendDataToNode = (address, path, data) => {
         'Content-Type': 'application/json',
     }
   };
+  console.log('Data:', data)
   var req = http.request(options, function(res) {
     // console.log('Status: ' + res.statusCode);
     // console.log('Headers: ' + JSON.stringify(res.headers));
     res.setEncoding('utf8');
     res.on('data', function (body) {
-      // console.log('Body: ' + body);
+      console.log('Body: ' + body);
     });
   });
   req.on('error', function(e) {
