@@ -94,6 +94,7 @@ const startServer = () => {
       saveBlockchain(blockchain);
 
     }else{
+      console.log(req)
       console.log('Blockchain received from node is undefined');
     }
 
@@ -392,18 +393,19 @@ let broadcastNewBlock = (block) => {
 
 }
 //Modify it whether it's a block or the whole blockchain
-let sendDataToNode = (address, path, data) => {
-
+let sendDataToNode = (address, path, jsonData) => {
+  let bodyData = {blockchain:JSON.stringify(jsonData)}
   var options = {
     hostname: address,
     port: 5000,
     path: path,
     method: 'POST',
+    body:bodyData,
     headers: {
         'Content-Type': 'application/json',
     }
   };
-  console.log('Data:', data)
+  // console.log('Data:', data)
   var req = http.request(options, function(res) {
     // console.log('Status: ' + res.statusCode);
     // console.log('Headers: ' + JSON.stringify(res.headers));
@@ -416,7 +418,8 @@ let sendDataToNode = (address, path, data) => {
     //console.log('problem with request: ' + e.message);
   });
   // write data to request body
-  req.write(JSON.stringify(data));
+  // console.log('DATA:'JSON.stringify(data))
+  req.write(JSON.stringify(bodyData));
   req.end();
 
 }
