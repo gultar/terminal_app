@@ -73,7 +73,7 @@ function getSelectedCryptos(cryptoOne, cryptoTwo=false, cryptoThree=false,
 
       //blockchain.createTransaction(new Transaction('https://min-api.cryptocompare.com/data/pricemulti?fsyms=', '192.168.1.69', data[cryptoOne].USD, JSON.stringify(data)))
       sendTransaction('https://min-api.cryptocompare.com/data/pricemulti?fsyms=', '192.168.1.69', data[cryptoOne].USD, JSON.stringify(data))
-      
+
        updateCryptoValues(cryptoOne, data[cryptoOne]);
       (cryptoTwo ? updateCryptoValues(cryptoTwo, data[cryptoTwo]) : '');
       (cryptoThree ? updateCryptoValues(cryptoThree, data[cryptoThree]) : '');
@@ -86,7 +86,7 @@ function getSelectedCryptos(cryptoOne, cryptoTwo=false, cryptoThree=false,
       (cryptoTen ? updateCryptoValues(cryptoTen, data[cryptoTen]) : '');
 
     })
-  }, 5000);
+  }, 15000);
 }
 
 function getListOfCryptos(){

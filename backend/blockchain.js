@@ -46,14 +46,14 @@ class Block{
 
 /////////////////////Blockchain///////////////////////
 class Blockchain{
-  constructor(chain=false, pendingTransactions=false, blockbase=[{}]){
+  constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: []);
     this.miningReward = 50;
-    this.nodeAddresses = []; //Stores all the node addresses of the P2P network
+    this.nodeAddresses = nodeAddresses; //Stores all the node addresses of the P2P network
     this.blockSize = 10; //Minimum Number of transactions per block
-    this.blockbase = blockbase; //Blockchain database;
+
   }
 
   createGenesisBlock(){
@@ -157,7 +157,7 @@ class Blockchain{
 }
 
 class BlockchainAddress{
-  constructor(address, blocksMined,  balance){
+  constructor(address, blocksMined=0,  balance=0){
     this.address = address;
     this.blocksMined = blocksMined;
     this.balance = balance;

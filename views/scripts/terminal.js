@@ -2,9 +2,10 @@ var cryptos = [{}];
 var blockchain;
 const blockchainURL = 'http://localhost:5000/blockchain';
 const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain', 'http://192.168.1.68:5000/blockchain', 'http://192.168.1.75:5000/blockchain']
+let nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
 var ip = '192.168.0.112'
 console.log('IP:',ip);
-var sachaAddress = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
+var sachaAddress = '192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 var hexagrams = [{}];
 var backgroundUrl = $('body').css("background-image");
 var connection = new WebSocket('ws://192.168.1.68:8080');
@@ -258,7 +259,8 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           break;
 
         case 'mine':
-          startMining(sachaAddress);
+          startMining(blockchain.nodeAddresses[sachaAddress]);
+
           break;
 
         case 'show-blocks':
@@ -521,7 +523,8 @@ function fetchBlockchainFromServer(){
 
       rawBlockchain = JSON.parse(data);
       console.log(sachaAddress);
-      blockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
+
+      blockchain = rawBlockchain//new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, {'sachaAddress':sachaAddress});
       console.log(blockchain);
     })
 
@@ -567,21 +570,21 @@ function startMining(blockchainAddr){
   var waitingOutputOnce = true;
   output('Starting the miner...');
   setInterval(function(){
-    if(blockchain.pendingTransactions.length >= blockchain.blockSize){
+    // if(blockchain.pendingTransactions.length >= blockchain.blockSize){
       $.post('http://localhost:5000/mine', { address: JSON.stringify(blockchainAddr)}, function(data, status, response){
           if(status === 'success'){
             //gets the updated blockchain
             updatedBlockchain = JSON.parse(response.responseText);
             console.log('Latest Block Hash:', updatedBlockchain);
             blockchain = new Blockchain(updatedBlockchain.chain, updatedBlockchain.pendingTransactions, updatedBlockchain.blockbase);
+
             //fetches the latest hash & output the mining address' stats
             var latestBlock = getLatestBlock(blockchain);
             console.log("Length of updated blockchain:",updatedBlockchain.length);
 
             output('Block mined: ' + latestBlock.hash);
-            output(sachaAddress.address + ' mined ' + sachaAddress.blocksMined + ' blocks');
-            output('\nBalance of '+sachaAddress.address+' is '+ sachaAddress.balance);
 
+            displayAddressStats(blockchain.nodeAddresses);
             saveBlockchainToServer();
             sendBlockchainToRemoteNode();
 
@@ -595,14 +598,21 @@ function startMining(blockchainAddr){
 
 
       });
-    }else{
-      if(waitingOutputOnce){
-        output('Waiting for other transactons to occur');
-        waitingOutputOnce = false;
-      }
-    }
-  },5000);
+    // }else{
+    //   if(waitingOutputOnce){
+    //     output('Waiting for other transactons to occur');
+    //     waitingOutputOnce = false;
+    //   }
+    // }
+  },15000);
 
+}
+
+function displayAddressStats(addresses){
+  addresses.forEach(function(address){
+    output(address.address + ' mined ' + address.blocksMined + ' blocks');
+    output('\nBalance of '+address.address+' is '+ address.balance);
+  });
 }
 
 function sendTransaction(fromAddress, toAddress, amount, data=''){
@@ -617,6 +627,7 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
     if(status === 'success'){
       console.log('Transaction sent to blockchain');
     }
+    console.log('Response:', response);
   })
 
 
@@ -651,7 +662,6 @@ function clearAll() {
 
 window.onbeforeunload = function() {
     clearAll();
-    localStorage.setItem('savedSachaAddress', JSON.stringify(sachaAddress));
     localStorage.setItem('savedBackground', $('body').css("background-image"));
     //saving the blockchain to server, then to file
 
@@ -671,21 +681,9 @@ window.onload = function() {
     }
 
     //fetch my address from localstorage after page reload
-    var localStoredSachaAddress = localStorage.getItem('savedSachaAddress');
-    var rawSachaAddress = JSON.parse(localStoredSachaAddress);
-    sachaAddress = new BlockchainAddress(rawSachaAddress.address, rawSachaAddress.blocksMined,  rawSachaAddress.balance);
+
     listenForChangeOnBlockchain();
     //Give blockchain some time to be fetched from server - It can be pretty big
-    if(blockchain){
-      blockchain.addNodeAddress(sachaAddress);
-
-    }else{
-      setTimeout(function(){
-        if(blockchain){
-          blockchain.addNodeAddress(sachaAddress);
-        }
-      },3000)
-    }
 
     $('#myCanvas').css('visibility', 'hidden');
     $('body').css("background-image", localStorage.getItem('savedBackground'));
@@ -726,8 +724,12 @@ function listenForChangeOnBlockchain(){
 
         rawBlockchain = JSON.parse(data);
 
-        if(rawBlockchain.chain.length >= blockchain.chain.length && rawBlockchain.pendingTransactions.length >= blockchain.pendingTransactions.length){
+        if(rawBlockchain.chain.length >= blockchain.chain.length){
+          if(rawBlockchain.pendingTransactions.length >= blockchain.pendingTransactions.length){
+            //if there are more pending transactions in the new blockchain, save that one instead
+          }else{
 
+          }
           var newBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
           if(newBlockchain.chain > blockchain.chain){
             //check if pendingTransactions are longer too

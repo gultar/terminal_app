@@ -14,6 +14,7 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 const http = require('http');
 
 let nodeAddresses = [getIPAddress(), '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
+let nodes = [{}];
 let connectedNodes = [];
 
 let peers = {};
@@ -52,7 +53,7 @@ const initBlockchain = () => {
     if(!blockchainFetched){
       console.log('No blockchain is available');
       blockchain = new Blockchain();
-      seedNodeList(blockchain);
+      blockchain = seedNodeList(blockchain);
 
     }else{
       blockchain = new Blockchain(blockchainFetched.chain, blockchainFetched.pendingTransactions, blockchainFetched.nodeAddresses);
@@ -90,11 +91,11 @@ const startServer = () => {
       var receivedBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
       rawBlockchain = null;
       blockchain = compareBlockchains(blockchain, receivedBlockchain);
+      blockchain = updateNodeList(blockchain);
       console.log('A node sent a copy of the blockchain');
       saveBlockchain(blockchain);
 
     }else{
-      console.log(req)
       console.log('Blockchain received from node is undefined');
     }
 
@@ -102,10 +103,12 @@ const startServer = () => {
 
   app.post('/transaction', function(req, res){
     if(typeof blockchain !== 'undefined'){
+      // console.log('Response:', res.req);
       let transReceived = JSON.parse(req.body.transaction);
       blockchain.createTransaction( new Transaction(transReceived.fromAddress, transReceived.toAddress, transReceived.amount, transReceived.data))
       transReceived = null;
-      saveBlockchain(blockchain);
+      console.log(blockchain.pendingTransactions);
+      // saveBlockchain(blockchain);
     }else{
       res.status(400);
       res.send('Transaction not loaded or loading...');
@@ -116,14 +119,17 @@ const startServer = () => {
   app.post('/mine', function(req, res){
     if(connectedNodes.length > 0){
       let rawMiningAddr = JSON.parse(req.body.address);
-
+      
       miningAddr = new BlockchainAddress(rawMiningAddr.address, rawMiningAddr.blocksMined, rawMiningAddr.balance);
       console.log(miningAddr);
+
+      miningAddr = blockchain.nodeAddresses[rawMiningAddr];
+
       var miningSuccess;
       var waitingOutputOnce = true;
 
       if(typeof blockchain != 'undefined'){
-        console.log('Block:', blockchain);
+        // console.log('Block:', blockchain);
         miningSuccess = blockchain.minePendingTransactions(miningAddr);
         if(miningSuccess){
           res.send(JSON.stringify(blockchain));
@@ -250,9 +256,31 @@ loadBlockchainFromServer = () => {
 }
 
 seedNodeList = (blockchain) => {
+  blockchain.nodeAddresses = [];
+  nodes = {};
   for(var i=0; i < nodeAddresses.length; i++){
-    blockchain.addNodeAddress(nodeAddresses[i]);
+    let addressOfNode = nodeAddresses[i];
+    let addressInfo = new BlockchainAddress(nodeAddresses[i], nodeAddresses[i].blocksMined, nodeAddresses[i].balance);
+    nodes[addressOfNode] = addressInfo;
+
   }
+  console.log(nodes);
+  blockchain.nodeAddresses = nodes;
+  return blockchain;
+}
+
+updateNodes = (blockchain) => {
+
+  nodes = {};
+  for(var i=0; i < nodeAddresses.length; i++){
+    let addressOfNode = nodeAddresses[i];
+    let addressInfo = new BlockchainAddress(nodeAddresses[i], blockchain.nodeAddresses[nodeAddresses[i]].blocksMined, blockchain.nodeAddresses[nodeAddresses[i]].balance);
+    nodes[addressOfNode] = addressInfo;
+
+  }
+  console.log(nodes);
+  // blockchain.nodeAddresses = nodes;
+  return nodes;
 }
 
 saveBlockchain = (blockchainReceived) => {
@@ -268,7 +296,7 @@ saveBlockchain = (blockchainReceived) => {
             let blockchainFromFile = JSON.parse(data);
             blockchainFromFile = new Blockchain(blockchainFromFile.chain, blockchainFromFile.pendingTransactions, blockchainFromFile.blockbase);
             blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
-
+            // blockchain = seedNodeList(blockchain);
             let json = JSON.stringify(blockchain);
 
             if(json != undefined){
