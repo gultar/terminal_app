@@ -91,7 +91,8 @@ const startServer = () => {
       var receivedBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
       rawBlockchain = null;
       blockchain = compareBlockchains(blockchain, receivedBlockchain);
-      blockchain = updateNodeList(blockchain);
+      blockchain = seedNodeList(blockchain);
+      blockchain.nodeAddresses = nodes;
       console.log('A node sent a copy of the blockchain');
       saveBlockchain(blockchain);
 
@@ -119,7 +120,7 @@ const startServer = () => {
   app.post('/mine', function(req, res){
     if(connectedNodes.length > 0){
       let rawMiningAddr = JSON.parse(req.body.address);
-      
+
       miningAddr = new BlockchainAddress(rawMiningAddr.address, rawMiningAddr.blocksMined, rawMiningAddr.balance);
       console.log(miningAddr);
 
@@ -136,6 +137,8 @@ const startServer = () => {
           console.log('Block mined: ' + blockchain.getLatestBlock().hash);
           console.log(miningAddr.address + ' mined ' + miningAddr.getBlocksMined() + ' blocks');
           console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
+          blockchain.nodeAddresses[miningAddr.address].minedOneBlock();
+          blockchain.nodeAddresses[miningAddr.address].setBalance(this.miningReward);
           saveBlockchain(blockchain);
           return true;
         }else{
@@ -269,7 +272,7 @@ seedNodeList = (blockchain) => {
   return blockchain;
 }
 
-updateNodes = (blockchain) => {
+updateNodeList = (blockchain) => {
 
   nodes = {};
   for(var i=0; i < nodeAddresses.length; i++){

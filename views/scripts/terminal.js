@@ -571,7 +571,9 @@ function startMining(blockchainAddr){
   output('Starting the miner...');
   setInterval(function(){
     // if(blockchain.pendingTransactions.length >= blockchain.blockSize){
-      $.post('http://localhost:5000/mine', { address: JSON.stringify(blockchainAddr)}, function(data, status, response){
+      miningAddr = blockchain.nodeAddresses[blockchainAddr];
+      console.log('Mining:',miningAddr);
+      $.post('http://localhost:5000/mine', { address: JSON.stringify(miningAddr)}, function(data, status, response){
           if(status === 'success'){
             //gets the updated blockchain
             updatedBlockchain = JSON.parse(response.responseText);
