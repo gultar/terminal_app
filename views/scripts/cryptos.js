@@ -1,16 +1,15 @@
 var output_ = null;
-
-function getProperOutput(output){
+var debugOutput_ = null;
+function getProperOutput(output, debugOutput){
   output_ = output;
+  debugOutput_ = debugOutput;
 }
 
 function createCryptoTags(crypto){
-  output("<div class='currency-line'><span><b class='currency-symbol'>"+crypto+":  </b><b>BTC</b><b id='"+crypto+"-btc'> </b></span>" +
+  outputToDebug("<div class='currency-line'><span><b class='currency-symbol'>"+crypto+":  </b><b>BTC</b><b id='"+crypto+"-btc'> </b></span>" +
   " -- <span><b>USD</b><b id='"+crypto+"-us'> </b></span>" +
   " -- <span><b>CAD</b><b id='"+crypto+"-cad'> </b></span>" +
   " -- <span><b>EUR</b><b id='"+crypto+"-eur'> </b></span></div>");
-
-  //output( + );
 
 }
 
@@ -198,4 +197,8 @@ function loopThroughRecursive(keys, data){
 
 function output(html) {
   output_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
+}
+
+function outputToDebug(html){
+  debugOutput_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
 }

