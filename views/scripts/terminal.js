@@ -575,16 +575,19 @@ function startMining(blockchainAddr){
 
             output('Block mined: ' + latestBlock.hash);
 
-            displayAddressStats(blockchain.nodeAddresses);
+            //(blockchain.nodeAddresses.length > 1? displayAddressStats(blockchain.nodeAddresses));
             saveBlockchainToServer();
             sendBlockchainToRemoteNode();
 
             return true;
-          }else{
+          }else if(status === '418'){
             if(waitingOutputOnce){
-              output('Waiting for other transactons to occur');
+              output('Waiting for other transactions to occur');
               waitingOutputOnce = false;
             }
+
+          }else{
+
           }
 
 
@@ -600,10 +603,15 @@ function startMining(blockchainAddr){
 }
 
 function displayAddressStats(addresses){
-  addresses.forEach(function(address){
-    output(address.address + ' mined ' + address.blocksMined + ' blocks');
-    output('\nBalance of '+address.address+' is '+ address.balance);
-  });
+  // addresses.forEach(function(address){
+  //   output(address.address + ' mined ' + address.blocksMined + ' blocks');
+  //   output('\nBalance of '+address.address+' is '+ address.balance);
+  // });
+
+  for(address in addresses){
+      output(address.address + ' mined ' + address.blocksMined + ' blocks');
+      output('\nBalance of '+address.address+' is '+ address.balance);
+  }
 }
 
 function sendTransaction(fromAddress, toAddress, amount, data=''){

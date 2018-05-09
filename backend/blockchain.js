@@ -89,6 +89,9 @@ class Blockchain{
 
       console.log("Block successfully mined!");
       this.chain.push(block);
+
+      console.log("The Blockchain is " + blockchain.chain.length + " blocks long.");
+      console.log(miningRewardAddress.address + ' has mined ' + miningRewardAddress.blocksMined + ' blocks.');
       this.pendingTransactions = [
         new Transaction(null, miningRewardAddress.address, this.miningReward, "")
       ];

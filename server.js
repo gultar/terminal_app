@@ -140,12 +140,13 @@ const startServer = () => {
           miningAddr.setBalance(this.miningReward);
 
           saveBlockchain(blockchain);
+          sendBlockchainToAllNodes(blockchain);
           return true;
         }else{
           if(waitingOutputOnce){
             console.log('Waiting for other transactions to occur');
             waitingOutputOnce = false;
-            res.status(400);
+            res.status(418);
             res.send('Waiting for other transactions to occur');
           }
 
@@ -416,13 +417,15 @@ let queryAllNodesForBlockchain = (blockchainFromFile) => {
 
 let sendBlockchainToAllNodes = (blockchainToSend) => {
   for(let i=0; i < nodeAddresses.length; i++){
-
-    if(blockchainToSend.isChainValid()){
-      sendDataToNode(nodeAddresses[i], '/blockchain', blockchainToSend);
-    }else{
-      //invalid blockchain
-      console.log('Address: ' + nodeAddresses[i] + ' has an invalid blockchain');
+    if(nodeAddresses[i] != getIPAddress()){
+      if(blockchainToSend.isChainValid()){
+        sendDataToNode(nodeAddresses[i], '/blockchain', blockchainToSend);
+      }else{
+        //invalid blockchain
+        console.log('Address: ' + nodeAddresses[i] + ' has an invalid blockchain');
+      }
     }
+
 
   }
 }
