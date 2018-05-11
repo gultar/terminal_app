@@ -64,7 +64,8 @@ function fetchWeatherData(city, country, forecast=false){
       return
     }
     outputWeatherData(result);
-    blockchain.createTransaction(new Transaction(weatherUrl, blockchainAddress, 0, result));
+    //blockchain.createTransaction(new Transaction(weatherUrl, blockchainAddress, 0, result));
+    sendTransaction(weatherUrl, thisNode.address, 0, result );
   });
 
 }

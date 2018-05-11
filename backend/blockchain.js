@@ -46,12 +46,12 @@ class Block{
 
 /////////////////////Blockchain///////////////////////
 class Blockchain{
-  constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}]){
+  constructor(chain=false, pendingTransactions=false, nodeAddresses=[]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: []);
     this.miningReward = 50;
-    this.nodeAddresses = nodeAddresses; //Stores all the node addresses of the P2P network
+    this.nodeAddresses = (nodeAddresses.length > 0? nodeAddresses : []); //Stores all the node addresses of the P2P network
     this.blockSize = 10; //Minimum Number of transactions per block
 
   }
@@ -90,7 +90,7 @@ class Blockchain{
       console.log("Block successfully mined!");
       this.chain.push(block);
 
-      console.log("The Blockchain is " + blockchain.chain.length + " blocks long.");
+      console.log("The Blockchain is " + this.chain.length + " blocks long.");
       console.log(miningRewardAddress.address + ' has mined ' + miningRewardAddress.blocksMined + ' blocks.');
       this.pendingTransactions = [
         new Transaction(null, miningRewardAddress.address, this.miningReward, "")
@@ -107,9 +107,7 @@ class Blockchain{
     this.pendingTransactions.push(transaction);
   }
 
-  addNodeAddress(address){
-    this.nodeAddresses.push(address);
-  }
+
 
   getBalanceOfAddress(address){
     let balance = 0;
@@ -160,10 +158,11 @@ class Blockchain{
 }
 
 class BlockchainAddress{
-  constructor(address, blocksMined=0,  balance=0){
+  constructor(address, hashSignature, blocksMined=0,   balance=0){
     this.address = address;
     this.blocksMined = blocksMined;
     this.balance = balance;
+    this.hashSignature = hashSignature
   }
 
   getBalance(){

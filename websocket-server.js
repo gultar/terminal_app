@@ -1,6 +1,10 @@
 var express = require('express');
 var app = express();
 var expressWs = require('express-ws')(app);
+
+const http = require('http');
+const WebSocket = require('ws');
+
 const bodyParser = require('body-parser');
 
 var allowCrossDomain = function(req, res, next) {
@@ -35,6 +39,7 @@ app.ws('/', function(ws, req) {
   ws.on('message', function(msg) {
     console.log(msg);
   });
+  ws.send('Connected to local node');
   console.log('socket', req.testing);
 });
 

