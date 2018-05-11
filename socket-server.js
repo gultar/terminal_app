@@ -4,13 +4,14 @@ const app = express();
 const server = http.createServer(app).listen(8080);
 const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
 var expressWs = require('express-ws')(app);
-const io = require('socket.io')(server);
-const ioClient = require('socket.io-client');
+const io = require('socket.io');
+const ioServer = require('socket.io')(server);
 const fs = require('fs');
 const { getIPAddress } = require('./backend/ipFinder.js');
 const sha256 = require('./backend/sha256');
 
-const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080']
+// const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080']
+const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080', 'ws://192.168.0.154:8080']
 
 let thisNode = {
   'type' : 'endpoint',
@@ -29,7 +30,11 @@ let transactationAlreadyReceived = false;
 
 app.use(express.static(__dirname+'/views'));
 
-io.on('connection', (socket) => {
+app.on('/ip', () => {
+  res.send(getIPAddress());
+})
+
+ioServer.on('connection', (socket) => {
 
   socket.on('message', (msg) => {
 
@@ -136,7 +141,12 @@ const initBlockchain = (tryOnceAgain=true) => {
 const connectToPeerNetwork = () => {
   for(var i=0; i < ipList.length; i++){
     if(ipList[i] != thisNode.address){
-      var peerConnection = ioClient(ipList);
+      var peerConnection = io(ipList);
+      console.log('Peer:', peerConnection);
+      peerConnection.emit('message', 'Hello biatch');
+      peerConnection.on('connect', () =>{
+
+      })
     }
   }
 };
@@ -317,7 +327,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
-  // connectToPeerNetwork();
+  connectToPeerNetwork();
 }, 1500)
 
 

@@ -9,7 +9,7 @@ $(function() {
   // Initialize a new terminal object
   var term = new Terminal('#input-line .cmdline', '#container output');
   term.init();
-
+  
 
 
 });

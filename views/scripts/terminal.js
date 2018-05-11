@@ -4,15 +4,16 @@ const blockchainURL = 'http://localhost:5000/blockchain';
 const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain', 'http://192.168.1.68:5000/blockchain', 'http://192.168.0.154:5000/blockchain', 'http://192.168.1.75:5000/blockchain']
 let nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
 
-var sachaAddress = '192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 
+var localAddress = "192.168.0.153";   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
+getUserIP(function(ip){
+    localAddress = ip;
+    console.log('IP:', ip);
+});
 
-
-var clientConnectionToken = {
-    'type' : 'endpoint',
-    'address' : sachaAddress,
-    'hashSignature' : sha256(sachaAddress, Date.now())
-};
+var currentTime = Date.now();
+console.log('Time',currentTime);
+var clientConnectionToken;
 
 var hexagrams = [{}];
 var backgroundUrl = $('body').css("background-image");
@@ -234,7 +235,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
         case 'uname':
           output(navigator.appVersion);
-          // connection.send(JSON.stringify(new Transaction(sachaAddress, 'ws://192.168.0.154:8080', 10, clientConnectionToken)));
+          // connection.send(JSON.stringify(new Transaction(localAddress, 'ws://192.168.0.154:8080', 10, clientConnectionToken)));
           socket.emit('seedBlockchain', 'Hello world');
           break;
 
@@ -269,7 +270,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           break;
 
         case 'mine':
-          startMining(sachaAddress);
+          startMining(localAddress);
 
           break;
 
@@ -515,7 +516,7 @@ function fetchFromDistantNode(url){
   $.get(url).then(function(data){
 
     rawBlockchain = JSON.parse(data);
-    console.log(sachaAddress, url);
+    console.log(localAddress, url);
     distantBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
     blockchain = longestChain(blockchain, distantBlockchain);
     console.log('Longest blockchain has that many blocks:',blockchain.chain.length, url);
@@ -611,8 +612,9 @@ function initPeerConnection(){
 }
 
 function initSocketConnection(){
-
-  socket  = io('http://localhost:8080/');
+setTimeout(function(){
+  issueClientToken();
+  socket  = io('http://'+localAddress+':8080/');
 
   socket.on('disconnect', function(){
     console.log('You have disconnected from node server');
@@ -629,6 +631,10 @@ function initSocketConnection(){
   socket.on('message', function(message){
     console.log('Server:', message);
   })
+
+  fetchBlockchainFromServer();
+}, 2000)
+
 
 }
 
@@ -666,7 +672,7 @@ window.onload = function() {
 
 
     initSocketConnection();
-    fetchBlockchainFromServer();
+
 
 
     $('#myCanvas').css('visibility', 'hidden');
@@ -698,4 +704,14 @@ function longestChain(localBlockchain=false, distantBlockchain=false){
 function getLatestBlock(blockchain){
   var lengthChain = blockchain.chain.length;
   return blockchain.chain[lengthChain - 1];
+}
+
+function issueClientToken(){
+  clientConnectionToken = {
+    'type' : 'endpoint',
+    'address' : localAddress,
+    'hashSignature' : sha256(localAddress, Date.now())
+  }
+
+  console.log(clientConnectionToken);
 }
