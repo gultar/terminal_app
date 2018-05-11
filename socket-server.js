@@ -10,11 +10,11 @@ const fs = require('fs');
 const { getIPAddress } = require('./backend/ipFinder.js');
 const sha256 = require('./backend/sha256');
 
-const ipList = ['ws://192.168.0.154:8080', 'ws://192.168.0.153:8080']
+const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080']
 
 let thisNode = {
   'type' : 'endpoint',
-  'ipAddress' : '192.168.0.154',
+  'address' : getIPAddress(),
   'hashSignature' : sha256('192.168.0.154', Date.now())
 }
 
@@ -316,6 +316,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
+  console.log('Node address:',thisNode.address);
   connectToPeerNetwork();
 }, 1500)
 
