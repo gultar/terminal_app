@@ -6,8 +6,8 @@ const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require(
 var expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
 const ioServer = require('socket.io')(server);
-const P2P = require('socket.io-p2p');
-const p2p = require('socket.io-p2p-server').Server;
+// const P2P = require('socket.io-p2p');
+// const p2p = require('socket.io-p2p-server').Server;
 const fs = require('fs');
 const { getIPAddress } = require('./backend/ipFinder.js');
 const sha256 = require('./backend/sha256');
@@ -35,8 +35,6 @@ app.use(express.static(__dirname+'/views'));
 app.on('/', () => {
   res.send(getIPAddress());
 })
-
-ioServer.use(p2p);
 
 
 
@@ -151,10 +149,6 @@ const connectToPeerNetwork = () => {
   for(var i=0; i < ipList.length; i++){
     if(ipList[i] != thisNode.address){
       var peerConnection = io(ipList[i]);
-      var p2p = new P2P(peerConnection);
-      p2p.on('peer-msg', function (data) {
-        console.log('From a peer %s', data);
-      });
 
       peerConnection.emit('message', 'Hello biatch');
       peerConnection.on('connect', () =>{
