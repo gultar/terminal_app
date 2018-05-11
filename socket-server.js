@@ -6,12 +6,13 @@ const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require(
 var expressWs = require('express-ws')(app);
 const io = require('socket.io');
 const ioServer = require('socket.io')(server);
+const p2p = require('socket.io-p2p-server').Server;
 const fs = require('fs');
 const { getIPAddress } = require('./backend/ipFinder.js');
 const sha256 = require('./backend/sha256');
 
 // const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080']
-const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080', 'ws://192.168.0.154:8080']
+const ipList = ['http://'+getIPAddress()+':8080', 'http://192.168.0.153:8080', 'http://192.168.0.154:8080']
 
 let thisNode = {
   'type' : 'endpoint',
@@ -30,9 +31,13 @@ let transactationAlreadyReceived = false;
 
 app.use(express.static(__dirname+'/views'));
 
-app.on('/ip', () => {
+app.on('/', () => {
   res.send(getIPAddress());
 })
+
+ioServer.use(p2p);
+
+
 
 ioServer.on('connection', (socket) => {
 
@@ -76,9 +81,12 @@ ioServer.on('connection', (socket) => {
 
   socket.on('seedBlockchain', (clientNode) => {
     //fetch most up to date blockchain from network
-
-
     socket.emit('blockchain',seedNodeList(blockchain));
+  });
+
+  socket.on('peerConnect', () => {
+    connectToPeerNetwork();
+    socket.broadcast.emit('message', 'HELLO');
   });
 
 
@@ -141,8 +149,12 @@ const initBlockchain = (tryOnceAgain=true) => {
 const connectToPeerNetwork = () => {
   for(var i=0; i < ipList.length; i++){
     if(ipList[i] != thisNode.address){
-      var peerConnection = io(ipList);
-      console.log('Peer:', peerConnection);
+      var peerConnection = io(ipList[i]);
+      var p2p = new P2P(peerConnection);
+      p2p.on('peer-msg', function (data) {
+        console.log('From a peer %s', data);
+      });
+
       peerConnection.emit('message', 'Hello biatch');
       peerConnection.on('connect', () =>{
 
@@ -327,7 +339,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
-  connectToPeerNetwork();
+  // connectToPeerNetwork();
 }, 1500)
 
 
