@@ -4,8 +4,9 @@ const app = express();
 const server = http.createServer(app).listen(8080);
 const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
 var expressWs = require('express-ws')(app);
-const io = require('socket.io');
+const io = require('socket.io-client');
 const ioServer = require('socket.io')(server);
+const P2P = require('socket.io-p2p');
 const p2p = require('socket.io-p2p-server').Server;
 const fs = require('fs');
 const { getIPAddress } = require('./backend/ipFinder.js');
@@ -339,7 +340,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
-  // connectToPeerNetwork();
+  connectToPeerNetwork();
 }, 1500)
 
 
