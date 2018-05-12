@@ -24,7 +24,7 @@ let thisNode = {
 
 let clients = [];
 
-let nodes = [];
+let peers = [];
 
 let blockchain;
 let blockchainFetched;
@@ -39,6 +39,14 @@ app.on('/', () => {
 
 
 ioServer.on('connection', (socket) => {
+
+  socketEvents(socket);
+
+});
+
+
+const socketEvents = (socket) => {
+  socket.broadcast.emit('message', 'you are now connected to ' + getIPAddress());
 
   socket.on('message', (msg) => {
 
@@ -58,6 +66,7 @@ ioServer.on('connection', (socket) => {
     //Need to validate transaction before adding to blockchain
     if(!transactationAlreadyReceived){
       socket.broadcast.emit('transaction', transaction);
+
       transactationAlreadyReceived = true;
     }
 
@@ -83,9 +92,11 @@ ioServer.on('connection', (socket) => {
     socket.emit('blockchain',seedNodeList(blockchain));
   });
 
-  socket.on('peerConnect', () => {
-    connectToPeerNetwork();
-    socket.broadcast.emit('message', 'HELLO');
+  socket.on('peerConnect', (miningAddr) => {
+    // connectToPeerNetwork();
+    // socket.broadcast.emit('message', 'HELLO');
+
+    peers[0].emit('miningRequest', miningAddr);
   });
 
 
@@ -104,7 +115,8 @@ ioServer.on('connection', (socket) => {
 
   });
 
-});
+}
+
 
 //Init blockchain starting from local file
 const initBlockchain = (tryOnceAgain=true) => {
@@ -137,7 +149,7 @@ const initBlockchain = (tryOnceAgain=true) => {
     }
 
 
-    console.log('Current blockchain:', blockchain);
+    // console.log('Current blockchain:', blockchain);
 
 
     // console.log('This node:',blockchain.nodeAddresses[thisNode.hashSignature]);
@@ -145,17 +157,19 @@ const initBlockchain = (tryOnceAgain=true) => {
 
 };
 
-const connectToPeerNetwork = () => {
+const connectToPeerNetwork = (socket) => {
+  let peerConnections = []
   for(var i=0; i < ipList.length; i++){
-    if(ipList[i] != thisNode.address){
-      var peerConnection = io(ipList[i]);
 
-      peerConnection.emit('message', 'Hello biatch');
-      peerConnection.on('connect', () =>{
-
-      })
+    if(ipList[i] != "http://"+thisNode.address+":8080"){
+      var peerSocket = io(ipList[i]);
+      peers.push(peerSocket);
+    }else{
+      console.log('Avoiding infinite feedback');
     }
   }
+  console.log('Peers:', peers.length);
+  // return peerConnections;
 };
 
 const getBlockchainAddress = (addressToken) => {
@@ -277,7 +291,7 @@ const seedNodeList = (blockchain) =>  {
   }else{
     console.log('This node address already exists:', thisNode.hashSignature);
   }
-  console.log('This node:', blockchain.nodeAddresses[thisNode.hashSignature]);
+  // console.log('This node:', blockchain.nodeAddresses[thisNode.hashSignature]);
   return blockchain;
 }
 

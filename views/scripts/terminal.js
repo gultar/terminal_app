@@ -13,6 +13,7 @@ getUserIP(function(ip){
 
 var currentTime = Date.now();
 console.log('Time',currentTime);
+
 var clientConnectionToken;
 
 var hexagrams = [{}];
