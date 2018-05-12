@@ -92,9 +92,10 @@ ioServer.on('connection', (socket) => {
 
   socket.on('peerConnect', (miningAddrToken) => {
     // connectToPeerNetwork();
-    console.log(peers[0]);
+
     ioServer.emit('message', miningAddrToken.address + " has sent a mining request");
-    peers[0].emit('transaction', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, { 'test' : 'test' }));
+    peers[0].emit('seedingNodes', thisNode);
+    peers[0].emit('transaction', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, thisNode));
   });
 
 
