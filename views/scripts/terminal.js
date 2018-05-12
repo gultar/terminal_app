@@ -12,7 +12,9 @@ getUserIP(function(ip){
 });
 
 var currentTime = Date.now();
-console.log('Time',currentTime);
+
+var fetchTrials = 0;
+
 
 var clientConnectionToken;
 
@@ -582,6 +584,7 @@ function displayAddressStats(addresses){
       output(address.address + ' mined ' + address.blocksMined + ' blocks');
       output('\nBalance of '+address.address+' is '+ address.balance);
   }
+
 }
 
 function sendTransaction(fromAddress, toAddress, amount, data=''){
@@ -593,6 +596,16 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
   }
 
   socket.emit('transaction', transactToSend);
+  socket.on('nodeBusy', function(busy){
+    if(busy){
+      console.log('Node is busy...');
+      setTimeout(
+        function(){
+          return sendTransaction(transactToSend.fromAddress, transactToSend.toAddress, transactToSend.amount, transactToSend.data);
+        }
+      , 2000)
+    }
+  })
 }
 
 
@@ -632,10 +645,17 @@ setTimeout(function(){
 function fetchBlockchainFromServer(){
 
       socket.emit('getBlockchain', 'Fetching');
-      console.log('Fetched blockchain from server node');
+      console.log('Fetching blockchain from server node...');
       socket.on('blockchain', function(data){
+        if(data == null && fetchTrials <= 5){
+          setTimeout(function(){
+            console.log('blockchain not loaded correctly. Fetching again...');
+            fetchTrials++;
+            return fetchBlockchainFromServer();
+          },2000)
+        }
           blockchain = data;
-          console.log(blockchain);
+          console.log('Fetched blockchain:',blockchain);
       });
 
 }
