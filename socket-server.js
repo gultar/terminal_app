@@ -175,12 +175,15 @@ const connectToPeerNetwork = () => {
 
       peerSocket.on('connect', () =>{
         console.log('connection to node established');
+
         peerSocket.emit('client-connect', thisNode);
+        peerSocket.emit('blockchain', blockchain);
+
         peerSocket.emit('seedBlockchain', thisNode);
 
       });
 
-      peerSocket.on('seedingNodes', () =>{
+      peerSocket.on('seedingNodes', (node) =>{
         blockchain.nodeAddresses.push(node);
         console.log('Seeding the blockchain with this address:', node);
       })
@@ -305,16 +308,21 @@ const seedNodeList = (blockchain, token) =>  {
   //Seed the list of connected nodes
   var returnValue;
   // blockchain.addNodeAddress(thisNode);
-  if(blockchain.nodeAddresses[token.hashSignature] == undefined){
-    blockchain.nodeAddresses[token.hashSignature] = new BlockchainAddress(token.address, token.hashSignature, 0, 0);
+  if(blockchain){
+    if(blockchain.nodeAddresses[token.hashSignature] == undefined){
+      blockchain.nodeAddresses[token.hashSignature] = new BlockchainAddress(token.address, token.hashSignature, 0, 0);
 
 
+    }else{
+      console.log('This node address already exists:', token.hashSignature);
+
+    }
+    // console.log('This node:', blockchain.nodeAddresses[thisNode.hashSignature]);
+    return blockchain.nodeAddresses[token.hashSignature];
   }else{
-    console.log('This node address already exists:', token.hashSignature);
-
+    socket.emit('getBlockchain', 'getting blockchain');
   }
-  // console.log('This node:', blockchain.nodeAddresses[thisNode.hashSignature]);
-  return blockchain.nodeAddresses[token.hashSignature];
+
 }
 
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
@@ -370,9 +378,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
-  setTimeout(() =>{
-    peers = connectToPeerNetwork();
-  }, 2000)
+  peers = connectToPeerNetwork();
 
 }, 1500)
 
