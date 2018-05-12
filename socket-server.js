@@ -1,8 +1,8 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-
-const server = http.createServer(app).listen(8080);
+const port = 8080
+const server = http.createServer(app).listen(port);
 
 const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
 var expressWs = require('express-ws')(app);
@@ -15,11 +15,11 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 const sha256 = require('./backend/sha256');
 
 // const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080']
-const ipList = ['http://'+getIPAddress()+':8080', 'http://192.168.0.153:8080', 'http://192.168.0.154:8080', 'http://192.168.0.153:8081']
+const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080', 'http://192.168.0.153:8081']
 
 let thisNode = {
   'type' : 'endpoint',
-  'address' : getIPAddress(),
+  'address' : ipList[0],
   'hashSignature' : sha256(getIPAddress(), Date.now())
 }
 
