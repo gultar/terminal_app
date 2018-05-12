@@ -179,7 +179,6 @@ const connectToPeerNetwork = () => {
         peerSocket.emit('client-connect', thisNode);
         peerSocket.emit('blockchain', blockchain);
 
-        peerSocket.emit('seedBlockchain', thisNode);
 
       });
 
