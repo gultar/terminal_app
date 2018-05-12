@@ -14,7 +14,7 @@ getUserIP(function(ip){
 var currentTime = Date.now();
 
 var fetchTrials = 0;
-
+var sendingTrials = 0;
 
 var clientConnectionToken;
 
@@ -588,6 +588,11 @@ function displayAddressStats(addresses){
 }
 
 function sendTransaction(fromAddress, toAddress, amount, data=''){
+
+  if(clientConnectionToken == undefined){
+    issueClientToken();
+  }
+
   var transactToSend = {
     fromAddress : fromAddress,
     toAddress : toAddress,
@@ -595,13 +600,20 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
     data : data
   }
 
-  socket.emit('transaction', transactToSend);
-  socket.on('nodeBusy', function(busy){
-    if(busy){
+  socket.emit('transactionOffer', transactToSend, clientConnectionToken)
+
+  socket.on('transactionApproved', function(transact){
+    socket.emit('transaction', transact);
+  });
+
+
+  socket.on('nodeBusyForTransact', function(busy, transact){
+    if(busy && sendingTrials < 5){
       console.log('Node is busy...');
       setTimeout(
         function(){
-          return sendTransaction(transactToSend.fromAddress, transactToSend.toAddress, transactToSend.amount, transactToSend.data);
+          sendingTrials++;
+          return sendTransaction(transact.fromAddress, transact.toAddress, transact.amount, transact.data);
         }
       , 2000)
     }
@@ -616,6 +628,7 @@ setTimeout(function(){
 
   socket.on('disconnect', function(){
     console.log('You have disconnected from node server');
+    clearAll();
     socket.emit('close', clientConnectionToken);
 
   })
@@ -647,15 +660,22 @@ function fetchBlockchainFromServer(){
       socket.emit('getBlockchain', 'Fetching');
       console.log('Fetching blockchain from server node...');
       socket.on('blockchain', function(data){
-        if(data == null && fetchTrials <= 5){
-          setTimeout(function(){
-            console.log('blockchain not loaded correctly. Fetching again...');
-            fetchTrials++;
-            return fetchBlockchainFromServer();
-          },2000)
+        if(fetchTrials <= 5){
+          if(data == undefined){
+            setTimeout(function(){
+              console.log('blockchain not loaded correctly. Fetching again...');
+              fetchTrials++;
+              return fetchBlockchainFromServer();
+            },2000)
+          }
+            blockchain = data;
+            console.log('Fetched blockchain:',blockchain);
+
+        }else{
+          console.log('Tried to fetch from server 5 times. Server unavailable...')
         }
-          blockchain = data;
-          console.log('Fetched blockchain:',blockchain);
+        fetchTrials = 0;
+
       });
 
 }
