@@ -595,23 +595,6 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
   socket.emit('transaction', transactToSend);
 }
 
-function initPeerConnection(){
-
-  console.log(connection);
-  connection.onopen = function (event) {
-    connection.send('Connected?', event.currentTarget.url);
-  };
-
-  // Log errors
-  connection.onerror = function (error) {
-    console.error('WebSocket Error ' + error);
-  };
-
-  // Log messages from the server
-  connection.onmessage = function (msg) {
-    console.log('From Server:',msg)
-  };
-}
 
 function initSocketConnection(){
 setTimeout(function(){

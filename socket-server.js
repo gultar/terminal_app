@@ -18,7 +18,7 @@ const ipList = ['http://'+getIPAddress()+':8080', 'http://192.168.0.153:8080', '
 let thisNode = {
   'type' : 'endpoint',
   'address' : getIPAddress(),
-  'hashSignature' : sha256('192.168.0.154', Date.now())
+  'hashSignature' : sha256(getIPAddress(), Date.now())
 }
 
 
@@ -26,9 +26,12 @@ let clients = [];
 
 let peers = [];
 
+let minersOnHold = [];
+
 let blockchain;
 let blockchainFetched;
 let transactationAlreadyReceived = false;
+
 
 app.use(express.static(__dirname+'/views'));
 
@@ -40,12 +43,6 @@ app.on('/', () => {
 
 ioServer.on('connection', (socket) => {
 
-  socketEvents(socket);
-
-});
-
-
-const socketEvents = (socket) => {
   socket.broadcast.emit('message', 'you are now connected to ' + getIPAddress());
 
   socket.on('message', (msg) => {
@@ -95,7 +92,7 @@ const socketEvents = (socket) => {
   socket.on('peerConnect', (miningAddr) => {
     // connectToPeerNetwork();
     // socket.broadcast.emit('message', 'HELLO');
-
+    console.log(peers[0]);
     peers[0].emit('miningRequest', miningAddr);
   });
 
@@ -115,7 +112,8 @@ const socketEvents = (socket) => {
 
   });
 
-}
+
+});
 
 
 //Init blockchain starting from local file
@@ -349,6 +347,7 @@ setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
   connectToPeerNetwork();
+
 }, 1500)
 
 
