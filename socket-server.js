@@ -43,7 +43,7 @@ app.on('/', () => {
 
 ioServer.on('connection', (socket) => {
 
-  socket.broadcast.emit('message', 'you are now connected to ' + getIPAddress());
+  // socket.broadcast.emit('message', 'this is node address ' + getIPAddress());
 
   socket.on('message', (msg) => {
 
@@ -54,7 +54,7 @@ ioServer.on('connection', (socket) => {
     //Create validation for connecting nodes
 
     clients[token.hashSignature] = token;
-
+    socket.emit('message', 'You are now connected to ' + getIPAddress());
     console.log('Connected clients: ', token.hashSignature);
 
   });
@@ -77,6 +77,7 @@ ioServer.on('connection', (socket) => {
 
   socket.on('miningRequest', (miningAddrToken) =>{
     //need to validate miningAddr before allowing mining action;
+
     startMining(miningAddrToken)
 
     // if(clients.length > 1){
@@ -89,11 +90,11 @@ ioServer.on('connection', (socket) => {
     socket.emit('blockchain',seedNodeList(blockchain));
   });
 
-  socket.on('peerConnect', (miningAddr) => {
+  socket.on('peerConnect', (miningAddrToken) => {
     // connectToPeerNetwork();
-    // socket.broadcast.emit('message', 'HELLO');
-    console.log(peers[0]);
-    peers[0].emit('miningRequest', miningAddr);
+
+    ioServer.emit('message', miningAddrToken.address + " has sent a mining request");
+    peers[0].emit('message', miningAddrToken.address + " has sent a mining request");
   });
 
 
@@ -103,6 +104,7 @@ ioServer.on('connection', (socket) => {
 
     socket.emit('blockchain', blockchain);
     console.log('Sending client the blockchain');
+
   });
 
   socket.on('close', (token) => {
@@ -155,19 +157,32 @@ const initBlockchain = (tryOnceAgain=true) => {
 
 };
 
-const connectToPeerNetwork = (socket) => {
-  let peerConnections = []
+const connectToPeerNetwork = () => {
+  let peerConnections = [];
+
   for(var i=0; i < ipList.length; i++){
 
     if(ipList[i] != "http://"+thisNode.address+":8080"){
       var peerSocket = io(ipList[i]);
-      peers.push(peerSocket);
-    }else{
-      console.log('Avoiding infinite feedback');
+
+      peerConnections.push(peerSocket);
+
+      peerSocket.on('disconnect', function(){
+        console.log('disconnection drop with peer', ipList[i]);
+        peerSocket.emit('close', thisNode);
+
+      })
+
+      peerSocket.on('connect', function(){
+        console.log('connection to node established');
+        peerSocket.emit('client-connect', thisNode);
+
+      })
+
     }
   }
-  console.log('Peers:', peers.length);
-  // return peerConnections;
+  
+  return peerConnections;
 };
 
 const getBlockchainAddress = (addressToken) => {
@@ -346,7 +361,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
-  connectToPeerNetwork();
+  peers = connectToPeerNetwork();
 
 }, 1500)
 
