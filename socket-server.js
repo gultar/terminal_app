@@ -319,8 +319,6 @@ const seedNodeList = (blockchain, token) =>  {
     }
     // console.log('This node:', blockchain.nodeAddresses[thisNode.hashSignature]);
     return blockchain.nodeAddresses[token.hashSignature];
-  }else{
-    socket.emit('getBlockchain', 'getting blockchain');
   }
 
 }
