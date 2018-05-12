@@ -18,9 +18,9 @@ const sha256 = require('./backend/sha256');
 const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080', 'http://192.168.0.153:8081']
 
 let thisNode = {
-  'type' : 'endpoint',
+  'type' : 'node',
   'address' : ipList[0],
-  'hashSignature' : sha256(getIPAddress(), Date.now())
+  'hashSignature' : sha256(ipList[0], Date.now())
 }
 
 
