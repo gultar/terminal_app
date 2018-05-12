@@ -617,6 +617,11 @@ setTimeout(function(){
     console.log('Server:', message);
   })
 
+  socket.on('seedingNodes', function(node){
+    blockchain.nodeAddresses.push(node);
+    console.log('Seeding the blockchain with this address:', node);
+  })
+
   fetchBlockchainFromServer();
 }, 2000)
 
