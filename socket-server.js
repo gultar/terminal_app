@@ -90,6 +90,11 @@ ioServer.on('connection', (socket) => {
     socket.emit('seedingNodes',seedNodeList(blockchain, clientToken));
   });
 
+  socket.on('seedingNodes', (node) =>{
+    blockchain.nodeAddresses.push(node);
+    console.log('Seeding the blockchain with this address:', node);
+  })
+
   socket.on('peerConnect', (miningAddrToken) => {
     // connectToPeerNetwork();
 
