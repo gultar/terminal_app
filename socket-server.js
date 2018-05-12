@@ -370,7 +370,9 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
-  peers = connectToPeerNetwork();
+  setTimeout(() =>{
+    peers = connectToPeerNetwork();
+  }, 2000)
 
 }, 1500)
 
