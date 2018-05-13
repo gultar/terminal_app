@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-const port = 8081
+const port = 8080
 const server = http.createServer(app).listen(port);
 
 const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
@@ -44,7 +44,12 @@ app.on('/', () => {
   res.send(getIPAddress());
 })
 
-
+var test = {
+  fromAddress : 'herm',
+  toAddress : 'toAddress',
+  amount : 'amount',
+  data : 'data'
+}
 
 ioServer.on('connection', (socket) => {
 
@@ -52,6 +57,10 @@ ioServer.on('connection', (socket) => {
 
   socket.on('message', (msg) => {
     console.log('Client:', msg);
+  });
+
+  socket.on('testBusy', () => {
+    socket.emit('nodeBusyForTransact', true, test);
   });
 
   socket.on('client-connect', (token) => {
@@ -71,6 +80,7 @@ ioServer.on('connection', (socket) => {
       if(!blockchainBusy){
         console.log('Transaction offered by '+fromNodeToken.address + ' approved');
         socket.emit('transactionApproved', transact);
+        sendTrials = 0;
       }else{
         socket.emit('nodeBusyForTransact', true);
       }
@@ -81,12 +91,13 @@ ioServer.on('connection', (socket) => {
     console.log('Sending approved transaction');
     socket.emit('message', 'transaction has been approved' + transact);
     socket.emit('transaction', transact);
+
   });
 
   socket.on('nodeBusyForTransact', function(busy, transact){
     if(busy && sendTrials < 5){
       console.log('Node is busy... Sending again');
-      setTimeout(
+      setInterval(
         function(){
           sendTrials++;
           socket.emit('transactionOffer', transact, thisNode);
@@ -171,10 +182,15 @@ ioServer.on('connection', (socket) => {
 
 });
 
-const sendEventToAllPeers = (eventType, data) => {
+const sendEventToAllPeers = (eventType, data, moreData=false ) => {
   if(peers.length > 0){
     for(var i=0; i<peers.length; i++){
-      peers[i].emit(eventType, data);
+      if(!moreData){
+        peers[i].emit(eventType, data);
+      }else{
+        peers[i].emit(eventType, data, moreData);
+      }
+
     }
   }
 
