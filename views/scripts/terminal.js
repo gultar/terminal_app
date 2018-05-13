@@ -657,7 +657,7 @@ setTimeout(function(){
 
 function fetchBlockchainFromServer(){
 
-      socket.emit('getBlockchain', 'Fetching');
+      socket.emit('getBlockchain', clientConnectionToken.address+' has requested a copy of the blockchain');
       console.log('Fetching blockchain from server node...');
       socket.on('blockchain', function(data){
         if(fetchTrials <= 5){
