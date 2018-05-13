@@ -589,9 +589,10 @@ function displayAddressStats(addresses){
 
 function sendTransaction(fromAddress, toAddress, amount, data=''){
 
-  if(clientConnectionToken == undefined){
+
     issueClientToken();
-  }
+    // console.log('Client token issued', clientConnectionToken);
+
 
   var transactToSend = {
     fromAddress : fromAddress,
