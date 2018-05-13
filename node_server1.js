@@ -51,15 +51,15 @@ ioServer.on('connection', (socket) => {
   // socket.broadcast.emit('message', 'this is node address ' + getIPAddress());
 
   socket.on('message', (msg) => {
-
     console.log('Client:', msg);
   });
 
   socket.on('client-connect', (token) => {
     //Create validation for connecting nodes
-    console.log('Token:',token);
+
     clients[token.hashSignature] = token;
-    console.log('Connected client: ', token.hashSignature);
+    console.log('Connected client hash: ', token.hashSignature);
+    console.log('At address:', token.address);
     socket.emit('message', 'You are now connected to ' + thisNode.address);
 
 
@@ -115,7 +115,6 @@ ioServer.on('connection', (socket) => {
       startMining(miningAddrToken);
 
     }
-
   });
 
   socket.on('miningApproved', function(updatedBlockchain){
@@ -145,12 +144,20 @@ ioServer.on('connection', (socket) => {
     sendEventToAllPeers('transactionOffer', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, thisNode), miningAddrToken);
   });
 
+  socket.on('queryForBlockchain', (queryingNodeToken) =>{
+    sendEventToAllPeers('message', queryingNodeToken.address + ' has requested a copy of the current blockchain');
+    sendEventToAllPeers('getBlockchain', socket);
+  })
 
-
-  socket.on('getBlockchain', (msg) =>{
+  socket.on('getBlockchain', (peerSocket) =>{
     //Query all nodes for blockchain
-    socket.emit('blockchain', blockchain);
-    console.log('Sending client the blockchain');
+    if(peerSocket == undefined){
+      socket.emit('blockchain', blockchain);
+    }else{
+      peerSocket.emit('blockchain', blockchain)
+    }
+
+    console.log('Sending client the blockchain to ' + address);
 
   });
 
@@ -235,8 +242,8 @@ const connectToPeerNetwork = () => {
 
       peerSocket.on('connect', () =>{
         console.log('connection to node established');
-        console.log('sending:', thisNode.hashSignature);
-        peerSocket.emit('blockchain', blockchain);
+
+        peerSocket.emit('queryForBlockchain', thisNode);
 
 
       });

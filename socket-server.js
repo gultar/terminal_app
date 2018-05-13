@@ -15,8 +15,8 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 const sha256 = require('./backend/sha256');
 
 // const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080']
-const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080', 'http://192.168.0.153:8081']
-
+const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
+				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082']
 let thisNode = {
   'type' : 'node',
   'address' : ipList[0],
@@ -33,6 +33,7 @@ let minersOnHold = [];
 let blockchain;
 let blockchainFetched;
 
+let sendTrials = 0;
 
 let blockchainBusy = false;
 
@@ -56,32 +57,54 @@ ioServer.on('connection', (socket) => {
 
   socket.on('client-connect', (token) => {
     //Create validation for connecting nodes
-
+    console.log('Token:',token);
     clients[token.hashSignature] = token;
-    socket.emit('message', 'You are now connected to ' + getIPAddress());
-    console.log('Connected clients: ', token.hashSignature);
+    console.log('Connected client: ', token.hashSignature);
+    socket.emit('message', 'You are now connected to ' + thisNode.address);
+
 
   });
 
-  socket.on('transaction', (transaction) => {
-    //Need to validate transaction before adding to blockchain
-    // if(!transactationAlreadyReceived){
-    //   sendEventToAllPeers('transaction', transaction);
-    //
-    //   transactationAlreadyReceived = true;
-    // }
+  socket.on('transactionOffer', (transact, fromNodeToken) =>{
+    console.log(fromNodeToken.address + ' offered a transaction...');
     if(blockchain != undefined){
       if(!blockchainBusy){
-        let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
-        sendEventToAllPeers('transaction',transactionObj)
-        blockchain.createTransaction(transactionObj);
-        transactationAlreadyReceived = false;
-        console.log('Received new transaction:', transaction);
+        console.log('Transaction offered by '+fromNodeToken.address + ' approved');
+        socket.emit('transactionApproved', transact);
       }else{
-        socket.emit('nodeBusy', true);
+        socket.emit('nodeBusyForTransact', true);
       }
     }
+  });
 
+  socket.on('transactionApproved', (transact) => {
+    console.log('Sending approved transaction');
+    socket.emit('message', 'transaction has been approved' + transact);
+    socket.emit('transaction', transact);
+  });
+
+  socket.on('nodeBusyForTransact', function(busy, transact){
+    if(busy && sendTrials < 5){
+      console.log('Node is busy... Sending again');
+      setTimeout(
+        function(){
+          sendTrials++;
+          socket.emit('transactionOffer', transact, thisNode);
+        }
+      , 2000)
+    }else{
+      //think of a case where node is unavailable but will still receive transact later
+      console.log('Tried to send transaction 5 times... node never responded');
+    }
+  })
+
+  socket.on('transaction', (transaction, fromNodeToken) => {
+    //Need to validate transaction before adding to blockchain
+
+        let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+        sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
+        blockchain.createTransaction(transactionObj);
+        console.log('Received new transaction:', transactionObj);
 
   });
 
@@ -101,6 +124,7 @@ ioServer.on('connection', (socket) => {
     sendEventToAllPeers('Latest Block Hash:', latestBlock.hash);
     blockchain = updatedBlockchain;
     sendEventToAllPeers('Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
+    blockchainBusy = false;
   });
 
   socket.on('seedBlockchain', (clientToken) => {
@@ -118,7 +142,7 @@ ioServer.on('connection', (socket) => {
 
     ioServer.emit('message', miningAddrToken.address + " has sent a mining request");
     sendEventToAllPeers('seedingNodes', thisNode);
-    sendEventToAllPeers('transaction', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, thisNode));
+    sendEventToAllPeers('transactionOffer', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, thisNode), miningAddrToken);
   });
 
 
@@ -203,25 +227,25 @@ const connectToPeerNetwork = () => {
 
   for(var i=0; i < ipList.length; i++){
 
-    if(ipList[i] != "http://"+thisNode.address+":8080"){
+    if(ipList[i] != thisNode.address){
       var peerSocket = io(ipList[i]);
 
       peerConnections.push(peerSocket);
+      peerSocket.emit('client-connect', thisNode);
+
+      peerSocket.on('connect', () =>{
+        console.log('connection to node established');
+        console.log('sending:', thisNode.hashSignature);
+        peerSocket.emit('blockchain', blockchain);
+
+
+      });
 
       peerSocket.on('disconnect', () =>{
         console.log('connection with peer dropped');
         peerSocket.emit('close', thisNode);
 
       })
-
-      peerSocket.on('connect', () =>{
-        console.log('connection to node established');
-
-        peerSocket.emit('client-connect', thisNode);
-        peerSocket.emit('blockchain', blockchain);
-
-
-      });
 
       // peerSocket.on('seedingNodes', (node) =>{
       //   blockchain.nodeAddresses.push(node);
@@ -380,7 +404,7 @@ const seedNodeList = (blockchain, token) =>  {
 
     }
     // console.log('This node:', blockchain.nodeAddresses[thisNode.hashSignature]);
-    return blockchain.nodeAddresses[token.hashSignature];
+    return blockchain.nodeAddresses;
   }
 
 }
@@ -440,4 +464,4 @@ setTimeout(() =>{ //A little delay to let websocket open
 }, 1500)
 
 
-console.log('Starting server on 8080... at http://localhost:8080/');
+console.log('Starting server on '+port+'... at http://localhost:'+port+'/');
