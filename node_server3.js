@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-const port = 8082
+const port = 8080
 const server = http.createServer(app).listen(port);
 
 const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
@@ -145,19 +145,14 @@ ioServer.on('connection', (socket) => {
   });
 
   socket.on('queryForBlockchain', (queryingNodeToken) =>{
-    sendEventToAllPeers('message', queryingNodeToken.address + ' has requested a copy of the current blockchain');
-    sendEventToAllPeers('getBlockchain', socket);
+    // sendEventToAllPeers('message', queryingNodeToken.address + ' has requested a copy of the current blockchain');
+    sendEventToAllPeers('getBlockchain', queryingNodeToken.address + ' has requested a copy of the current blockchain');
   })
 
-  socket.on('getBlockchain', (peerSocket) =>{
+  socket.on('getBlockchain', () =>{
     //Query all nodes for blockchain
-    if(peerSocket == undefined){
-      socket.emit('blockchain', blockchain);
-    }else{
-      peerSocket.emit('blockchain', blockchain)
-    }
 
-    console.log('Sending client the blockchain to ' + address);
+      socket.emit('blockchain', blockchain);
 
   });
 
@@ -235,7 +230,7 @@ const connectToPeerNetwork = () => {
   for(var i=0; i < ipList.length; i++){
 
     if(ipList[i] != thisNode.address){
-      var peerSocket = io(ipList[i]);
+      var peerSocket = io(ipList[i], { 'forceNew': true});
 
       peerConnections.push(peerSocket);
       peerSocket.emit('client-connect', thisNode);
@@ -243,7 +238,7 @@ const connectToPeerNetwork = () => {
       peerSocket.on('connect', () =>{
         console.log('connection to node established');
 
-        peerSocket.emit('queryForBlockchain', thisNode);
+        // peerSocket.emit('queryForBlockchain', thisNode);
 
 
       });
