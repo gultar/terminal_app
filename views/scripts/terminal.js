@@ -1,20 +1,25 @@
 var cryptos = [{}];
 var blockchain;
-const blockchainURL = 'http://localhost:5000/blockchain';
-const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain', 'http://192.168.1.68:5000/blockchain', 'http://192.168.0.154:5000/blockchain', 'http://192.168.1.75:5000/blockchain']
-let nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
+// const blockchainURL = 'http://localhost:5000/blockchain';
+// const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain', 'http://192.168.1.68:5000/blockchain', 'http://192.168.0.154:5000/blockchain', 'http://192.168.1.75:5000/blockchain']
 
+var ipList;
+var nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
 
-var localAddress = "192.168.0.153";   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
+var port = 8080;
+var localAddress = "http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 getUserIP(function(ip){
-    localAddress = ip;
+    localAddress = 'http://'+ip+':'+port;
     console.log('IP:', ip);
+    ipList = [ localAddress, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
+    				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
 });
 
 var currentTime = Date.now();
 
 var fetchTrials = 0;
 var sendingTrials = 0;
+var fallbackCounter = 1;
 
 var clientConnectionToken;
 
@@ -622,37 +627,61 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
 }
 
 
-function initSocketConnection(){
+function initSocketConnection(nodeAddress){
 setTimeout(function(){
-  issueClientToken();
-  socket  = io('http://'+localAddress+':8080/');
+  
+  if(nodeAddress != undefined){
+    nodeAddress = localAddress;
+  }
 
-  socket.on('disconnect', function(){
-    console.log('You have disconnected from node server');
-    clearAll();
-    socket.emit('close', clientConnectionToken);
+  issueClientToken(nodeAddress);
 
-  })
+    socket  = io(nodeAddress);
 
-  socket.on('connect', function(){
-    console.log('Connected to node');
-    socket.emit('client-connect', clientConnectionToken);
+    // if(socket.connected){
 
-  })
+      socket.on('disconnect', function(){
+        console.log('You have disconnected from node server');
+        clearAll();
+        socket.emit('close', clientConnectionToken);
+        // fallBackOntoOtherNode(fallbackCounter);
+      })
 
-  socket.on('message', function(message){
-    console.log('Server:', message);
-  })
+      socket.on('connect', function(){
+        console.log('Connected to node', nodeAddress);
+        socket.emit('client-connect', clientConnectionToken);
+        fallbackCounter = 1;
+      })
 
-  socket.on('seedingNodes', function(node){
-    blockchain.nodeAddresses.push(node);
-    console.log('Seeding the blockchain with this address:', node);
-  })
+      socket.on('message', function(message){
+        console.log('Server:', message);
+      })
 
-  fetchBlockchainFromServer();
+      socket.on('seedingNodes', function(node){
+        blockchain.nodeAddresses.push(node);
+        console.log('Seeding the blockchain with this address:', node);
+      })
+
+      fetchBlockchainFromServer();
+
+    // }
+
 }, 2000)
 
 
+}
+
+//Have to work on this one to avoid infinite loop
+function fallBackOntoOtherNode(fallbackCounter){
+  if(fallbackCounter < ipList.length){
+
+    if(ipList[fallbackCounter] == localAddress){
+      fallbackCounter++;
+    }
+    console.log('Falling back onto node ', ipList[fallbackCounter])
+    initSocketConnection(ipList[fallbackCounter]);
+    fallbackCounter++;
+  }
 }
 
 
@@ -671,11 +700,13 @@ function fetchBlockchainFromServer(){
           }
             blockchain = data;
             console.log('Fetched blockchain:',blockchain);
+          fetchTrials = 0;
 
         }else{
-          console.log('Tried to fetch from server 5 times. Server unavailable...')
+          console.log('Tried to fetch from server 5 times. Server unavailable...');
+            fetchTrials = 0;
         }
-        fetchTrials = 0;
+
 
       });
 
@@ -737,11 +768,11 @@ function getLatestBlock(blockchain){
   return blockchain.chain[lengthChain - 1];
 }
 
-function issueClientToken(){
+function issueClientToken(address){
   clientConnectionToken = {
     'type' : 'endpointClient',
-    'address' : localAddress,
-    'hashSignature' : sha256(localAddress, Date.now())
+    'address' : address,
+    'hashSignature' : sha256(address, Date.now())
   }
 
   console.log(clientConnectionToken);
