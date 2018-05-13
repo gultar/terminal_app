@@ -44,12 +44,6 @@ app.on('/', () => {
   res.send(getIPAddress());
 })
 
-var test = {
-  fromAddress : 'herm',
-  toAddress : 'toAddress',
-  amount : 'amount',
-  data : 'data'
-}
 
 ioServer.on('connection', (socket) => {
 
@@ -59,9 +53,6 @@ ioServer.on('connection', (socket) => {
     console.log('Client:', msg);
   });
 
-  socket.on('testBusy', () => {
-    socket.emit('nodeBusyForTransact', true, test);
-  });
 
   socket.on('client-connect', (token) => {
     //Create validation for connecting nodes
@@ -91,7 +82,7 @@ ioServer.on('connection', (socket) => {
     console.log('Sending approved transaction');
     socket.emit('message', 'transaction has been approved' + transact);
     socket.emit('transaction', transact);
-
+    sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
   });
 
   socket.on('nodeBusyForTransact', function(busy, transact){
@@ -113,9 +104,10 @@ ioServer.on('connection', (socket) => {
     //Need to validate transaction before adding to blockchain
 
         let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
-        sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
+
         blockchain.createTransaction(transactionObj);
         console.log('Received new transaction:', transactionObj);
+
 
   });
 
@@ -149,7 +141,6 @@ ioServer.on('connection', (socket) => {
 
   socket.on('peerConnect', (miningAddrToken) => {
     // connectToPeerNetwork();
-
     ioServer.emit('message', miningAddrToken.address + " has sent a mining request");
     sendEventToAllPeers('seedingNodes', thisNode);
     sendEventToAllPeers('transactionOffer', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, thisNode), miningAddrToken);
@@ -162,7 +153,7 @@ ioServer.on('connection', (socket) => {
 
   socket.on('getBlockchain', () =>{
     //Query all nodes for blockchain
-
+    console.log('Blockchain:', blockchain);
       socket.emit('blockchain', blockchain);
 
   });
