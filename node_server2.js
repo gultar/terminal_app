@@ -110,8 +110,8 @@ ioServer.on('connection', (socket) => {
 		if(blockchain != undefined){
 			if(transaction != undefined && fromNodeToken != undefined){
 				console.log('Peer '+fromNodeToken.address+' has sent a new transction.');
-				console.log(transactionObj);
-				blockchain.createTransaction(transactionObj);
+				console.log(transaction);
+				blockchain.createTransaction(transaction);
 			}
 		}
 	})
