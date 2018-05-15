@@ -44,12 +44,6 @@ app.on('/', () => {
   res.send(getIPAddress());
 })
 
-var test = {
-  fromAddress : 'herm',
-  toAddress : 'toAddress',
-  amount : 'amount',
-  data : 'data'
-}
 
 ioServer.on('connection', (socket) => {
 
@@ -59,9 +53,6 @@ ioServer.on('connection', (socket) => {
     console.log('Client:', msg);
   });
 
-  socket.on('testBusy', () => {
-    socket.emit('nodeBusyForTransact', true, test);
-  });
 
   socket.on('client-connect', (token) => {
     //Create validation for connecting nodes
@@ -71,6 +62,12 @@ ioServer.on('connection', (socket) => {
     console.log('At address:', token.address);
     socket.emit('message', 'You are now connected to ' + thisNode.address);
 
+		if(token.type == 'endpointClient'){
+			setInterval(()=>{
+				socket.emit()
+			}, 10000)
+		}
+
 
   });
 
@@ -79,44 +76,34 @@ ioServer.on('connection', (socket) => {
     if(blockchain != undefined){
       if(!blockchainBusy){
         console.log('Transaction offered by '+fromNodeToken.address + ' approved');
-        socket.emit('transactionApproved', transact);
+        socket.emit('transactionApproved', true, transact);
         sendTrials = 0;
       }else{
-        socket.emit('nodeBusyForTransact', true);
+        socket.emit('transactionApproved', false, transact);
       }
     }
   });
 
-  socket.on('transactionApproved', (transact) => {
-    console.log('Sending approved transaction');
-    socket.emit('message', 'transaction has been approved' + transact);
-    socket.emit('transaction', transact);
+  socket.on('transactionApproved', (approved, transact) => {
+		if(approved){
+			console.log('Sending approved transaction');
+	    socket.emit('message', 'transaction has been approved' + transact);
+	    socket.emit('transaction', transact);
+	    sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
+		}else{
+			console.log('Transaction not approved. The node might be busy...')
+		}
 
   });
 
-  socket.on('nodeBusyForTransact', function(busy, transact){
-    if(busy && sendTrials < 5){
-      console.log('Node is busy... Sending again');
-      setInterval(
-        function(){
-          sendTrials++;
-          socket.emit('transactionOffer', transact, thisNode);
-        }
-      , 2000)
-    }else{
-      //think of a case where node is unavailable but will still receive transact later
-      console.log('Tried to send transaction 5 times... node never responded');
-    }
-  })
+
 
   socket.on('transaction', (transaction, fromNodeToken) => {
     //Need to validate transaction before adding to blockchain
-
         let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
-        sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
+
         blockchain.createTransaction(transactionObj);
         console.log('Received new transaction:', transactionObj);
-
   });
 
   socket.on('miningRequest', (miningAddrToken) =>{
@@ -124,6 +111,8 @@ ioServer.on('connection', (socket) => {
     if(!blockchainBusy && blockchain != undefined){
 
       startMining(miningAddrToken);
+			blockchainBusy = false;
+
 
     }
   });
@@ -131,11 +120,16 @@ ioServer.on('connection', (socket) => {
   socket.on('miningApproved', function(updatedBlockchain){
     var latestBlock = getLatestBlock(updatedBlockchain);
 
-    sendEventToAllPeers('Latest Block Hash:', latestBlock.hash);
-    blockchain = updatedBlockchain;
-    sendEventToAllPeers('Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
+    sendEventToAllPeers('message','Latest Block Hash:'+latestBlock.hash);
+    blockchain = compareBlockchains(blockchain, updatedBlockchain);
+    sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
     blockchainBusy = false;
   });
+
+	socket.on('syncBlockchain', (blockchainToSync)=>{
+		blockchain = compareBlockchains(blockchain, blockchainToSync);
+		ioServer.emit('blockchain', blockchain);
+	})
 
   socket.on('seedBlockchain', (clientToken) => {
     //fetch most up to date blockchain from network
@@ -149,21 +143,29 @@ ioServer.on('connection', (socket) => {
 
   socket.on('peerConnect', (miningAddrToken) => {
     // connectToPeerNetwork();
-
-    ioServer.emit('message', miningAddrToken.address + " has sent a mining request");
-    sendEventToAllPeers('seedingNodes', thisNode);
-    sendEventToAllPeers('transactionOffer', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, thisNode), miningAddrToken);
+    ioServer.emit('message', miningAddrToken.address + " has sent a blockchain");
+    sendEventToAllPeers('blockchain', blockchain);
+    sendEventToAllPeers('getBlockchain', miningAddrToken.address + ' has requested a copy of the current blockchain');
+    // sendEventToAllPeers('seedingNodes', thisNode);
+    // sendEventToAllPeers('transactionOffer', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, thisNode), miningAddrToken);
   });
 
   socket.on('queryForBlockchain', (queryingNodeToken) =>{
     // sendEventToAllPeers('message', queryingNodeToken.address + ' has requested a copy of the current blockchain');
-    sendEventToAllPeers('getBlockchain', queryingNodeToken.address + ' has requested a copy of the current blockchain');
+    // sendEventToAllPeers('getBlockchain', queryingNodeToken.address + ' has requested a copy of the current blockchain');
+		syncBlockchain();
   })
 
-  socket.on('getBlockchain', () =>{
+  socket.on('getBlockchain', (token) =>{
     //Query all nodes for blockchain
-
-      socket.emit('blockchain', blockchain);
+		if(token.type == 'endpointClient'){
+			var msg = token.address + ' has requested a copy of the blockchain!';
+	    console.log(msg);
+			sendEventToAllPeers('message', msg);
+	    ioServer.emit('blockchain', blockchain);
+		}else if(token.type == 'node'){
+			socket.emit('syncBlockchain', blockchain);
+		}
 
   });
 
@@ -171,6 +173,8 @@ ioServer.on('connection', (socket) => {
     blockchain = compareBlockchains(blockchain, blockchainReceived);
     console.log('Received blockchain from node. Comparing it!');
   })
+
+
 
   socket.on('close', (token) => {
 
@@ -194,6 +198,17 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
     }
   }
 
+}
+
+const syncBlockchain = () => {
+	sendEventToAllPeers('message', 'Syncing blockchain');
+	for(var i=0; i<peers.length; i++){
+		peers[i].emit('getBlockchain', thisNode);
+
+		peers[i].on('syncBlockchain', (blockchainReceived) =>{
+			blockchain = compareBlockchains(blockchain, blockchainReceived);
+		})
+	}
 }
 
 
@@ -373,11 +388,11 @@ const saveBlockchain = (blockchainReceived) => {
 
 const startMining = (miningAddrToken) => {
 
-  blockchainBusy = true;
+
 
   miningAddr = getBlockchainAddress(miningAddrToken);
   let waitingOutputOnce = true;
-
+		blockchainBusy = true;
     miningSuccess = blockchain.minePendingTransactions(miningAddr);
 
     if(miningSuccess){
@@ -392,7 +407,7 @@ const startMining = (miningAddrToken) => {
       sendEventToAllPeers('message', message);
       sendEventToAllPeers('blockchain', blockchain);
       saveBlockchain(blockchain);
-      blockchainBusy = false;
+
 
 
     }else{
@@ -401,7 +416,7 @@ const startMining = (miningAddrToken) => {
       //   // ioServer.emit('needMoreTransact', 'Insufficient transactions to mine. Listening for incoming transactions');
       //   sendEventToAllPeers('message', miningAddr.address+' has Insufficient transactions to mine. Listening for incoming transactions');
       // }
-
+			blockchainBusy = false;
     }
 
 

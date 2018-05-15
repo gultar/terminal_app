@@ -6,25 +6,30 @@ var blockchain;
 var ipList;
 var nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
 
+var url = document.URL;
+console.log(url);
 var port = 8080;
-var localAddress = "http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
-getUserIP(function(ip){
-    localAddress = 'http://'+ip+':'+port;
-    console.log('IP:', ip);
-    ipList = [ localAddress, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
-    				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
-});
+
+var localAddress = document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
+// getUserIP(function(ip){
+//     localAddress = 'http://'+ip+':'+port;
+//     console.log('IP:', ip);
+//     ipList = [ localAddress, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
+//     				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
+// });
 
 var currentTime = Date.now();
 
 var fetchTrials = 0;
 var sendingTrials = 0;
 var fallbackCounter = 1;
+var outputBuffer;
 
 var clientConnectionToken;
 
 var hexagrams = [{}];
 var backgroundUrl = $('body').css("background-image");
+var debugOutput_ = document.getElementById('second-container');
 
 //Server connection
 var socket;
@@ -56,7 +61,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
   var cmdLine_ = document.querySelector(cmdLineContainer);
   var output_ = document.querySelector(outputContainer);
-  var debugOutput_ = document.getElementById('second-container');
+
   var mobileButton = document.getElementById('mobile-enter');
   var ulContainer = document.getElementById("myULContainer")
 
@@ -75,7 +80,6 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
     "<span class'help-line'><b class='help-cmd'>echo</b> ----------- Outputs a string into the console. Usage: echo string. Ex: echo Hello World</span>",
     "<span class'help-line'><b class='help-cmd'>help</b> ----------- Displays this message</span>",
     "<span class'help-line'><b class='help-cmd'>uname</b> ---------- Displays information about the browser</span>",
-    "<span class'help-line'><b class='help-cmd'>whoami</b> --------- ?????</span>",
     "<span class'help-line'><b class='help-cmd'>iching</b> --------- Casts a random hexagram and text. Usage: iching HxNb. Ex: iching 40</span>",
     "<span class'help-line'><b class='help-cmd'>crypto</b> --------- Outputs selected crypto currencies compared to major real-world currencies.Is updated every five seconds. Usage: crypto SYM1 SYM2 SYM3... SYM10. EX: crypto ETH DASH BTC</span>",
     "<span class'help-line'><b class='help-cmd'>list-cryptos</b> ---- Displays a list of all known cryptocurrencies</span>",
@@ -83,8 +87,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
     "<span class'help-line'><b class='help-cmd'>background</b> ----- Changes the background image. Usage: background URL. Ex: background http://www.nafpaktia.com/data/wallpapers/40/860159.jpg</span>",
     "<span class'help-line'><b class='help-cmd'>weather</b> -------- Outputs current weather data from a specific location. Usage: weather City Country. Ex: weather Quebec Canada.</span>",
     "<span class'help-line'><b class='help-cmd'>show-blocks</b> ---- Displays all current blocks on the blockchain. Options: <b>-e or expand</b></span>",
-    "<span class'help-line'><b class='help-cmd'>mine</b> ----------- Mines the current transactions</span>",
-    "<span class'help-line'><b class='help-cmd'>game-of-life</b> --- Displays a Conway's Game of Life</span>"
+    "<span class'help-line'><b class='help-cmd'>mine</b> ----------- Mines the current transactions</span>"
 
   ];
 
@@ -248,10 +251,6 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           socket.emit('peerConnect', 'connect')
           break;
 
-        case 'game-of-life':
-          $('#myCanvas').css('visibility', 'visible');
-          initGameOfLife();
-          break;
 
         case 'iching':
           runIching(args, cmd);
@@ -456,6 +455,8 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
     output_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
   }
 
+
+
   function outputTd(html) {
     output_.insertAdjacentHTML('beforeEnd', '<td>' + html + '</td>');
   }
@@ -513,41 +514,15 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
       getProperOutput(output_, ulContainer);
     },
-    output: output
+    output: output,
+    outputDebug: outputDebug
   }
 };
 
+function outputDebug(html) {
 
-
-
-function fetchFromDistantNode(url){
-  console.log('Fetching from :', url);
-  $.get(url).then(function(data){
-
-    rawBlockchain = JSON.parse(data);
-    console.log(localAddress, url);
-    distantBlockchain = new Blockchain(rawBlockchain.chain, rawBlockchain.pendingTransactions);
-    blockchain = longestChain(blockchain, distantBlockchain);
-    console.log('Longest blockchain has that many blocks:',blockchain.chain.length, url);
-
-  })
+  debugOutput_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
 }
-
-function saveBlockchainToServer(){
-  console.log('Saving: ', blockchain);
-  $.post(blockchainURL, { blockchain: JSON.stringify(blockchain)}, function(data){
-    //console.log('Sending: ', data);
-  })
-  .done(function(){
-    console.log('Blockchain saved to server');
-  })
-  .fail(function(err){
-    console.log('Failed to save blockchain to server');
-    throw err;
-  });
-  //sendBlockchainToRemoteNode();
-}
-
 
 
 function startMining(blockchainAddr){
@@ -608,28 +583,23 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
 
   socket.emit('transactionOffer', transactToSend, clientConnectionToken)
 
-  socket.on('transactionApproved', function(transact){
-    socket.emit('transaction', transact);
+  socket.on('transactionApproved', function(approved, transact){
+    if(approved){
+      socket.emit('transaction', transact, clientConnectionToken);
+    }else{
+      console.log("Transaction hasn't been sent");
+    }
+
   });
 
 
-  socket.on('nodeBusyForTransact', function(busy, transact){
-    if(busy && sendingTrials < 5){
-      console.log('Node is busy...');
-      setTimeout(
-        function(){
-          sendingTrials++;
-          return sendTransaction(transact.fromAddress, transact.toAddress, transact.amount, transact.data);
-        }
-      , 2000)
-    }
-  })
+
 }
 
 
-function initSocketConnection(nodeAddress){
+function initSocketConnection(nodeAddress=localAddress){
 setTimeout(function(){
-  
+
   if(nodeAddress != undefined){
     nodeAddress = localAddress;
   }
@@ -648,13 +618,14 @@ setTimeout(function(){
       })
 
       socket.on('connect', function(){
-        console.log('Connected to node', nodeAddress);
+        console.log('Connected to node ', nodeAddress);
         socket.emit('client-connect', clientConnectionToken);
         fallbackCounter = 1;
       })
 
       socket.on('message', function(message){
         console.log('Server:', message);
+        outputDebug('Server:'+message)
       })
 
       socket.on('seedingNodes', function(node){
@@ -674,7 +645,7 @@ setTimeout(function(){
 //Have to work on this one to avoid infinite loop
 function fallBackOntoOtherNode(fallbackCounter){
   if(fallbackCounter < ipList.length){
-
+    socket = null;
     if(ipList[fallbackCounter] == localAddress){
       fallbackCounter++;
     }
@@ -687,7 +658,7 @@ function fallBackOntoOtherNode(fallbackCounter){
 
 function fetchBlockchainFromServer(){
 
-      socket.emit('getBlockchain', clientConnectionToken.address+' has requested a copy of the blockchain');
+      socket.emit('getBlockchain', clientConnectionToken);
       console.log('Fetching blockchain from server node...');
       socket.on('blockchain', function(data){
         if(fetchTrials <= 5){
@@ -726,7 +697,7 @@ window.onbeforeunload = function() {
     localStorage.setItem('savedBackground', $('body').css("background-image"));
     //saving the blockchain to server, then to file
 
-    saveBlockchainToServer();
+    // saveBlockchainToServer();
 
 }
 
@@ -768,12 +739,12 @@ function getLatestBlock(blockchain){
   return blockchain.chain[lengthChain - 1];
 }
 
-function issueClientToken(address){
+function issueClientToken(address=localAddress){
   clientConnectionToken = {
     'type' : 'endpointClient',
     'address' : address,
-    'hashSignature' : sha256(address, Date.now())
+    'hashSignature' : sha256(address, currentTime)
   }
 
-  console.log(clientConnectionToken);
+
 }
