@@ -78,48 +78,56 @@ ioServer.on('connection', (socket) => {
 
   });
 
-  socket.on('transactionOffer', (transact, fromNodeToken) =>{
-		if(fromNodeToken != undefined){
-			console.log(fromNodeToken.address + ' offered a transaction...');
-	    if(blockchain != undefined){
-	      if(!blockchainBusy){
-	        console.log('Transaction offered by '+fromNodeToken.address + ' approved');
-	        socket.emit('transactionApproved', true, transact);
-	        sendTrials = 0;
-	      }else{
-	        socket.emit('transactionApproved', false, transact);
-	      }
-	    }
-		}
-
-  });
-
-  socket.on('transactionApproved', (approved, transact) => {
-		if(approved && transact != undefined){
-			console.log('Sending approved transaction');
-	    socket.emit('message', 'transaction has been approved' + transact);
-	    socket.emit('transaction', transact);
-	    sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
-		}else{
-			console.log('Transaction not approved. The node might be busy...')
-		}
-
-  });
+  // socket.on('transactionOffer', (transact, fromNodeToken) =>{
+	// 	if(fromNodeToken != undefined){
+	// 		console.log(fromNodeToken.address + ' offered a transaction...');
+	//     if(blockchain != undefined){
+	//       if(!blockchainBusy){
+	//         console.log('Transaction offered by '+fromNodeToken.address + ' approved');
+	//         socket.emit('transactionApproved', true, transact);
+	//         sendTrials = 0;
+	//       }else{
+	//         socket.emit('transactionApproved', false, transact);
+	//       }
+	//     }
+	// 	}
+	//
+  // });
+	//
+  // socket.on('transactionApproved', (approved, transact) => {
+	// 	if(approved && transact != undefined){
+	// 		console.log('Sending approved transaction');
+	//     socket.emit('message', 'transaction has been approved' + transact);
+	//     socket.emit('transaction', transact);
+	//     sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
+	// 	}else{
+	// 		console.log('Transaction not approved. The node might be busy...')
+	// 	}
+	//
+  // });
 
 
 
   socket.on('transaction', (transaction, fromNodeToken) => {
     //Need to validate transaction before adding to blockchain
-		if(transaction != undefined && fromNodeToken != undefined){
-			let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+		if(blockchain != undefined){
+			if(transaction != undefined && fromNodeToken != undefined){
+				if(fromNodeToken.address != thisNode.address){
+					let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
-			blockchain.createTransaction(transactionObj);
-			sendEventToAllPeers('transaction', transactionObj);
-			console.log('Received new transaction:', transactionObj);
-			transactionObj = null;
+					blockchain.createTransaction(transactionObj);
+					sendEventToAllPeers('transaction', transactionObj, fromNodeToken);
+					console.log('Received new transaction:', transactionObj);
+					transactionObj = null;
+				}
+
+			}else{
+				socket.emit('message', 'ERROR: Either your transaction or your token is unreadable. Try again.')
+			}
 		}else{
-			socket.emit('message', 'ERROR: Either your transaction or your token is unreadable. Try again.')
+			socket.emit('message', 'Node is unavailable for receiving the transaction');
 		}
+
 
   });
 
@@ -201,7 +209,7 @@ ioServer.on('connection', (socket) => {
 		// socket.removeAllListeners('message');
 		// socket.removeAllListeners('disconnect');
 		// ioServer.removeAllListeners('connection');
-		console.log('Lost a connected peer');
+
 	})
 
 
