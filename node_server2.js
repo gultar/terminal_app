@@ -105,7 +105,15 @@ ioServer.on('connection', (socket) => {
 	// 	}
 	//
   // });
-
+	socket.on('distributedTransaction', (transaction, fromNodeToken) => {
+		if(blockchain != undefined){
+			if(transaction != undefined && fromNodeToken != undefined){
+				console.log('Peer '+fromNodeToken.address+' has sent a new transction.');
+				console.log(transactionObj);
+				blockchain.createTransaction(transactionObj);
+			}
+		}
+	})
 
 
   socket.on('transaction', (transaction, fromNodeToken) => {
@@ -116,7 +124,7 @@ ioServer.on('connection', (socket) => {
 					let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
 					blockchain.createTransaction(transactionObj);
-					sendEventToAllPeers('transaction', transactionObj, fromNodeToken);
+					sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
 					console.log('Received new transaction:', transactionObj);
 					transactionObj = null;
 				}
