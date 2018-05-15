@@ -7,7 +7,7 @@ const server = http.createServer(app).listen(port);
 const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
 var expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
-const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000});
+const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
 // const P2P = require('socket.io-p2p');
 // const p2p = require('socket.io-p2p-server').Server;
 const fs = require('fs');
@@ -53,39 +53,49 @@ ioServer.on('connection', (socket) => {
     console.log('Client:', msg);
   });
 
+	socket.on('error', (exception)=>{
+		console.log('Error:',exception);
+		socket.destroy();
+	})
+
 
   socket.on('client-connect', (token) => {
     //Create validation for connecting nodes
-
-    clients[token.hashSignature] = token;
-    console.log('Connected client hash: ', token.hashSignature);
-    console.log('At address:', token.address);
-    socket.emit('message', 'You are now connected to ' + thisNode.address);
-
-		if(token.type == 'endpointClient'){
-			setInterval(()=>{
-				socket.emit()
-			}, 10000)
+		if(token != undefined){
+			clients[token.hashSignature] = token;
+	    console.log('Connected client hash: ', token.hashSignature);
+	    console.log('At address:', token.address);
+	    socket.emit('message', 'You are now connected to ' + thisNode.address);
 		}
+
+
+		// if(token.type == 'endpointClient'){
+		// 	setInterval(()=>{
+		// 		socket.emit('message', 'ping');
+		// 	}, 10000)
+		// }
 
 
   });
 
   socket.on('transactionOffer', (transact, fromNodeToken) =>{
-    console.log(fromNodeToken.address + ' offered a transaction...');
-    if(blockchain != undefined){
-      if(!blockchainBusy){
-        console.log('Transaction offered by '+fromNodeToken.address + ' approved');
-        socket.emit('transactionApproved', true, transact);
-        sendTrials = 0;
-      }else{
-        socket.emit('transactionApproved', false, transact);
-      }
-    }
+		if(fromNodeToken != undefined){
+			console.log(fromNodeToken.address + ' offered a transaction...');
+	    if(blockchain != undefined){
+	      if(!blockchainBusy){
+	        console.log('Transaction offered by '+fromNodeToken.address + ' approved');
+	        socket.emit('transactionApproved', true, transact);
+	        sendTrials = 0;
+	      }else{
+	        socket.emit('transactionApproved', false, transact);
+	      }
+	    }
+		}
+
   });
 
   socket.on('transactionApproved', (approved, transact) => {
-		if(approved){
+		if(approved && transact != undefined){
 			console.log('Sending approved transaction');
 	    socket.emit('message', 'transaction has been approved' + transact);
 	    socket.emit('transaction', transact);
@@ -100,10 +110,17 @@ ioServer.on('connection', (socket) => {
 
   socket.on('transaction', (transaction, fromNodeToken) => {
     //Need to validate transaction before adding to blockchain
-        let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+		if(transaction != undefined && fromNodeToken != undefined){
+			let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
-        blockchain.createTransaction(transactionObj);
-        console.log('Received new transaction:', transactionObj);
+			blockchain.createTransaction(transactionObj);
+			sendEventToAllPeers('transaction', transactionObj);
+			console.log('Received new transaction:', transactionObj);
+			transactionObj = null;
+		}else{
+			socket.emit('message', 'ERROR: Either your transaction or your token is unreadable. Try again.')
+		}
+
   });
 
   socket.on('miningRequest', (miningAddrToken) =>{
@@ -118,8 +135,8 @@ ioServer.on('connection', (socket) => {
   });
 
   socket.on('miningApproved', function(updatedBlockchain){
-    var latestBlock = getLatestBlock(updatedBlockchain);
 
+    var latestBlock = getLatestBlock(updatedBlockchain);
     sendEventToAllPeers('message','Latest Block Hash:'+latestBlock.hash);
     blockchain = compareBlockchains(blockchain, updatedBlockchain);
     sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
@@ -141,6 +158,7 @@ ioServer.on('connection', (socket) => {
     console.log('Seeding the blockchain with this address:', node);
   })
 
+	//------------------TEST EVENT-------------------------//
   socket.on('peerConnect', (miningAddrToken) => {
     // connectToPeerNetwork();
     ioServer.emit('message', miningAddrToken.address + " has sent a blockchain");
@@ -151,9 +169,12 @@ ioServer.on('connection', (socket) => {
   });
 
   socket.on('queryForBlockchain', (queryingNodeToken) =>{
-    // sendEventToAllPeers('message', queryingNodeToken.address + ' has requested a copy of the current blockchain');
-    // sendEventToAllPeers('getBlockchain', queryingNodeToken.address + ' has requested a copy of the current blockchain');
-		syncBlockchain();
+		if(queryingNodeToken != undefined){
+			syncBlockchain();
+		}else{
+			socket.emit('message', 'ERROR: Invalid token sent');
+		}
+
   })
 
   socket.on('getBlockchain', (token) =>{
@@ -165,6 +186,8 @@ ioServer.on('connection', (socket) => {
 	    ioServer.emit('blockchain', blockchain);
 		}else if(token.type == 'node'){
 			socket.emit('syncBlockchain', blockchain);
+		}else{
+			socket.emit('message', 'ERROR: Invalid token sent');
 		}
 
   });
@@ -174,17 +197,31 @@ ioServer.on('connection', (socket) => {
     console.log('Received blockchain from node. Comparing it!');
   })
 
+	socket.on('disconnect', () =>{
+		// socket.removeAllListeners('message');
+		// socket.removeAllListeners('disconnect');
+		// ioServer.removeAllListeners('connection');
+		console.log('Lost a connected peer');
+	})
+
 
 
   socket.on('close', (token) => {
 
     clients[token.hashSignature] = null;
+
     console.log('Disconnected clients: ',token.hashSignature);
 
   });
 
 
 });
+
+ioServer.on('disconnection', (socket) =>{
+	console.log('Lost connection with client');
+
+	socket.destroy();
+})
 
 const sendEventToAllPeers = (eventType, data, moreData=false ) => {
   if(peers.length > 0){
@@ -194,6 +231,7 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
       }else{
         peers[i].emit(eventType, data, moreData);
       }
+
 
     }
   }
@@ -206,7 +244,10 @@ const syncBlockchain = () => {
 		peers[i].emit('getBlockchain', thisNode);
 
 		peers[i].on('syncBlockchain', (blockchainReceived) =>{
+			ioServer.emit('message', 'Length of peers: '+peers.length);
 			blockchain = compareBlockchains(blockchain, blockchainReceived);
+			ioServer.emit('blockchain', blockchain);
+			// ioServer.emit('message', 'Syncing with '+peers[i].uri);
 		})
 	}
 }
@@ -497,4 +538,4 @@ setTimeout(() =>{ //A little delay to let websocket open
 }, 1500)
 
 
-console.log('Starting server on '+port+'... at http://localhost:'+port+'/');
+console.log('Starting server at '+thisNode.address+'/');

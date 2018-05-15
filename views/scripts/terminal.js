@@ -1,28 +1,22 @@
 var cryptos = [{}];
 var blockchain;
 // const blockchainURL = 'http://localhost:5000/blockchain';
-// const otherNodesAddresses = ['http://169.254.139.53:5000/blockchain', 'http://192.168.0.153:5000/blockchain', 'http://192.168.0.112:5000/blockchain', 'http://192.168.1.68:5000/blockchain', 'http://192.168.0.154:5000/blockchain', 'http://192.168.1.75:5000/blockchain']
+ const nodeAddresses = ['http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', 'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082',
+  'http://192.168.0.112:8080', 'http://192.168.0.112:8080', 'http://192.168.1.68:8080', 'http://192.168.0.154:8080', 'http://192.168.1.75:8080']
 
 var ipList;
-var nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
+// var nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
 
 var url = document.URL;
-console.log(url);
 var port = 8080;
 
 var localAddress = document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
-// getUserIP(function(ip){
-//     localAddress = 'http://'+ip+':'+port;
-//     console.log('IP:', ip);
-//     ipList = [ localAddress, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
-//     				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
-// });
 
 var currentTime = Date.now();
 
 var fetchTrials = 0;
 var sendingTrials = 0;
-var fallbackCounter = 1;
+var fallbackCounter = -1;
 var outputBuffer;
 
 var clientConnectionToken;
@@ -609,17 +603,26 @@ setTimeout(function(){
     socket  = io(nodeAddress);
 
     // if(socket.connected){
-
+      
       socket.on('disconnect', function(){
         console.log('You have disconnected from node server');
         clearAll();
         socket.emit('close', clientConnectionToken);
+
+        fallbackCounter++;
+        socket.removeAllListeners('message');
+        socket.removeAllListeners('disconnect');
+
+        //
+
+
         // fallBackOntoOtherNode(fallbackCounter);
       })
 
       socket.on('connect', function(){
         console.log('Connected to node ', nodeAddress);
         socket.emit('client-connect', clientConnectionToken);
+
         fallbackCounter = 1;
       })
 
