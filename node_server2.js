@@ -106,6 +106,7 @@ ioServer.on('connection', (socket) => {
 	//
   // });
 	socket.on('distributedTransaction', (transaction, fromNodeToken) => {
+		//Need to validate transaction everytime it is received
 		if(blockchain != undefined){
 			if(transaction != undefined && fromNodeToken != undefined){
 				console.log('Peer '+fromNodeToken.address+' has sent a new transction.');

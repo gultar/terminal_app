@@ -105,19 +105,31 @@ ioServer.on('connection', (socket) => {
 	// 	}
 	//
   // });
-
+	socket.on('distributedTransaction', (transaction, fromNodeToken) => {
+		//Need to validate transaction everytime it is received
+		if(blockchain != undefined){
+			if(transaction != undefined && fromNodeToken != undefined){
+				console.log('Peer '+fromNodeToken.address+' has sent a new transction.');
+				console.log(transactionObj);
+				blockchain.createTransaction(transactionObj);
+			}
+		}
+	})
 
 
   socket.on('transaction', (transaction, fromNodeToken) => {
     //Need to validate transaction before adding to blockchain
 		if(blockchain != undefined){
 			if(transaction != undefined && fromNodeToken != undefined){
-				let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+				if(fromNodeToken.address != thisNode.address){
+					let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
-				blockchain.createTransaction(transactionObj);
-				sendEventToAllPeers('transaction', transactionObj, thisNode);
-				console.log('Received new transaction:', transactionObj);
-				transactionObj = null;
+					blockchain.createTransaction(transactionObj);
+					sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
+					console.log('Received new transaction:', transactionObj);
+					transactionObj = null;
+				}
+
 			}else{
 				socket.emit('message', 'ERROR: Either your transaction or your token is unreadable. Try again.')
 			}
