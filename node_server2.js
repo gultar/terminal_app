@@ -3,7 +3,7 @@ const http = require('http');
 const app = express();
 const port = 8081
 const server = http.createServer(app).listen(port);
-
+const sha256 = require('./backend/sha256');
 const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
 var expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
@@ -12,16 +12,20 @@ const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeou
 // const p2p = require('socket.io-p2p-server').Server;
 const fs = require('fs');
 const { getIPAddress } = require('./backend/ipFinder.js');
-const sha256 = require('./backend/sha256');
 
+// const blockBase = require('json')
 // const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080']
 const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
-				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082']
+				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
+
 let thisNode = {
   'type' : 'node',
   'address' : ipList[0],
   'hashSignature' : sha256(ipList[0], Date.now())
 }
+
+const { encrypt, decrypt } = require('./backend/encryption.js')
+
 
 
 let clients = [];
@@ -35,7 +39,7 @@ let blockchainFetched;
 
 let sendTrials = 0;
 
-let blockchainBusy = false;
+// let blockchainBusy = false;
 
 
 app.use(express.static(__dirname+'/views'));
@@ -78,19 +82,9 @@ ioServer.on('connection', (socket) => {
 
   });
 
-  // socket.on('transactionOffer', (transact, fromNodeToken) =>{
-	// 	if(fromNodeToken != undefined){
-	// 		console.log(fromNodeToken.address + ' offered a transaction...');
-	//     if(blockchain != undefined){
-	//       if(!blockchainBusy){
-	//         console.log('Transaction offered by '+fromNodeToken.address + ' approved');
-	//         socket.emit('transactionApproved', true, transact);
-	//         sendTrials = 0;
-	//       }else{
-	//         socket.emit('transactionApproved', false, transact);
-	//       }
-	//     }
-	// 	}
+  socket.on('triggerSave', ()=>{
+		saveBlockchain(blockchain);
+	})
 	//
   // });
 	//
@@ -106,23 +100,29 @@ ioServer.on('connection', (socket) => {
 	//
   // });
 	socket.on('distributedTransaction', (transaction, fromNodeToken) => {
+		///////////////////////////////////////////////////////////
 		//Need to validate transaction everytime it is received
+		///////////////////////////////////////////////////////////
 		if(blockchain != undefined){
 			if(transaction != undefined && fromNodeToken != undefined){
 				console.log('Peer '+fromNodeToken.address+' has sent a new transction.');
 				console.log(transaction);
-				blockchain.createTransaction(transaction);
+				var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+
+				blockchain.createTransaction(transactionObj);
 			}
 		}
 	})
 
 
   socket.on('transaction', (transaction, fromNodeToken) => {
-    //Need to validate transaction before adding to blockchain
+		///////////////////////////////////////////////////////////
+		//Need to validate transaction before adding to blockchain
+		///////////////////////////////////////////////////////////
 		if(blockchain != undefined){
 			if(transaction != undefined && fromNodeToken != undefined){
 				if(fromNodeToken.address != thisNode.address){
-					let transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+					var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
 					blockchain.createTransaction(transactionObj);
 					sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
@@ -141,11 +141,16 @@ ioServer.on('connection', (socket) => {
   });
 
   socket.on('miningRequest', (miningAddrToken) =>{
+		///////////////////////////////////////////////////////////
     //need to validate miningAddr before allowing mining action;
-    if(!blockchainBusy && blockchain != undefined){
+		///////////////////////////////////////////////////////////
+    if(blockchain != undefined){
 
-      startMining(miningAddrToken);
-			blockchainBusy = false;
+      var hasMinedABlock = startMining(miningAddrToken);
+
+			if(hasMinedABlock){
+				saveBlockchain(blockchain);
+			}
 
 
     }
@@ -157,10 +162,12 @@ ioServer.on('connection', (socket) => {
     sendEventToAllPeers('message','Latest Block Hash:'+latestBlock.hash);
     blockchain = compareBlockchains(blockchain, updatedBlockchain);
     sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
-    blockchainBusy = false;
+		console.log('BLOCKCHAIN:', blockchain);
+
+
   });
 
-	socket.on('syncBlockchain', (blockchainToSync)=>{
+	socket.on('syncBlockchain', (blockchainToSync=false)=>{
 		blockchain = compareBlockchains(blockchain, blockchainToSync);
 		ioServer.emit('blockchain', blockchain);
 	})
@@ -186,6 +193,7 @@ ioServer.on('connection', (socket) => {
   });
 
   socket.on('queryForBlockchain', (queryingNodeToken) =>{
+
 		if(queryingNodeToken != undefined){
 			syncBlockchain();
 		}else{
@@ -196,16 +204,21 @@ ioServer.on('connection', (socket) => {
 
   socket.on('getBlockchain', (token) =>{
     //Query all nodes for blockchain
-		if(token.type == 'endpointClient'){
-			var msg = token.address + ' has requested a copy of the blockchain!';
-	    console.log(msg);
-			sendEventToAllPeers('message', msg);
-	    ioServer.emit('blockchain', blockchain);
-		}else if(token.type == 'node'){
-			socket.emit('syncBlockchain', blockchain);
+		if(blockchain != undefined){
+			if(token.type == 'endpointClient'){
+				var msg = token.address + ' has requested a copy of the blockchain!';
+		    console.log(msg);
+				sendEventToAllPeers('message', msg);
+		    ioServer.emit('blockchain', blockchain);
+			}else if(token.type == 'node'){
+				socket.emit('syncBlockchain', blockchain);
+			}else{
+				socket.emit('message', 'ERROR: Invalid token sent');
+			}
 		}else{
-			socket.emit('message', 'ERROR: Invalid token sent');
+			socket.emit('message', 'Blockchain is unavailable on node. It might be loading or saving.');
 		}
+
 
   });
 
@@ -220,7 +233,6 @@ ioServer.on('connection', (socket) => {
 		// ioServer.removeAllListeners('connection');
 
 	})
-
 
 
   socket.on('close', (token) => {
@@ -260,12 +272,6 @@ const syncBlockchain = () => {
 	for(var i=0; i<peers.length; i++){
 		peers[i].emit('getBlockchain', thisNode);
 
-		peers[i].on('syncBlockchain', (blockchainReceived) =>{
-			ioServer.emit('message', 'Length of peers: '+peers.length);
-			blockchain = compareBlockchains(blockchain, blockchainReceived);
-			ioServer.emit('blockchain', blockchain);
-			// ioServer.emit('message', 'Syncing with '+peers[i].uri);
-		})
 	}
 }
 
@@ -273,7 +279,7 @@ const syncBlockchain = () => {
 //Init blockchain starting from local file
 const initBlockchain = (tryOnceAgain=true) => {
   //flag to avoid crashes if a transaction is sent while loading
-  blockchainBusy = true;
+
 
   console.log('Initiating blockchain');
   blockchainFetched = loadBlockchainFromServer()
@@ -299,7 +305,7 @@ const initBlockchain = (tryOnceAgain=true) => {
       blockchain = new Blockchain(blockchainFetched.chain, blockchainFetched.pendingTransactions, blockchainFetched.nodeAddresses);
       seedNodeList(blockchain, thisNode);
 
-      blockchainFetched = null;
+
     }
 
 
@@ -307,7 +313,7 @@ const initBlockchain = (tryOnceAgain=true) => {
 
 
     // console.log('This node:',blockchain.nodeAddresses[thisNode.hashSignature]);
-    blockchainBusy = false;
+
   }, 4000);
 
 
@@ -347,6 +353,7 @@ const connectToPeerNetwork = () => {
   }
 
   return peerConnections;
+
 };
 
 const getBlockchainAddress = (addressToken) => {
@@ -370,7 +377,7 @@ const getBlockchainAddress = (addressToken) => {
 const loadBlockchainFromServer = () => {
 
   //flag to avoid crashes if a transaction is sent while loading
-  blockchainBusy = true;
+
 
   fs.exists('blockchain.json', function(exists){
 
@@ -380,13 +387,13 @@ const loadBlockchainFromServer = () => {
               console.log('Reading from blockchain.json file...');
               let rawBlockchainFetched = JSON.parse(data);
               blockchainFetched = new Blockchain(rawBlockchainFetched.chain, rawBlockchainFetched.pendingTransactions, rawBlockchainFetched.nodeAddresses);
-              blockchainFetched = seedNodeList(blockchainFetched, thisNode);
+              blockchainFetched.nodeAddresses = seedNodeList(blockchainFetched, thisNode);
 
             if (err){
                 console.log(err);
             }
 
-            blockchainBusy = false
+
             });
         } else {
           console.log('Generating new blockchain')
@@ -397,7 +404,7 @@ const loadBlockchainFromServer = () => {
             saveBlockchain(newBlockchain);
             console.log("file does not exist")
 
-            blockchainBusy = false;
+
             return false;
         }
 
@@ -407,7 +414,7 @@ const loadBlockchainFromServer = () => {
 
 const saveBlockchain = (blockchainReceived) => {
   //flag to avoid crashes if a transaction is sent while loading
-  blockchainBusy = true;
+
 
   fs.exists('blockchain.json', function(exists){
       if(exists){
@@ -426,22 +433,48 @@ const saveBlockchain = (blockchainReceived) => {
 
             if(json != undefined){
               console.log('Writing to file...');
-              fs.writeFile('blockchain.json', json);
+
+							fs.createWriteStream
+							var wstream = fs.createWriteStream('blockchain.json');
+
+              wstream.write(json);
+
+							console.log('BLOCKCHAIN', blockchain);
             }
-            blockchainBusy = false
+
             });
 
       } else {
           console.log("Creating new Blockchain file and saving to it")
           let json = JSON.stringify(blockchainReceived);
           if(json != undefined){
-            fs.writeFile('blockchain.json', json);
+
+						fs.createWriteStream
+						var wstream = fs.createWriteStream('blockchain.json');
+
+						wstream.write(json);
           }
-          blockchainBusy = false;
+
       }
 
 
       });
+}
+
+
+const save = () =>{
+	fs.open('myfile', 'wx', (err, fd) => {
+  if (err) {
+    if (err.code === 'EEXIST') {
+      console.error('myfile already exists');
+      return;
+    }
+
+    throw err;
+  }
+
+  writeMyData(fd);
+});
 }
 
 const startMining = (miningAddrToken) => {
@@ -450,13 +483,11 @@ const startMining = (miningAddrToken) => {
 
   miningAddr = getBlockchainAddress(miningAddrToken);
   let waitingOutputOnce = true;
-		blockchainBusy = true;
+
     miningSuccess = blockchain.minePendingTransactions(miningAddr);
 
     if(miningSuccess){
 
-      console.log('Block mined: ' + blockchain.getLatestBlock().hash);
-      console.log(miningAddr.address + ' mined ' + miningAddr.getBlocksMined() + ' blocks');
       console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
 
       var message =  'A new block has been mined by ' + miningAddr.hashSignature + '. Sending new blockchain version';
@@ -464,9 +495,9 @@ const startMining = (miningAddrToken) => {
       ioServer.emit('message', message);
       sendEventToAllPeers('message', message);
       sendEventToAllPeers('blockchain', blockchain);
-      saveBlockchain(blockchain);
 
 
+			return true;
 
     }else{
       // if(waitingOutputOnce){
@@ -474,7 +505,9 @@ const startMining = (miningAddrToken) => {
       //   // ioServer.emit('needMoreTransact', 'Insufficient transactions to mine. Listening for incoming transactions');
       //   sendEventToAllPeers('message', miningAddr.address+' has Insufficient transactions to mine. Listening for incoming transactions');
       // }
-			blockchainBusy = false;
+
+			return false;
+
     }
 
 
@@ -503,8 +536,19 @@ const seedNodeList = (blockchain, token) =>  {
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   let longestBlockchain;
 
-  if(receivedBlockchain && receivedBlockchain instanceof Blockchain){ //Does it exist and is it an instance of Blockchain or an object?
+	if(receivedBlockchain instanceof Blockchain){
+		console.log('received Blockchain is a blockchain');
+	}
+
+
+
+  if(receivedBlockchain){ //Does it exist and is it an instance of Blockchain or an object?
+
+		receivedBlockchain = new Blockchain(receivedBlockchain.chain, receivedBlockchain.pendingTransactions, receivedBlockchain.nodeAddresses);
+
     if(receivedBlockchain.isChainValid()){ //Is the chain valid?
+			//Try sending a notice or command to node with invalid blockchain
+
       if(storedBlockchain.chain.length > receivedBlockchain.chain.length){ //Which chain is the longest?
 
               longestBlockchain = storedBlockchain;
@@ -553,6 +597,8 @@ setTimeout(() =>{ //A little delay to let websocket open
   peers = connectToPeerNetwork();
 
 }, 1500)
+
+
 
 
 console.log('Starting server at '+thisNode.address+'/');

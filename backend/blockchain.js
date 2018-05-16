@@ -46,7 +46,7 @@ class Block{
 
 /////////////////////Blockchain///////////////////////
 class Blockchain{
-  
+
   constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;
@@ -110,25 +110,27 @@ class Blockchain{
 
 
 
-  getBalanceOfAddress(address){
+  getBalanceOfAddress(token){
     let balance = 0;
+    var trans;
+    for(var block of this.chain){
+      // console.log(block);
+      for(var i=0; i < block.transactions.length; i++){
+        trans = block.transactions[i];
 
-    for(const block of this.chain){
-      console.log(block);
-      for(const trans of block.transactions){
-        // for(let i=0; i<block.transactions.length){
-        //
-        // }
-        console.log('Trans: ' + trans.data);
-        if(trans.fromAddress === address){
-          console.log("sending "+trans.amount);
-          balance -= trans.amount;
-        }
+          console.log('Trans: ', trans);
+          console.log('token:', token);
+          if(trans.fromAddress == token.address){
+            console.log("sending ",trans.amount);
+            balance = balance - trans.amount;
+          }
 
-        if(trans.toAddress === address){
-          console.log("receiving "+ balance);
-          balance += trans.amount;
-        }
+          if(trans.toAddress == token.address){
+            console.log("receiving ", balance);
+            balance = balance + trans.amount;
+          }
+
+
       }
     }
     return balance;

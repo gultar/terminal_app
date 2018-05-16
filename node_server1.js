@@ -82,9 +82,12 @@ ioServer.on('connection', (socket) => {
 
   });
 
-  socket.on('triggerSave', ()=>{
-		saveBlockchain(blockchain);
+	socket.on('checkBalance', () =>{
+		thisNode.address = thisNode.address+'/';
+		console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
 	})
+
+
 	//
   // });
 	//
@@ -482,7 +485,7 @@ const startMining = (miningAddrToken) => {
 
 
   miningAddr = getBlockchainAddress(miningAddrToken);
-  let waitingOutputOnce = true;
+
 
     miningSuccess = blockchain.minePendingTransactions(miningAddr);
 
@@ -499,17 +502,9 @@ const startMining = (miningAddrToken) => {
 
 			return true;
 
-    }else{
-      // if(waitingOutputOnce){
-      //   console.log('Waiting for other transactions to occur');
-      //   // ioServer.emit('needMoreTransact', 'Insufficient transactions to mine. Listening for incoming transactions');
-      //   sendEventToAllPeers('message', miningAddr.address+' has Insufficient transactions to mine. Listening for incoming transactions');
-      // }
-
-			return false;
-
     }
 
+		return false;
 
 
 }
@@ -537,14 +532,18 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   let longestBlockchain;
 
 	if(receivedBlockchain instanceof Blockchain){
-		console.log('received Blockchain is a blockchain');
+
+	}else{
+		receivedBlockchain = new Blockchain(receivedBlockchain.chain, receivedBlockchain.pendingTransactions, receivedBlockchain.nodeAddresses);
 	}
+
+
 
 
 
   if(receivedBlockchain){ //Does it exist and is it an instance of Blockchain or an object?
 
-		receivedBlockchain = new Blockchain(receivedBlockchain.chain, receivedBlockchain.pendingTransactions, receivedBlockchain.nodeAddresses);
+
 
     if(receivedBlockchain.isChainValid()){ //Is the chain valid?
 			//Try sending a notice or command to node with invalid blockchain
