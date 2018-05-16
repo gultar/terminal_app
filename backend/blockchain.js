@@ -46,6 +46,7 @@ class Block{
 
 /////////////////////Blockchain///////////////////////
 class Blockchain{
+  
   constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;

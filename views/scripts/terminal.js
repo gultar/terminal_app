@@ -447,6 +447,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
   function output(html) {
     output_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
+    cmdLine_.focus();
   }
 
 
@@ -531,18 +532,7 @@ function startMining(blockchainAddr){
       if(socket.connected){
         socket.emit('miningRequest', miningAddr);
 
-        socket.on('miningApproved', function(updatedBlockchain){
-          var latestBlock = getLatestBlock(updatedBlockchain);
-          console.log('Latest Block Hash:', latestBlock.hash);
-          blockchain = updatedBlockchain;
-          console.log("Blockchain:", updatedBlockchain);
-          output('Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
-        });
 
-        socket.on('needMoreTransact', function(message){
-          output(message);
-          console.log(message);
-        });
 
       }
 
@@ -575,16 +565,7 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
     data : data
   }
 
-  socket.emit('transactionOffer', transactToSend, clientConnectionToken)
-
-  socket.on('transactionApproved', function(approved, transact){
-    if(approved){
-      socket.emit('transaction', transact, clientConnectionToken);
-    }else{
-      console.log("Transaction hasn't been sent");
-    }
-
-  });
+  socket.emit('transaction', transactToSend, clientConnectionToken)
 
 
 
@@ -603,7 +584,7 @@ setTimeout(function(){
     socket  = io(nodeAddress);
 
     // if(socket.connected){
-      
+
       socket.on('disconnect', function(){
         console.log('You have disconnected from node server');
         clearAll();
@@ -635,6 +616,19 @@ setTimeout(function(){
         blockchain.nodeAddresses.push(node);
         console.log('Seeding the blockchain with this address:', node);
       })
+
+      socket.on('miningApproved', function(updatedBlockchain){
+        var latestBlock = getLatestBlock(updatedBlockchain);
+        console.log('Latest Block Hash:', latestBlock.hash);
+        blockchain = updatedBlockchain;
+        console.log("Blockchain:", updatedBlockchain);
+        output('Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
+      });
+
+      socket.on('needMoreTransact', function(message){
+        output(message);
+        console.log(message);
+      });
 
       fetchBlockchainFromServer();
 
