@@ -27,6 +27,7 @@ let thisNode = {
 const { encrypt, decrypt } = require('./backend/encryption.js')
 
 
+const room = 'sync';
 
 let clients = [];
 
@@ -49,7 +50,7 @@ app.on('/', () => {
 })
 
 
-ioServer.on('connection', (socket) => {
+ioServer.sockets.on('connection', (socket) => {
 
   // socket.broadcast.emit('message', 'this is node address ' + getIPAddress());
 
@@ -66,42 +67,37 @@ ioServer.on('connection', (socket) => {
   socket.on('client-connect', (token) => {
     //Create validation for connecting nodes
 		if(token != undefined){
-			clients[token.hashSignature] = token;
+			clients[token.address] = token;
+
 	    console.log('Connected client hash: ', token.hashSignature);
 	    console.log('At address:', token.address);
 	    socket.emit('message', 'You are now connected to ' + thisNode.address);
+			if(token.type == 'node'){
+				socket.emit('seedingNodes', thisNode);
+
+			}
+
+
+			getNumPeers();
+
 		}
 
-
-		// if(token.type == 'endpointClient'){
-		// 	setInterval(()=>{
-		// 		socket.emit('message', 'ping');
-		// 	}, 10000)
-		// }
 
 
   });
 
+	socket.on('room', function(room) {
+			socket.join(room);
+	});
+
 	socket.on('checkBalance', () =>{
-		thisNode.address = 'http://192.168.0.153:8080';
-		console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
+		// thisNode.address = 'http://192.168.0.153:8080';
+		// console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
+		socket.to('sync').emit('message', 'trying rooms');
 	})
 
 
-	//
-  // });
-	//
-  // socket.on('transactionApproved', (approved, transact) => {
-	// 	if(approved && transact != undefined){
-	// 		console.log('Sending approved transaction');
-	//     socket.emit('message', 'transaction has been approved' + transact);
-	//     socket.emit('transaction', transact);
-	//     sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
-	// 	}else{
-	// 		console.log('Transaction not approved. The node might be busy...')
-	// 	}
-	//
-  // });
+
 	socket.on('distributedTransaction', (transaction, fromNodeToken) => {
 		///////////////////////////////////////////////////////////
 		//Need to validate transaction everytime it is received
@@ -243,7 +239,7 @@ ioServer.on('connection', (socket) => {
     clients[token.hashSignature] = null;
 
     console.log('Disconnected clients: ',token.hashSignature);
-
+		getNumPeers();
   });
 
 
@@ -330,12 +326,13 @@ const connectToPeerNetwork = () => {
     if(ipList[i] != thisNode.address){
       var peerSocket = io(ipList[i], { 'forceNew': true});
 
-      peerConnections.push(peerSocket);
+
       peerSocket.emit('client-connect', thisNode);
 
       peerSocket.on('connect', () =>{
         console.log('connection to node established');
-
+				peerConnections.push(peerSocket);
+				peerSocket.emit('room', room);
         // peerSocket.emit('queryForBlockchain', thisNode);
 
 
@@ -343,8 +340,15 @@ const connectToPeerNetwork = () => {
 
       peerSocket.on('disconnect', () =>{
         console.log('connection with peer dropped');
-        peerSocket.emit('close', thisNode);
+				//this is upon start, which then sends
+				// peerConnections.splice(peerConnections.indexOf(peerSocket), 1);
+				//This is in case the event happens after starting the node
+				peers.splice(peers.indexOf(peerSocket, 1));
 
+				peers.push(peerSocket);
+
+        peerSocket.emit('close', thisNode);
+				getNumPeers();
       })
 
       // peerSocket.on('seedingNodes', (node) =>{
@@ -354,6 +358,7 @@ const connectToPeerNetwork = () => {
 
     }
   }
+
 
   return peerConnections;
 
@@ -597,14 +602,30 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 }
 
+const getNumPeers = () =>{
+	if(peers != undefined){
+		if(peers.length > 0){
+			console.log('There currently are '+peers.length+' other connected nodes on the network');
+			return peers.length;
+		}
+
+	}
+}
+
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
+	console.log('Node Hash:', thisNode.hashSignature);
+
   peers = connectToPeerNetwork();
+
 
 }, 1500)
 
-
+//Output waits for nodes to connect to one another - Using Async await would be so much better. Thanks Raspberry Pi...
+setTimeout(()=>{
+	getNumPeers();
+}, 2000)
 
 
 console.log('Starting server at '+thisNode.address+'/');

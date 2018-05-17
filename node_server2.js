@@ -27,6 +27,7 @@ let thisNode = {
 const { encrypt, decrypt } = require('./backend/encryption.js')
 
 
+const room = 'sync';
 
 let clients = [];
 
@@ -49,7 +50,7 @@ app.on('/', () => {
 })
 
 
-ioServer.on('connection', (socket) => {
+ioServer.sockets.on('connection', (socket) => {
 
   // socket.broadcast.emit('message', 'this is node address ' + getIPAddress());
 
@@ -71,46 +72,32 @@ ioServer.on('connection', (socket) => {
 	    console.log('Connected client hash: ', token.hashSignature);
 	    console.log('At address:', token.address);
 	    socket.emit('message', 'You are now connected to ' + thisNode.address);
-			if(token.type === 'node'){
-				socket.emit('seedingNodes', thisNode)
-			}
-			getNumPeers();
+			if(token.type == 'node'){
+				socket.emit('seedingNodes', thisNode);
 
-			// console.log('Client tokens:', clients);
+			}
+
+
+			getNumPeers();
 
 		}
 
 
-		// if(token.type == 'endpointClient'){
-		// 	setInterval(()=>{
-		// 		socket.emit('message', 'ping');
-		// 	}, 10000)
-		// }
-
 
   });
 
+	socket.on('room', function(room) {
+			socket.join(room);
+	});
+
 	socket.on('checkBalance', () =>{
-		thisNode.address = 'http://192.168.0.153:8080';
-		console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
-		ioServer.emit('message', 'Sync yo fuckin blockchains');
+		// thisNode.address = 'http://192.168.0.153:8080';
+		// console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
+		socket.to('sync').emit('message', 'trying rooms');
 	})
 
 
-	//
-  // });
-	//
-  // socket.on('transactionApproved', (approved, transact) => {
-	// 	if(approved && transact != undefined){
-	// 		console.log('Sending approved transaction');
-	//     socket.emit('message', 'transaction has been approved' + transact);
-	//     socket.emit('transaction', transact);
-	//     sendEventToAllPeers('transactionOffer',transactionObj, thisNode);
-	// 	}else{
-	// 		console.log('Transaction not approved. The node might be busy...')
-	// 	}
-	//
-  // });
+
 	socket.on('distributedTransaction', (transaction, fromNodeToken) => {
 		///////////////////////////////////////////////////////////
 		//Need to validate transaction everytime it is received
@@ -332,7 +319,7 @@ const initBlockchain = (tryOnceAgain=true) => {
 };
 
 const connectToPeerNetwork = () => {
-  // let peerConnections = [];
+  let peerConnections = [];
 
   for(var i=0; i < ipList.length; i++){
 
@@ -344,7 +331,8 @@ const connectToPeerNetwork = () => {
 
       peerSocket.on('connect', () =>{
         console.log('connection to node established');
-				peers.push(peerSocket);
+				peerConnections.push(peerSocket);
+				peerSocket.emit('room', room);
         // peerSocket.emit('queryForBlockchain', thisNode);
 
 
@@ -372,7 +360,7 @@ const connectToPeerNetwork = () => {
   }
 
 
-  // return peerConnections;
+  return peerConnections;
 
 };
 
@@ -629,7 +617,7 @@ setTimeout(() =>{ //A little delay to let websocket open
   console.log('Node address:',thisNode.address);
 	console.log('Node Hash:', thisNode.hashSignature);
 
-  connectToPeerNetwork();
+  peers = connectToPeerNetwork();
 
 
 }, 1500)

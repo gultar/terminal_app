@@ -91,9 +91,9 @@ ioServer.on('connection', (socket) => {
   });
 
 	socket.on('checkBalance', () =>{
-		thisNode.address = 'http://192.168.0.153:8080';
-		console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
-		ioServer.emit('message', 'Sync yo fuckin blockchains');
+		// thisNode.address = 'http://192.168.0.153:8080';
+		// console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
+		ioServer.sockets.emit('message', 'Sync yo fuckin blockchains');
 	})
 
 
@@ -536,7 +536,7 @@ const seedNodeList = (blockchain, token) =>  {
 
 
     }else{
-      console.log('This node address already exists:', token.hashSignature);
+      // console.log('This node address already exists:', token.hashSignature);
 
     }
     // console.log('This node:', blockchain.nodeAddresses[thisNode.hashSignature]);
