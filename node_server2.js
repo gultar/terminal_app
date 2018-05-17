@@ -4,7 +4,7 @@ const app = express();
 const port = 8081
 const server = http.createServer(app).listen(port);
 const sha256 = require('./backend/sha256');
-const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
+const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
 var expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
@@ -82,9 +82,12 @@ ioServer.on('connection', (socket) => {
 
   });
 
-  socket.on('triggerSave', ()=>{
-		saveBlockchain(blockchain);
+	socket.on('checkBalance', () =>{
+		thisNode.address = 'http://192.168.0.153:8080';
+		console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
 	})
+
+
 	//
   // });
 	//
@@ -482,7 +485,7 @@ const startMining = (miningAddrToken) => {
 
 
   miningAddr = getBlockchainAddress(miningAddrToken);
-  let waitingOutputOnce = true;
+
 
     miningSuccess = blockchain.minePendingTransactions(miningAddr);
 
@@ -499,17 +502,9 @@ const startMining = (miningAddrToken) => {
 
 			return true;
 
-    }else{
-      // if(waitingOutputOnce){
-      //   console.log('Waiting for other transactions to occur');
-      //   // ioServer.emit('needMoreTransact', 'Insufficient transactions to mine. Listening for incoming transactions');
-      //   sendEventToAllPeers('message', miningAddr.address+' has Insufficient transactions to mine. Listening for incoming transactions');
-      // }
-
-			return false;
-
     }
 
+		return false;
 
 
 }
@@ -537,14 +532,24 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   let longestBlockchain;
 
 	if(receivedBlockchain instanceof Blockchain){
-		console.log('received Blockchain is a blockchain');
+
+	}else{
+		receivedBlockchain = new Blockchain(receivedBlockchain.chain, receivedBlockchain.pendingTransactions, receivedBlockchain.nodeAddresses);
 	}
+
+	if(blockchain instanceof Blockchain){
+
+	}else{
+		blockchain = new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeAddresses);
+	}
+
+
 
 
 
   if(receivedBlockchain){ //Does it exist and is it an instance of Blockchain or an object?
 
-		receivedBlockchain = new Blockchain(receivedBlockchain.chain, receivedBlockchain.pendingTransactions, receivedBlockchain.nodeAddresses);
+
 
     if(receivedBlockchain.isChainValid()){ //Is the chain valid?
 			//Try sending a notice or command to node with invalid blockchain
@@ -563,6 +568,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
             longestBlockchain = storedBlockchain;
           }else{                                              //Different blocks - Find the lastest and modify it
             if(lastStoredBlock.timestamp > lastReceivedBlock.timestamp){
+
               longestChain = receivedBlockchain;
               lastStoredBlock.previousHash = lastReceivedBlock.hash;
               receivedBlockchain.addBlock(lastStoredBlock);
