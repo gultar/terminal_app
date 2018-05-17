@@ -66,10 +66,18 @@ ioServer.on('connection', (socket) => {
   socket.on('client-connect', (token) => {
     //Create validation for connecting nodes
 		if(token != undefined){
-			clients[token.hashSignature] = token;
+			clients[token.address] = token;
+
 	    console.log('Connected client hash: ', token.hashSignature);
 	    console.log('At address:', token.address);
 	    socket.emit('message', 'You are now connected to ' + thisNode.address);
+			if(token.type === 'node'){
+				socket.emit('seedingNodes', thisNode)
+			}
+			getNumPeers();
+
+			// console.log('Client tokens:', clients);
+
 		}
 
 
@@ -85,6 +93,7 @@ ioServer.on('connection', (socket) => {
 	socket.on('checkBalance', () =>{
 		thisNode.address = 'http://192.168.0.153:8080';
 		console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
+		ioServer.emit('message', 'Sync yo fuckin blockchains');
 	})
 
 
@@ -243,7 +252,7 @@ ioServer.on('connection', (socket) => {
     clients[token.hashSignature] = null;
 
     console.log('Disconnected clients: ',token.hashSignature);
-
+		getNumPeers();
   });
 
 
@@ -323,19 +332,19 @@ const initBlockchain = (tryOnceAgain=true) => {
 };
 
 const connectToPeerNetwork = () => {
-  let peerConnections = [];
+  // let peerConnections = [];
 
   for(var i=0; i < ipList.length; i++){
 
     if(ipList[i] != thisNode.address){
       var peerSocket = io(ipList[i], { 'forceNew': true});
 
-      peerConnections.push(peerSocket);
+
       peerSocket.emit('client-connect', thisNode);
 
       peerSocket.on('connect', () =>{
         console.log('connection to node established');
-
+				peers.push(peerSocket);
         // peerSocket.emit('queryForBlockchain', thisNode);
 
 
@@ -343,8 +352,15 @@ const connectToPeerNetwork = () => {
 
       peerSocket.on('disconnect', () =>{
         console.log('connection with peer dropped');
-        peerSocket.emit('close', thisNode);
+				//this is upon start, which then sends
+				// peerConnections.splice(peerConnections.indexOf(peerSocket), 1);
+				//This is in case the event happens after starting the node
+				peers.splice(peers.indexOf(peerSocket, 1));
 
+				peers.push(peerSocket);
+
+        peerSocket.emit('close', thisNode);
+				getNumPeers();
       })
 
       // peerSocket.on('seedingNodes', (node) =>{
@@ -355,7 +371,8 @@ const connectToPeerNetwork = () => {
     }
   }
 
-  return peerConnections;
+
+  // return peerConnections;
 
 };
 
@@ -597,14 +614,30 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 }
 
+const getNumPeers = () =>{
+	if(peers != undefined){
+		if(peers.length > 0){
+			console.log('There currently are '+peers.length+' other connected nodes on the network');
+			return peers.length;
+		}
+
+	}
+}
+
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   console.log('Node address:',thisNode.address);
-  peers = connectToPeerNetwork();
+	console.log('Node Hash:', thisNode.hashSignature);
+
+  connectToPeerNetwork();
+
 
 }, 1500)
 
-
+//Output waits for nodes to connect to one another - Using Async await would be so much better. Thanks Raspberry Pi...
+setTimeout(()=>{
+	getNumPeers();
+}, 2000)
 
 
 console.log('Starting server at '+thisNode.address+'/');
