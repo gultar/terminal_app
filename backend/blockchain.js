@@ -49,7 +49,7 @@ class Blockchain{
 
   constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
-    this.difficulty = 3;
+    this.difficulty = 5;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: []);
     this.miningReward = 50;
     this.nodeAddresses = (nodeAddresses.length > 0? nodeAddresses : []); //Stores all the node addresses of the P2P network
@@ -217,4 +217,4 @@ function RecalculateHash(block){
   return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
 }
 
-module.exports = { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord};
+module.exports = { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord};

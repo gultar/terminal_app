@@ -4,7 +4,7 @@ const app = express();
 const port = 8080
 const server = http.createServer(app).listen(port);
 const sha256 = require('./backend/sha256');
-const { Blockchain, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
+const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
 var expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
@@ -83,7 +83,7 @@ ioServer.on('connection', (socket) => {
   });
 
 	socket.on('checkBalance', () =>{
-		thisNode.address = thisNode.address+'/';
+		thisNode.address = 'http://192.168.0.153:8080';
 		console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
 	})
 
@@ -537,6 +537,12 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 		receivedBlockchain = new Blockchain(receivedBlockchain.chain, receivedBlockchain.pendingTransactions, receivedBlockchain.nodeAddresses);
 	}
 
+	if(blockchain instanceof Blockchain){
+
+	}else{
+		blockchain = new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeAddresses);
+	}
+
 
 
 
@@ -562,6 +568,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
             longestBlockchain = storedBlockchain;
           }else{                                              //Different blocks - Find the lastest and modify it
             if(lastStoredBlock.timestamp > lastReceivedBlock.timestamp){
+
               longestChain = receivedBlockchain;
               lastStoredBlock.previousHash = lastReceivedBlock.hash;
               receivedBlockchain.addBlock(lastStoredBlock);
