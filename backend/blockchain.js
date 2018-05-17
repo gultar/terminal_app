@@ -49,7 +49,7 @@ class Blockchain{
 
   constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
-    this.difficulty = 5;
+    this.difficulty = 3;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: []);
     this.miningReward = 50;
     this.nodeAddresses = (nodeAddresses.length > 0? nodeAddresses : []); //Stores all the node addresses of the P2P network
