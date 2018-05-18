@@ -1,20 +1,33 @@
+//////////////////////////////////////////////////////////////
+/////////////////////BLOCKCHAIN CONTAINER/////////////////////
+//////////////////////////////////////////////////////////////
+let blockchain;
+//////////////////////////////////////////////////////////////
+//This is a container for the blockchain copy taken from local file
+let blockchainFetched;
+
+
+//Express app and http server to run websockets on
 const express = require('express');
 const http = require('http');
 const app = express();
 const port = 8080
 const server = http.createServer(app).listen(port);
-const sha256 = require('./backend/sha256');
-const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
 var expressWs = require('express-ws')(app);
+
+const sha256 = require('./backend/sha256');
+//All the necessary blockchain classes
+const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
+
+//Socket client connection
 const io = require('socket.io-client');
+//Socket server
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
-// const P2P = require('socket.io-p2p');
-// const p2p = require('socket.io-p2p-server').Server;
+
 const fs = require('fs');
 const { getIPAddress } = require('./backend/ipFinder.js');
 
-// const blockBase = require('json')
-// const ipList = ['ws://'+getIPAddress()+':8080', 'ws://192.168.0.153:8080']
+//Seed list of ip addresses of the p2p network
 const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
 				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
 
@@ -29,18 +42,17 @@ const { encrypt, decrypt } = require('./backend/encryption.js')
 
 const room = 'sync';
 
+//Container for all connected client tokens
 let clients = [];
 
+
+//Container for all peer socket connections
 let peers = [];
 
+//Maybe implement a turned based mining system. It might be too cumbersome...
 let minersOnHold = [];
 
-let blockchain;
-let blockchainFetched;
-
 let sendTrials = 0;
-
-// let blockchainBusy = false;
 
 
 app.use(express.static(__dirname+'/views'));
@@ -70,17 +82,14 @@ ioServer.on('connection', (socket) => {
 			clients[token.address] = token;
 			socket.id = token.address;
 
-			console.log('Clients:', clients);
-			console.log('Socket id', socket.id);
-	    console.log('Connected client hash: ', token.hashSignature);
+	    console.log('Connected client hash: '+ token.hashSignature.substr(0, 10) + '...');
 	    console.log('At address:', token.address);
+
 	    socket.emit('message', 'You are now connected to ' + thisNode.address);
 			if(token.type == 'node'){
 				socket.emit('seedingNodes', thisNode);
 
 			}
-
-
 			getNumPeers();
 
 		}
@@ -94,11 +103,7 @@ ioServer.on('connection', (socket) => {
 	});
 
 	socket.on('checkBalance', () =>{
-		// thisNode.address = 'http://192.168.0.153:8080';
-		// console.log('Balance:', blockchain.getBalanceOfAddress(thisNode))
-		for(var i=0; i<peers.length; i++){
-			peers[i].emit('message', 'do you read me? Over');
-		}
+
 
 	})
 
@@ -110,7 +115,7 @@ ioServer.on('connection', (socket) => {
 		///////////////////////////////////////////////////////////
 		if(blockchain != undefined){
 			if(transaction != undefined && fromNodeToken != undefined){
-				console.log('Peer '+fromNodeToken.address+' has sent a new transction.');
+				console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
 				console.log(transaction);
 				var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
@@ -162,20 +167,40 @@ ioServer.on('connection', (socket) => {
   });
 
   socket.on('miningApproved', function(updatedBlockchain){
-
+		//This event is when a node is notified that a mining operation has been successfull
+		//Therefore, it receives a new blockchain. Will switch to receiving a newBlock
     var latestBlock = getLatestBlock(updatedBlockchain);
-    sendEventToAllPeers('message','Latest Block Hash:'+latestBlock.hash);
+
+		sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
+
     blockchain = compareBlockchains(blockchain, updatedBlockchain);
-    sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
-		console.log('BLOCKCHAIN:', blockchain);
+		// console.log('BLOCKCHAIN:', blockchain);
 
 
   });
 
 	socket.on('syncBlockchain', (blockchainToSync=false)=>{
 		blockchain = compareBlockchains(blockchain, blockchainToSync);
+		console.log('Blockchain from peer:', blockchain);
 		ioServer.emit('blockchain', blockchain);
 	})
+
+	socket.on('newBlock', (newBlock) =>{
+
+		if(newBlock != undefined){
+			console.log('Received newly mined block');
+
+			var isBlockValid = blockchain.validateBlock(newBlock);
+
+			if(isBlockValid){
+				blockchain.chain.push(newBlock);
+			}
+
+
+
+		}
+
+	});
 
   socket.on('seedBlockchain', (clientToken) => {
     //fetch most up to date blockchain from network
@@ -186,16 +211,6 @@ ioServer.on('connection', (socket) => {
     blockchain.nodeAddresses.push(node);
     console.log('Seeding the blockchain with this address:', node);
   })
-
-	//------------------TEST EVENT-------------------------//
-  socket.on('peerConnect', (miningAddrToken) => {
-    // connectToPeerNetwork();
-    ioServer.emit('message', miningAddrToken.address + " has sent a blockchain");
-    sendEventToAllPeers('blockchain', blockchain);
-    sendEventToAllPeers('getBlockchain', miningAddrToken.address + ' has requested a copy of the current blockchain');
-    // sendEventToAllPeers('seedingNodes', thisNode);
-    // sendEventToAllPeers('transactionOffer', new Transaction(thisNode.address, peers[0].io.opts.hostname, 0, thisNode), miningAddrToken);
-  });
 
   socket.on('queryForBlockchain', (queryingNodeToken) =>{
 
@@ -233,10 +248,11 @@ ioServer.on('connection', (socket) => {
   })
 
 	socket.on('disconnect', () =>{
-		// socket.removeAllListeners('message');
-		// socket.removeAllListeners('disconnect');
-		// ioServer.removeAllListeners('connection');
 
+	})
+
+	socket.on('broadcastMessage', (msg) =>{
+		sendEventToAllPeers('message', msg);
 	})
 
 
@@ -244,8 +260,9 @@ ioServer.on('connection', (socket) => {
 
     clients[token.hashSignature] = null;
 
-    console.log('Disconnected clients: ',token.hashSignature);
+    console.log('Disconnected clients: '+ token.hashSignature.substr(0, 10) + '...');
 		getNumPeers();
+
   });
 
 
@@ -253,7 +270,6 @@ ioServer.on('connection', (socket) => {
 
 ioServer.on('disconnection', (socket) =>{
 	console.log('Lost connection with client');
-
 	socket.destroy();
 })
 
@@ -263,8 +279,7 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
       if(!moreData){
         peers[i].emit(eventType, data);
       }else{
-				console.log('Hostname',peers[i].id)
-				peers[i].emit('message', 'testtest');
+
         peers[i].emit(eventType, data, moreData);
       }
 
@@ -276,22 +291,15 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 
 const syncBlockchain = () => {
 	sendEventToAllPeers('message', 'Syncing blockchain');
-	for(var i=0; i<peers.length; i++){
-		peers[i].emit('getBlockchain', thisNode);
-
-	}
+	sendEventToAllPeers('getBlockchain', thisNode);
+	// for(var i=0; i<peers.length; i++){
+	// 	peers[i].emit('getBlockchain', thisNode);
+	// }
 }
 
 
-const storeClientSocket = (socket) =>{
-	peers.push(socket);
-}
 
-const removeClientSocketfromStorage = (socket) =>{
-	var indexOfSocket = peers.indexOf(socket);
-	console.log('Found the index:', indexOfSocket);
-	peers.splice(indexOfSocket, 1);
-}
+
 
 //Init blockchain starting from local file
 const initBlockchain = (tryOnceAgain=true) => {
@@ -336,47 +344,40 @@ const initBlockchain = (tryOnceAgain=true) => {
 
 };
 
+const initClientSocket = (address) =>{
+
+	var peerSocket = io(address, {'forceNew': true});
+
+	peerSocket.emit('client-connect', thisNode);
+	peerSocket.emit('message', 'You are connected to '+thisNode.address);
+
+	peerSocket.on('connect', () =>{
+		console.log('connection to node established');
+		peers.push(peerSocket);
+	});
+
+	peerSocket.on('disconnect', () =>{
+		console.log('connection with peer dropped');
+		peers.splice(peers.indexOf(peerSocket), 1);
+		peerSocket.emit('close', thisNode);
+	})
+
+}
+
+
 const connectToPeerNetwork = () => {
   let peerConnections = [];
 
   for(var i=0; i < ipList.length; i++){
 
     if(ipList[i] != thisNode.address){
-      var peerSocket = io(ipList[i]);
 
-      peerSocket.emit('client-connect', thisNode);
-			peerSocket.emit('message', 'message.........');
-
-			sendMessage(peerSocket, 'WHY WHY WHY WHY WHY');
-
-      peerSocket.on('connect', () =>{
-        console.log('connection to node '+ipList[i]+' established');
-				// peerConnections.push(peerSocket);
-				// peerSocket.emit('room', room);
-				storeClientSocket(peerSocket);
-
-      });
-
-      peerSocket.on('disconnect', () =>{
-        console.log('connection with peer dropped');
-				//this is upon start, which then sends
-				// peerConnections.splice(peerConnections.indexOf(peerSocket), 1);
-				//This is in case the event happens after starting the node
-				peerConnections.splice(peerConnections.indexOf(peerSocket, 1));
-				removeClientSocketFromStorage(peerSocket);
-        peerSocket.emit('close', thisNode);
-				getNumPeers();
-      })
-
-      // peerSocket.on('seedingNodes', (node) =>{
-      //   blockchain.nodeAddresses.push(node);
-      //   console.log('Seeding the blockchain with this address:', node);
-      // })
+			var address = ipList[i];
+			initClientSocket(address);
 
     }
   }
-	peers = peerConnections;
-  return peerConnections;
+
 };
 
 const getBlockchainAddress = (addressToken) => {
@@ -486,10 +487,7 @@ const saveBlockchain = (blockchainReceived) => {
 
 const startMining = (miningAddrToken) => {
 
-
-
   miningAddr = getBlockchainAddress(miningAddrToken);
-
 
     miningSuccess = blockchain.minePendingTransactions(miningAddr);
 
@@ -497,12 +495,13 @@ const startMining = (miningAddrToken) => {
 
       console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
 
-      var message =  'A new block has been mined by ' + miningAddr.hashSignature + '. Sending new blockchain version';
+      var message =  'A new block has been mined by ' + miningAddr.hashSignature + '. Sending new block';
+			var newBlock = blockchain.getLatestBlock();
       ioServer.emit('miningApproved', blockchain);
       ioServer.emit('message', message);
       sendEventToAllPeers('message', message);
-      sendEventToAllPeers('blockchain', blockchain);
-
+			sendEventToAllPeers('newBlock', newBlock);
+      // sendEventToAllPeers('blockchain', blockchain);
 
 			return true;
 
@@ -511,6 +510,10 @@ const startMining = (miningAddrToken) => {
 		return false;
 
 
+}
+
+const calculateBlockHash = (block) =>{
+	return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
 }
 
 const seedNodeList = (blockchain, token) =>  {
@@ -535,22 +538,16 @@ const seedNodeList = (blockchain, token) =>  {
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   let longestBlockchain;
 
-	if(receivedBlockchain instanceof Blockchain){
-
-	}else{
+	if(!(receivedBlockchain instanceof Blockchain)){
 		receivedBlockchain = new Blockchain(receivedBlockchain.chain, receivedBlockchain.pendingTransactions, receivedBlockchain.nodeAddresses);
 	}
 
-	if(blockchain instanceof Blockchain){
-
-	}else{
-		blockchain = new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeAddresses);
+	if(!(storedBlockchain instanceof Blockchain)){
+		storedBlockchain = new Blockchain(storedBlockchain.chain, storedBlockchain.pendingTransactions, storedBlockchain.nodeAddresses);
 	}
 
+	//
   if(receivedBlockchain){ //Does it exist and is it an instance of Blockchain or an object?
-
-
-
     if(receivedBlockchain.isChainValid()){ //Is the chain valid?
 			//Try sending a notice or command to node with invalid blockchain
 
@@ -566,19 +563,21 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
           if(lastStoredBlock.hash === lastReceivedBlock.hash){ //Same blocks - it's fine
             longestBlockchain = storedBlockchain;
-          }else{                                              //Different blocks - Find the lastest and modify it
-            if(lastStoredBlock.timestamp > lastReceivedBlock.timestamp){
+          }else if(lastStoredBlock.hash === lastReceivedBlock.previousHash){ //New valid block linked to previous block - OK
+            // if(lastStoredBlock.timestamp > lastReceivedBlock.timestamp){
+						//
+            //   longestChain = receivedBlockchain;
+            //   lastStoredBlock.previousHash = lastReceivedBlock.hash;
+            //   receivedBlockchain.chain.push(lastStoredBlock);
+						//
+            // }else{
+            //   longestChain = storedBlockchain;
+            //   lastReceivedBlock.previousHash = lastStoredBlock.hash;
+            //   receivedBlockchain.chain.push(lastReceivedBlock);
+            // }
+          }else if(lastStoredBlock.hash === lastReceivedBlock.previousHash){
 
-              longestChain = receivedBlockchain;
-              lastStoredBlock.previousHash = lastReceivedBlock.hash;
-              receivedBlockchain.addBlock(lastStoredBlock);
-
-            }else{
-              longestChain = storedBlockchain;
-              lastReceivedBlock.previousHash = lastStoredBlock.hash;
-              receivedBlockchain.addBlock(lastReceivedBlock);
-            }
-          }
+					}
       }
       else{
         longestBlockchain = receivedBlockchain;
@@ -598,7 +597,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 }
 
 const sendMessage = (socket, message) =>{
-	socket.emit('seedBlockchain', message);
+		socket.emit('message', message);
 }
 
 const getNumPeers = () =>{
@@ -613,8 +612,7 @@ const getNumPeers = () =>{
 
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
-  console.log('Node address:',thisNode.address);
-	console.log('Node Hash:', thisNode.hashSignature);
+
 
   connectToPeerNetwork();
 
@@ -627,4 +625,8 @@ setTimeout(()=>{
 }, 2000)
 
 
+
+
 console.log('Starting server at '+thisNode.address+'/');
+console.log('Node address:',thisNode.address);
+console.log('Node Hash:', thisNode.hashSignature);

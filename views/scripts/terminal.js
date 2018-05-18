@@ -1,28 +1,42 @@
 var cryptos = [{}];
+
+//////////////////////////////////////////////////////////////
+/////////////////////BLOCKCHAIN CONTAINER/////////////////////
+//////////////////////////////////////////////////////////////
 var blockchain;
-// const blockchainURL = 'http://localhost:5000/blockchain';
+//////////////////////////////////////////////////////////////
+
  const nodeAddresses = ['http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', 'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082',
   'http://192.168.0.112:8080', 'http://192.168.0.112:8080', 'http://192.168.1.68:8080', 'http://192.168.0.154:8080', 'http://192.168.1.75:8080']
 
+//List of IP addresses for fallback connections if current connectionfails
 var ipList;
-// var nodeAddresses = [ '192.168.0.153', '169.254.105.109', '169.254.139.53', '192.168.0.112', '192.168.1.75', '192.168.1.68', '192.168.0.154'];
 
+//speaks for itself. Used to output which connection we're using
 var url = document.URL;
+
+//port of client connection
 var port = 8080;
 
 var localAddress = document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 
 var currentTime = Date.now();
-
+//This is a counter to limit the number of attempts to try to fetch blockchain from file if unreadable or else
 var fetchTrials = 0;
 var sendingTrials = 0;
 var fallbackCounter = -1;
 var outputBuffer;
 
+//Initiating the client token for connecting to network
 var clientConnectionToken;
 
+//Container for hexagrams to be sent to screen
 var hexagrams = [{}];
+
+//container for background image
 var backgroundUrl = $('body').css("background-image");
+
+//container for DOM element that represents the seccond right hand side console on application
 var debugOutput_ = document.getElementById('second-container');
 
 //Server connection
@@ -603,7 +617,7 @@ setTimeout(function(){
       socket.on('connect', function(){
         console.log('Connected to node ', nodeAddress);
         socket.emit('client-connect', clientConnectionToken);
-
+        socket.emit('getBlockchain', clientConnectionToken);
         fallbackCounter = 1;
       })
 

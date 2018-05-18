@@ -2,7 +2,6 @@ const sha256 = require('./sha256');
 const crypto = require('crypto'),
     algorithm = 'aes-256-ctr',
  		password = (sha256('One ring to rule them all, One ring to find them, One ring to bring them all, and in the darkness bind them ')).toString(); //Need to implement a keywords to password method, a bit like metamask
-console.log(password);
 //Password would be within local files. A key phrase like the one above
 
 

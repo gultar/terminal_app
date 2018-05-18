@@ -25,6 +25,7 @@ class Block{
     this.previousHash = previousHash;
     this.hash = this.calculateHash();
     this.nonce = 0;
+    this.valid = true
   }
 
   calculateHash(){
@@ -47,14 +48,15 @@ class Block{
 /////////////////////Blockchain///////////////////////
 class Blockchain{
 
-  constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}]){
+  constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}], ipAddresses=[], orphanedBlocks=[]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: []);
     this.miningReward = 50;
     this.nodeAddresses = (nodeAddresses.length > 0? nodeAddresses : []); //Stores all the node addresses of the P2P network
+    this.ipAddresses = ipAddresses;
     this.blockSize = 10; //Minimum Number of transactions per block
-
+    this.orphanedBlocks = orphanedBlocks;
   }
 
   createGenesisBlock(){
@@ -108,8 +110,6 @@ class Blockchain{
     this.pendingTransactions.push(transaction);
   }
 
-
-
   getBalanceOfAddress(token){
     let balance = 0;
     var trans;
@@ -147,16 +147,50 @@ class Blockchain{
       const previousBlock = this.chain[i - 1];
 
       if(currentBlock.hash !== RecalculateHash(currentBlock)){
+
         console.log('currentblock hash does not match the recalculation');
         console.log('Invalid block is :' + i + ' with hash: ' + currentBlock.hash + ' and previous hash: ' + previousBlock.hash);
         return false;
       }else if(currentBlock.previousHash !== previousBlock.hash){
+
         console.log('currentblock hash does not match previousblock hash');
         console.log('Invalid block is :' + i + ' with hash: ' + currentBlock.hash + ' and previous hash: ' + previousBlock.hash);
         return false;
       }
     }
+    
     return true;
+  }
+
+  validateBlock(newBlock){
+
+
+  	var latestBlock = this.getLatestBlock();
+
+
+  	if(newBlock.previousHash === latestBlock.hash){ //Latestblock is attached to the latest valid block. This is an Okay situation
+  		//validate block without recalculating it if possible
+  		//maybe by validating transactions first
+  		console.log('New block successfully validated. Will be appended to current blockchain.')
+  		return true;
+
+  	}else if(newBlock.hash === latestBlock.hash){ //Then have the same hash, means the block has been mined at the same exact time. Very improbable
+  		//if they have the same hash
+  		console.log('New block is the same as latest block. Placed in orphaned blocks');
+  		this.orphanedBlocks.push(newBlock);
+  		return false;
+
+  	}else if(newBlock.hash != RecalculateHash(newBlock)){
+  		console.log('Invalid block '+newBlock.hash);
+  		newBlock.valid = false;
+  		return false;
+
+  	}else{
+  		console.log('validated block but could not yet find a problem');
+  		console.log('Newblock:', newBlock);
+  		console.log('LatestBlock:', latestBlock);
+      return undefined;
+  	}
   }
 }
 
