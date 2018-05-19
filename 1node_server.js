@@ -288,10 +288,10 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 
 const syncBlockchain = () => {
 	sendEventToAllPeers('message', 'Syncing blockchain');
-	sendEventToAllPeers('getBlockchain', thisNode);
-	// for(var i=0; i<peers.length; i++){
-	// 	peers[i].emit('getBlockchain', thisNode);
-	// }
+	// sendEventToAllPeers('getBlockchain', thisNode);
+	for(var i=0; i<peers.length; i++){
+		peers[i].emit('getBlockchain', thisNode);
+	}
 }
 
 
