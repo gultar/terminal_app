@@ -493,32 +493,40 @@ const saveBlockchain = (blockchainReceived) => {
 
   fs.exists('blockchain.json', function(exists){
       if(exists){
-      			var blockchainFromFile = loadBlockchainFromServer();
-						if(!blockchainFromFile){
-							console.log('Error loading blockchain from file. Creating a new copy');
-							blockchainFromFile = new Blockchain();
-						}
-						blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
-						console.log('Blockchain successfully loaded from file and validated')
+				var longestBlockchain;
 
+				if(blockchainReceived != undefined){
 
+					if(!(blockchainReceived instanceof Blockchain)){
+						blockchainReceived = new Blockchain(
+							blockchainReceived.chain,
+							blockchainReceived.pendingTransactions,
+							blockchainReceived.nodeAddresses,
+							blockchainReceived.ipAddress,
+							blockchainReceived.orphanedBlocks
+						)
+					}
 
-            let json = JSON.stringify(blockchain);
+					if(blockchain != undefined){
+						longestBlockchain = compareBlockchains(blockchain, blockchainReceived);
+					}else{
+						longestBlockchain = blockchainReceived;
+					}
 
-            if(json != undefined){
-              console.log('Writing to file...');
+					let json = JSON.stringify(longestBlockchain);
 
-							fs.createWriteStream
-							var wstream = fs.createWriteStream('blockchain.json');
+					if(json != undefined){
+						console.log('Writing to blockchain file...');
 
-              wstream.write(json);
+						var wstream = fs.createWriteStream('blockchain.json');
 
-							console.log('BLOCKCHAIN', blockchain);
-            }
+						wstream.write(json);
 
-            // });
+						console.log('BLOCKCHAIN', blockchain);
+					}
 
-      } else {
+					// });
+				} else {
           console.log("Creating new Blockchain file and saving to it")
           let json = JSON.stringify(blockchainReceived);
           if(json != undefined){
@@ -528,9 +536,9 @@ const saveBlockchain = (blockchainReceived) => {
 						wstream.write(json);
           }
 
-      }
+      	}
 
-
+			}
       });
 }
 
