@@ -158,7 +158,7 @@ class Blockchain{
         return false;
       }
     }
-    
+
     return true;
   }
 
@@ -166,7 +166,6 @@ class Blockchain{
 
 
   	var latestBlock = this.getLatestBlock();
-
 
   	if(newBlock.previousHash === latestBlock.hash){ //Latestblock is attached to the latest valid block. This is an Okay situation
   		//validate block without recalculating it if possible

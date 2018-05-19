@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////
-/////////////////////BLOCKCHAIN CONTAINER/////////////////////
+/////////////////////////NODE SCRIPT /////////////////////////
 //////////////////////////////////////////////////////////////
 let blockchain;
 //////////////////////////////////////////////////////////////
@@ -14,17 +14,17 @@ const app = express();
 const port = 8080
 const server = http.createServer(app).listen(port);
 var expressWs = require('express-ws')(app);
-
-const sha256 = require('./backend/sha256');
-//All the necessary blockchain classes
-const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
-
-//Socket client connection
 const io = require('socket.io-client');
-//Socket server
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
 
 const fs = require('fs');
+
+//For hashing the transactions and block signatures
+const sha256 = require('./backend/sha256');
+
+//All the necessary blockchain classes
+const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
+
 const { getIPAddress } = require('./backend/ipFinder.js');
 
 //Seed list of ip addresses of the p2p network
@@ -51,7 +51,6 @@ let peers = [];
 
 //Maybe implement a turned based mining system. It might be too cumbersome...
 let minersOnHold = [];
-
 let sendTrials = 0;
 
 
@@ -187,7 +186,7 @@ ioServer.on('connection', (socket) => {
 
 	socket.on('newBlock', (newBlock) =>{
 
-		if(newBlock != undefined){
+		if(newBlock != undefined && blockchain != undefined){
 			console.log('Received newly mined block');
 
 			var isBlockValid = blockchain.validateBlock(newBlock);
@@ -195,8 +194,6 @@ ioServer.on('connection', (socket) => {
 			if(isBlockValid){
 				blockchain.chain.push(newBlock);
 			}
-
-
 
 		}
 
@@ -401,57 +398,110 @@ const getBlockchainAddress = (addressToken) => {
 const loadBlockchainFromServer = () => {
 
   //flag to avoid crashes if a transaction is sent while loading
+	fs.exists('blockchain.json', function(exists){
+		if(exists){
+			var data = '';
+			let blockchainDataFromFile;
+			var rstream = fs.createReadStream('blockchain.json');
+			console.log('Reading blockchain.json file...');
+
+			rstream.on('error', (err) =>{
+				console.log(err);
+				return err;
+			})
+
+			rstream.on('data', (chunk) => {
+				data += chunk;
+			});
 
 
-  fs.exists('blockchain.json', function(exists){
 
-        if(exists){
-            console.log("Loading Blockchain Data from file");
-            fs.readFile('blockchain.json', function readFileCallback(err, data){
-              console.log('Reading from blockchain.json file...');
-              let rawBlockchainFetched = JSON.parse(data);
-              blockchainFetched = new Blockchain(rawBlockchainFetched.chain, rawBlockchainFetched.pendingTransactions, rawBlockchainFetched.nodeAddresses);
-              blockchainFetched.nodeAddresses = seedNodeList(blockchainFetched, thisNode);
+			rstream.on('close', () =>{  // done
 
-            if (err){
-                console.log(err);
-            }
+				if(data != undefined){
+						blockchainDataFromFile = JSON.parse(data);
+						blockchainFetched = new Blockchain(
+							blockchainDataFromFile.chain,
+							blockchainDataFromFile.pendingTransactions,
+							blockchainDataFromFile.nodeAddresses,
+							blockchainDataFromFile.ipAddresses,
+							blockchainDataFromFile.orphanedBlocks
+						);
+						//validateBlockchain(blockchainFetched); --- To be created
+						console.log('Blockchain successfully loaded from file and validated')
+						// blockchain = compareBlockchains(blockchain, blockchainFetched);
 
+						return blockchainFetched;
 
-            });
-        } else {
-          console.log('Generating new blockchain')
-            let newBlockchain = new Blockchain();
-            newBlockchain = seedNodeList(newBlockchain, thisNode);
-            // seedNodeList(newBlockchain); //------------------------Have to find a better way to create nodes
-            blockchain = newBlockchain;
-            saveBlockchain(newBlockchain);
-            console.log("file does not exist")
+				}else{
+					return false;
+				}
 
 
-            return false;
-        }
+			});
+
+		}else {
+			console.log('Generating new blockchain')
+				let newBlockchain = new Blockchain();
+				newBlockchain = seedNodeList(newBlockchain, thisNode);
+				// seedNodeList(newBlockchain); //------------------------Have to find a better way to create nodes
+				blockchain = newBlockchain;
+				saveBlockchain(newBlockchain);
+				console.log("file does not exist")
+
+				return false;
+		}
+
+	});
 
 
-      });
+  // fs.exists('blockchain.json', function(exists){
+	//
+  //       if(exists){
+  //           console.log("Loading Blockchain Data from file");
+  //           fs.readFile('blockchain.json', function readFileCallback(err, data){
+  //             console.log('Reading from blockchain.json file...');
+  //             let rawBlockchainFetched = JSON.parse(data);
+  //             blockchainFetched = new Blockchain(rawBlockchainFetched.chain, rawBlockchainFetched.pendingTransactions, rawBlockchainFetched.nodeAddresses);
+  //             blockchainFetched.nodeAddresses = seedNodeList(blockchainFetched, thisNode);
+	//
+  //           if (err){
+  //               console.log(err);
+  //           }
+	//
+	//
+  //           });
+  //       } else {
+  //         console.log('Generating new blockchain')
+  //           let newBlockchain = new Blockchain();
+  //           newBlockchain = seedNodeList(newBlockchain, thisNode);
+  //           // seedNodeList(newBlockchain); //------------------------Have to find a better way to create nodes
+  //           blockchain = newBlockchain;
+  //           saveBlockchain(newBlockchain);
+  //           console.log("file does not exist")
+	//
+	//
+  //           return false;
+  //       }
+	//
+	//
+  //     });
 }
 
 const saveBlockchain = (blockchainReceived) => {
-  //flag to avoid crashes if a transaction is sent while loading
 
 
   fs.exists('blockchain.json', function(exists){
       if(exists){
-          console.log("Saving Blockchain data to existing File");
-          fs.readFile('blockchain.json', function readFileCallback(err, data){
-            console.log('Reading blockchain.json file...');
-            if (err){
-                console.log(err);
-            }
+      			var blockchainFromFile = loadBlockchainFromServer();
+						if(!blockchainFromFile){
+							console.log('Error loading blockchain from file. Creating a new copy');
+							blockchainFromFile = new Blockchain();
+						}
+						blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
+						console.log('Blockchain successfully loaded from file and validated')
 
-            let blockchainFromFile = JSON.parse(data);
-            blockchainFromFile = new Blockchain(blockchainFromFile.chain, blockchainFromFile.pendingTransactions, blockchainFromFile.nodeAddresses);
-            blockchain = compareBlockchains(blockchainFromFile, blockchainReceived);
+
 
             let json = JSON.stringify(blockchain);
 
@@ -466,14 +516,13 @@ const saveBlockchain = (blockchainReceived) => {
 							console.log('BLOCKCHAIN', blockchain);
             }
 
-            });
+            // });
 
       } else {
           console.log("Creating new Blockchain file and saving to it")
           let json = JSON.stringify(blockchainReceived);
           if(json != undefined){
 
-						fs.createWriteStream
 						var wstream = fs.createWriteStream('blockchain.json');
 
 						wstream.write(json);
@@ -538,46 +587,41 @@ const seedNodeList = (blockchain, token) =>  {
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   let longestBlockchain;
 
-	if(!(receivedBlockchain instanceof Blockchain)){
-		receivedBlockchain = new Blockchain(receivedBlockchain.chain, receivedBlockchain.pendingTransactions, receivedBlockchain.nodeAddresses);
-	}
 
-	if(!(storedBlockchain instanceof Blockchain)){
-		storedBlockchain = new Blockchain(storedBlockchain.chain, storedBlockchain.pendingTransactions, storedBlockchain.nodeAddresses);
-	}
+  if(receivedBlockchain != undefined && storedBlockchain != undefined){
 
-	//
-  if(receivedBlockchain){ //Does it exist and is it an instance of Blockchain or an object?
+		if(!(receivedBlockchain instanceof Blockchain)){
+			receivedBlockchain = new Blockchain(
+				receivedBlockchain.chain,
+				receivedBlockchain.pendingTransactions,
+				receivedBlockchain.nodeAddresses,
+				receivedBlockchain.ipAddresses,
+				receivedBlockchain.orphanedBlocks
+			);
+		}
+
+		if(!(storedBlockchain instanceof Blockchain)){
+			storedBlockchain = new Blockchain(
+				storedBlockchain.chain,
+				storedBlockchain.pendingTransactions,
+				storedBlockchain.nodeAddresses,
+				storedBlockchain.ipAddresses,
+				storedBlockchain.orphanedBlocks
+			);
+		}
+		 //Does it exist and is it an instance of Blockchain or an object?
     if(receivedBlockchain.isChainValid()){ //Is the chain valid?
 			//Try sending a notice or command to node with invalid blockchain
 
       if(storedBlockchain.chain.length > receivedBlockchain.chain.length){ //Which chain is the longest?
-
               longestBlockchain = storedBlockchain;
-
-
       }
       else if(storedBlockchain.chain.length == receivedBlockchain.chain.length){ //Same nb of blocks
+
           let lastStoredBlock = storedBlockchain.getLatestBlock();
           let lastReceivedBlock = receivedBlockchain.getLatestBlock();
 
-          if(lastStoredBlock.hash === lastReceivedBlock.hash){ //Same blocks - it's fine
-            longestBlockchain = storedBlockchain;
-          }else if(lastStoredBlock.hash === lastReceivedBlock.previousHash){ //New valid block linked to previous block - OK
-            // if(lastStoredBlock.timestamp > lastReceivedBlock.timestamp){
-						//
-            //   longestChain = receivedBlockchain;
-            //   lastStoredBlock.previousHash = lastReceivedBlock.hash;
-            //   receivedBlockchain.chain.push(lastStoredBlock);
-						//
-            // }else{
-            //   longestChain = storedBlockchain;
-            //   lastReceivedBlock.previousHash = lastStoredBlock.hash;
-            //   receivedBlockchain.chain.push(lastReceivedBlock);
-            // }
-          }else if(lastStoredBlock.hash === lastReceivedBlock.previousHash){
-
-					}
+        	//validated block
       }
       else{
         longestBlockchain = receivedBlockchain;
@@ -590,9 +634,16 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
     }
 
 
-  }else{
+  }else if(storedBlockchain == undefined && receivedBlockchain != undefined){
+		return receivedBlockchain;
+
+	}else if(storedBlockchain != undefined && receivedBlockchain == undefined){
     return storedBlockchain;
-  }
+
+  }else{
+		console.log('Both copies of the blockchain were undefined. Returning new blockchain copy instead')
+		return new Blockchain();
+	}
 
 }
 
@@ -603,7 +654,7 @@ const sendMessage = (socket, message) =>{
 const getNumPeers = () =>{
 	if(peers != undefined){
 		if(peers.length > 0){
-			console.log('There currently are '+peers.length+' other connected nodes on the network');
+			console.log('Number of peers on network:',peers.length);
 			return peers.length;
 		}
 
@@ -619,10 +670,6 @@ setTimeout(() =>{ //A little delay to let websocket open
 
 }, 1500)
 
-//Output waits for nodes to connect to one another - Using Async await would be so much better. Thanks Raspberry Pi...
-setTimeout(()=>{
-	getNumPeers();
-}, 2000)
 
 
 
