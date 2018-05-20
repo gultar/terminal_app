@@ -188,7 +188,7 @@ ioServer.on('connection', (socket) => {
 
 		if(newBlock != undefined && blockchain != undefined){
 			console.log('Received newly mined block');
-			console.log('Bc:', validateBlock(newBlock))
+			console.log('Bc:', blockchain.validateBlock(newBlock))
 			var isBlockValid = blockchain.validateBlock(newBlock);
 
 			if(isBlockValid){
