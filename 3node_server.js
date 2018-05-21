@@ -102,7 +102,7 @@ ioServer.on('connection', (socket) => {
 	});
 
 	socket.on('checkBalance', () =>{
-
+		
 
 	})
 
@@ -132,6 +132,8 @@ ioServer.on('connection', (socket) => {
 			if(transaction != undefined && fromNodeToken != undefined){
 				if(fromNodeToken.address != thisNode.address){
 					var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+
+					var transactIsValid = validateTransaction(transactionObj, fromNodeToken);
 
 					blockchain.createTransaction(transactionObj);
 					sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
@@ -256,7 +258,7 @@ ioServer.on('connection', (socket) => {
 
   socket.on('close', (token) => {
 
-    clients[token.hashSignature] = null;
+    clients[token.address] = null;
 
     console.log('Disconnected clients: '+ token.hashSignature.substr(0, 10) + '...');
 		getNumPeers();
@@ -295,7 +297,6 @@ const syncBlockchain = () => {
 		peers[i].emit('getBlockchain', thisNode);
 	}
 }
-
 
 
 
@@ -571,23 +572,11 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   if(receivedBlockchain != undefined && storedBlockchain != undefined){
 
 		if(!(receivedBlockchain instanceof Blockchain)){
-			receivedBlockchain = new Blockchain(
-				receivedBlockchain.chain,
-				receivedBlockchain.pendingTransactions,
-				receivedBlockchain.nodeAddresses,
-				receivedBlockchain.ipAddresses,
-				receivedBlockchain.orphanedBlocks
-			);
+			receivedBlockchain = instanciateBlockchain(receivedBlockchain);
 		}
 
 		if(!(storedBlockchain instanceof Blockchain)){
-			storedBlockchain = new Blockchain(
-				storedBlockchain.chain,
-				storedBlockchain.pendingTransactions,
-				storedBlockchain.nodeAddresses,
-				storedBlockchain.ipAddresses,
-				storedBlockchain.orphanedBlocks
-			);
+			storedBlockchain = instanciateBlockchain(storedBlockchain);
 		}
 		 //Does it exist and is it an instance of Blockchain or an object?
     if(receivedBlockchain.isChainValid()){ //Is the chain valid?
@@ -629,12 +618,13 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 
   }else if(storedBlockchain == undefined && receivedBlockchain != undefined){
+
 		console.log('Local chain is undefined. Using received chain');
-		return receivedBlockchain;
+		return instanciateBlockchain(receivedBlockchain);
 
 	}else if(storedBlockchain != undefined && receivedBlockchain == undefined){
 		console.log('Received chain is undefined. Using received chain');
-    return storedBlockchain;
+    return instanciateBlockchain(storedBlockchain);
 
   }else{
 		console.log('Both copies of the blockchain were undefined. Returning new blockchain copy instead')
@@ -655,6 +645,40 @@ const getNumPeers = () =>{
 		}
 
 	}
+}
+
+const instanciateBlockchain = (blockchain) =>{
+	return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeAddresses, blockchain.ipAddresses, blockchain.orphanedBlocks);
+}
+
+const validateTransaction = (transaction, token) =>{
+	if(transaction != undefined && token != undefined){
+
+		if(blockchain != undefined && blockchain instanceof Blockchain){
+
+			var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
+			if(!balanceOfSendingAddr){
+					console.log('Cannot verify balance of undefined address token');
+			}else{
+				if(balanceOfSendingAddr >= transaction.amount){
+					console.log('Transaction validated successfully');
+				}else if(transaction.type === 'query'){
+					//handle blockbase queries
+				}else{
+					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
+				}
+			}
+
+
+		}else{
+			console.log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
+		}
+
+	}else{
+		console.log('ERROR: Either the transaction or the token sent is undefined');
+		return false;
+	}
+
 }
 
 setTimeout(() =>{ //A little delay to let websocket open

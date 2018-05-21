@@ -116,38 +116,60 @@ class Blockchain{
   checkFundsThroughPendingTransactions(token){
     var balance = 0;
     var trans;
-    for(var i=0; i < this.pendingTransactions.length; i++){
-      trans = this.pendingTransactions[i];
+    var address;
+    if(token != undefined){
+      /*****************************/
+      if(!(typeof token == 'object')){  ///To be removed. For test purposes only
+        console.log('Token not object');
+        address = token;
+      }else{
+        address = token.address
+      }
+      /******************************/
+      for(var i=0; i < this.pendingTransactions.length; i++){
+        trans = this.pendingTransactions[i];
 
-      if(trans.fromAddress == token.address){
-        console.log("sending ",trans.amount);
-        balance = balance - trans.amount;
+        if(trans.fromAddress == address){
+          console.log("sending ",trans.amount);
+          balance = balance - trans.amount;
+        }
+
+        if(trans.toAddress == address){
+          console.log("receiving ", balance);
+          balance = balance + trans.amount;
+        }
       }
 
-      if(trans.toAddress == token.address){
-        console.log("receiving ", balance);
-        balance = balance + trans.amount;
-      }
     }
+
   }
 
   getBalanceOfAddress(token){
+    var address;
+
     let balance = 0;
     var trans;
     if(token != undefined){
+      /**********************/
+      if(!(typeof token == 'object')){  ///To be removed. For test purposes only
+        console.log('Token not object');
+        address = token;
+      }else{
+        address = token.address
+      }
+      /************************/
       for(var block of this.chain){
         // console.log(block);
         for(var i=0; i < block.transactions.length; i++){
           trans = block.transactions[i];
 
-            console.log('Trans: ', trans);
-            console.log('token:', token);
-            if(trans.fromAddress == token.address){
+          
+            if(trans.fromAddress == address){
               console.log("sending ",trans.amount);
               balance = balance - trans.amount;
             }
 
-            if(trans.toAddress == token.address){
+            if(trans.toAddress == address){
               console.log("receiving ", balance);
               balance = balance + trans.amount;
             }
@@ -163,35 +185,7 @@ class Blockchain{
     return balance;
   }
 
-  validateTransaction(transaction, token){
-  	if(transaction != undefined && token != undefined){
 
-  		if(blockchain != undefined && blockchain instanceof Blockchain){
-        
-  			var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
-  			if(!balanceOfSendingAddr){
-  				  console.log('Cannot verify balance of undefined address token');
-  			}else{
-  				if(balanceOfSendingAddr >= transaction.amount){
-  					console.log('Transaction validated successfully');
-  				}else if(transaction.type === 'query'){
-  					//handle blockbase queries
-  				}else{
-  					console.log()
-  				}
-  			}
-
-
-  		}else{
-  			console.log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
-  		}
-
-  	}else{
-  		console.log('ERROR: Either the transaction or the token sent is undefined');
-  		return false;
-  	}
-
-  }
 
   addBlockbaseRecord(address){
 
