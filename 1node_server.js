@@ -352,6 +352,7 @@ const initClientSocket = (address) =>{
 
 	peerSocket.on('connect', () =>{
 		console.log('connection to node established');
+		peerSocket.emit('getBlockchain', thisNode);
 		peers.push(peerSocket);
 	});
 
@@ -645,7 +646,7 @@ setTimeout(() =>{ //A little delay to let websocket open
 
 
   connectToPeerNetwork();
-	syncBlockchain();
+
 
 }, 1500)
 
