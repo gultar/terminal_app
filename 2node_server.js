@@ -230,7 +230,7 @@ ioServer.on('connection', (socket) => {
 				var msg = token.address + ' has requested a copy of the blockchain!';
 		    console.log(msg);
 				sendEventToAllPeers('message', msg);
-				sendEventToAllPeers('blockchain', blockchain);
+				socket.emit('blockchain', blockchain);
 		    ioServer.emit('blockchain', blockchain);
 
 		}else{
@@ -592,32 +592,48 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 		 //Does it exist and is it an instance of Blockchain or an object?
     if(receivedBlockchain.isChainValid()){ //Is the chain valid?
 			//Try sending a notice or command to node with invalid blockchain
-
+			console.log('Validated chain');
       if(storedBlockchain.chain.length > receivedBlockchain.chain.length){ //Which chain is the longest?
-              longestBlockchain = storedBlockchain;
+					console.log('Local chain is the longest. Choosing this one');
+          longestBlockchain = storedBlockchain;
       }
       else if(storedBlockchain.chain.length == receivedBlockchain.chain.length){ //Same nb of blocks
 
           let lastStoredBlock = storedBlockchain.getLatestBlock();
           let lastReceivedBlock = receivedBlockchain.getLatestBlock();
 
+					if(lastReceivedBlock.timestamp < lastStoredBlock.timestamp){
+						console.log('The last block on received chain is a older');
+						longestBlockchain = receivedBlockchain;
+					}else if(lastStoredBlock.timestamp < lastReceivedBlock.timestamp){
+						console.log('The last block on local chain is a older');
+						longestBlockchain = storedBlockchain;
+					}else{
+						console.log('The two chains and last two blocks are the same.')
+						longestBlockchain = storedBlockchain;
+					}
+					
         	//validated block
       }
       else{
+				console.log('Received chain is the longest. Choosing this one');
         longestBlockchain = receivedBlockchain;
       }
 
       return longestBlockchain;
     }
     else{
+			console.log('Received blockchain not valid. Reverting to local chain');
       return storedBlockchain;
     }
 
 
   }else if(storedBlockchain == undefined && receivedBlockchain != undefined){
+		console.log('Local chain is undefined. Using received chain');
 		return receivedBlockchain;
 
 	}else if(storedBlockchain != undefined && receivedBlockchain == undefined){
+		console.log('Received chain is undefined. Using received chain');
     return storedBlockchain;
 
   }else{
