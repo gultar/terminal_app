@@ -191,7 +191,7 @@ ioServer.on('connection', (socket) => {
 			console.log('Bc:', blockchain.validateBlock(newBlock))
 			var isBlockValid = blockchain.validateBlock(newBlock);
 
-			if(isBlockValid){
+			if(newBlock != undefined){ //isBlockValid
 				blockchain.chain.push(newBlock);
 			}
 

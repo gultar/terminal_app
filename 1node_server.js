@@ -191,15 +191,18 @@ ioServer.on('connection', (socket) => {
 			console.log('Bc:', blockchain.validateBlock(newBlock))
 			var isBlockValid = blockchain.validateBlock(newBlock);
 
-			if(isBlockValid){
+			if(newBlock != undefined){ //isBlockValid
 				blockchain.chain.push(newBlock);
 			}
+
+
 
 		}else{
 			console.log('New block received or blockchain is undefined');
 		}
 
 	});
+
 
   socket.on('seedBlockchain', (clientToken) => {
     //fetch most up to date blockchain from network
@@ -224,16 +227,12 @@ ioServer.on('connection', (socket) => {
   socket.on('getBlockchain', (token) =>{
     //Query all nodes for blockchain
 		if(blockchain != undefined){
-			if(token.type == 'endpointClient'){
 				var msg = token.address + ' has requested a copy of the blockchain!';
 		    console.log(msg);
 				sendEventToAllPeers('message', msg);
+				sendEventToAllPeers('blockchain', blockchain);
 		    ioServer.emit('blockchain', blockchain);
-			}else if(token.type == 'node'){
-				socket.emit('syncBlockchain', blockchain);
-			}else{
-				socket.emit('message', 'ERROR: Invalid token sent');
-			}
+
 		}else{
 			socket.emit('message', 'Blockchain is unavailable on node. It might be loading or saving.');
 		}
@@ -292,6 +291,7 @@ const syncBlockchain = () => {
 	sendEventToAllPeers('message', 'Syncing blockchain');
 	// sendEventToAllPeers('getBlockchain', thisNode);
 	for(var i=0; i<peers.length; i++){
+		console.log('Trying to sync')
 		peers[i].emit('getBlockchain', thisNode);
 	}
 }
@@ -457,37 +457,6 @@ const loadBlockchainFromServer = () => {
 	});
 
 
-  // fs.exists('blockchain.json', function(exists){
-	//
-  //       if(exists){
-  //           console.log("Loading Blockchain Data from file");
-  //           fs.readFile('blockchain.json', function readFileCallback(err, data){
-  //             console.log('Reading from blockchain.json file...');
-  //             let rawBlockchainFetched = JSON.parse(data);
-  //             blockchainFetched = new Blockchain(rawBlockchainFetched.chain, rawBlockchainFetched.pendingTransactions, rawBlockchainFetched.nodeAddresses);
-  //             blockchainFetched.nodeAddresses = seedNodeList(blockchainFetched, thisNode);
-	//
-  //           if (err){
-  //               console.log(err);
-  //           }
-	//
-	//
-  //           });
-  //       } else {
-  //         console.log('Generating new blockchain')
-  //           let newBlockchain = new Blockchain();
-  //           newBlockchain = seedNodeList(newBlockchain, thisNode);
-  //           // seedNodeList(newBlockchain); //------------------------Have to find a better way to create nodes
-  //           blockchain = newBlockchain;
-  //           saveBlockchain(newBlockchain);
-  //           console.log("file does not exist")
-	//
-	//
-  //           return false;
-  //       }
-	//
-	//
-  //     });
 }
 
 const saveBlockchain = (blockchainReceived) => {
@@ -528,7 +497,9 @@ const saveBlockchain = (blockchainReceived) => {
 					}
 
 					// });
-				} else {
+				}
+
+      	} else {
           console.log("Creating new Blockchain file and saving to it")
           let json = JSON.stringify(blockchainReceived);
           if(json != undefined){
@@ -537,8 +508,6 @@ const saveBlockchain = (blockchainReceived) => {
 
 						wstream.write(json);
           }
-
-      	}
 
 			}
       });
@@ -676,7 +645,7 @@ setTimeout(() =>{ //A little delay to let websocket open
 
 
   connectToPeerNetwork();
-
+	syncBlockchain();
 
 }, 1500)
 

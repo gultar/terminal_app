@@ -1,6 +1,7 @@
 //Modules
 const sha256 = require('./sha256');
 const JSONdb = require('simple-json-db');
+// const merkle = require('merkle');
 /******************************************/
 /***********Blockchain classes*************/
 /******************************************/
@@ -9,11 +10,13 @@ const JSONdb = require('simple-json-db');
 //A transaction is done if there is a
 //change of data on the blockchain
 class Transaction{
-  constructor(fromAddress, toAddress, amount, data=''){
+  constructor(fromAddress, toAddress, amount, data='', timestamp, hash){
     this.fromAddress = fromAddress;
     this.toAddress = toAddress;
     this.amount = amount;
     this.data = data;
+    this.timestamp = timestamp;
+    this.hash = (hash != undefined ? hash : sha256(this.fromAddress+ this.toAddress+ this.amount+ this.data+ this.timestamp));
   }
 }
 
@@ -162,8 +165,8 @@ class Blockchain{
     return true;
   }
 
-  validateBlock(newBlock){
 
+  validateBlock(newBlock){
 
   	var latestBlock = this.getLatestBlock();
 
@@ -179,16 +182,12 @@ class Blockchain{
   		this.orphanedBlocks.push(newBlock);
   		return false;
 
-  	}else if(newBlock.hash != RecalculateHash(newBlock)){
-  		console.log('Invalid block '+newBlock.hash);
-  		newBlock.valid = false;
-  		return false;
-
   	}else{
   		console.log('validated block but could not yet find a problem');
   		console.log('Newblock:', newBlock);
   		console.log('LatestBlock:', latestBlock);
-      return undefined;
+      this.orphanedBlocks.push(newBlock);
+  		return false;
   	}
   }
 }
