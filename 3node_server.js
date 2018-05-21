@@ -228,9 +228,9 @@ ioServer.on('connection', (socket) => {
     //Query all nodes for blockchain
 		if(blockchain != undefined){
 				var msg = token.address + ' has requested a copy of the blockchain!';
-		    console.log(msg);
+		    // console.log(msg);
 				sendEventToAllPeers('message', msg);
-				socket.emit('blockchain', blockchain);
+				sendEventToAllPeers('blockchain', blockchain);
 		    ioServer.emit('blockchain', blockchain);
 
 		}else{
@@ -612,7 +612,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 						console.log('The two chains and last two blocks are the same.')
 						longestBlockchain = storedBlockchain;
 					}
-					
+
         	//validated block
       }
       else{
