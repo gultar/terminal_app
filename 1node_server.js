@@ -133,6 +133,8 @@ ioServer.on('connection', (socket) => {
 				if(fromNodeToken.address != thisNode.address){
 					var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
+
+
 					blockchain.createTransaction(transactionObj);
 					sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
 					console.log('Received new transaction:', transactionObj);
@@ -256,7 +258,7 @@ ioServer.on('connection', (socket) => {
 
   socket.on('close', (token) => {
 
-    clients[token.hashSignature] = null;
+    clients[token.address] = null;
 
     console.log('Disconnected clients: '+ token.hashSignature.substr(0, 10) + '...');
 		getNumPeers();
@@ -295,7 +297,6 @@ const syncBlockchain = () => {
 		peers[i].emit('getBlockchain', thisNode);
 	}
 }
-
 
 
 
