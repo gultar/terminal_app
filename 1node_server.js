@@ -197,7 +197,8 @@ ioServer.on('connection', (socket) => {
 
 			if(newBlock != undefined){ //isBlockValid
 
-				blockchain.chain.push(newBlock);
+				// blockchain.chain.push(newBlock);
+				blockchain.syncBlock(newBlock);
 			}
 
 
