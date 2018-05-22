@@ -634,7 +634,6 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 }
 
-const
 
 const sendMessage = (socket, message) =>{
 		socket.emit('message', message);
