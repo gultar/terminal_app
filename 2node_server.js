@@ -103,8 +103,7 @@ ioServer.on('connection', (socket) => {
 	});
 
 	socket.on('checkBalance', (token) =>{
-		var test = Object.keys(blockchain.pendingTransactions);
-		console.log(test)
+		socket.emit('blockchain', blockchain);
 		// console.log(blockchain.validateTransaction())
 
 	})
@@ -288,7 +287,8 @@ ioServer.on('connection', (socket) => {
 					sendEventToAllPeers('blockchain', blockchain);
 			    ioServer.emit('blockchain', blockchain);
 				}else{
-					console.log('Current blockchain is invalid. Requesting a valid chain')
+					console.log('Current blockchain is invalid. Requesting a valid chain');
+					syncBlockchain();
 				}
 
 
@@ -670,10 +670,12 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
       return longestBlockchain;
     }
-    else{
+    else if(storedBlockchain.isChainValid()){
 			console.log('Received blockchain not valid. Reverting to local chain');
       return storedBlockchain;
-    }
+    }else{
+			return new Blockchain();
+		}
 
 
   }else if(storedBlockchain == undefined && receivedBlockchain != undefined){

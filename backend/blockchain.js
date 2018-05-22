@@ -119,16 +119,15 @@ class Blockchain{
       miningRewardAddress.setBalance(this.miningReward);
 
       console.log("Block successfully mined!");
-      var containsCurrentBlock = checkIfChainHasHash(block.hash);
-      if(!containsCurrentBlock){
+
+      if(this.validateBlock(block)){
         this.chain.push(block);
-      }else if(containsCurrentBlock == -1){
-        console.log('Current mined block is not linked with previous block. Sending it to orphanedBlocks')
-        this.orphanedBlocks.push(block);
-      }else if(containsCurrentBlock){
-        console.log('Block mined is already in the chain. Placing it in the orphanedBlocks')
+      }else{
+        console.log('Block is not valid');
         this.orphanedBlocks.push(block);
       }
+
+
 
 
       console.log("The Blockchain is " + this.chain.length + " blocks long.");
@@ -186,14 +185,20 @@ class Blockchain{
       if(this.chain[i-i].hash === hash){
         return true
       }
-
-      if(this.chain[i-1].previousHash !== hash){
-        return -1
-      }
     }
 
     return false;
   }
+
+  checkIfBlockIsLinked(previousHash){
+    var lastBlock = this.getLatestBlock();
+    if(lastBlock.hash === previousHash){
+      return true;
+    }
+    return false;
+  }
+
+
 
   getBalanceOfAddress(token){
     var address;
@@ -263,35 +268,31 @@ class Blockchain{
   }
 
 
-  validateBlock(newBlock){
+  validateBlock(block){
 
-  	var latestBlock = this.getLatestBlock();
+    var containsCurrentBlock = this.checkIfChainHasHash(block.hash);
+    var isLinked = this.checkIfBlockIsLinked(block.previousHash);
+    //Validate transactions using merkle root
+    if(!containsCurrentBlock){
+      if(!isLinked){
+        console.log('Current mined block is not linked with previous block. Sending it to orphanedBlocks')
+        return false
+      }else{
+        console.log('New block successfully validated. Will be appended to current blockchain.')
+        return true;
+      }
 
-  	if(newBlock.previousHash === latestBlock.hash){ //Latestblock is attached to the latest valid block. This is an Okay situation
-  		//validate block without recalculating it if possible
-  		//maybe by validating transactions first
-  		console.log('New block successfully validated. Will be appended to current blockchain.')
-  		return true;
+    }else if(containsCurrentBlock){
+      console.log('Block mined is already in the chain. Placing it in the orphanedBlocks')
+      return false;
+    }
 
-  	}else if(newBlock.hash === latestBlock.hash){ //Then have the same hash, means the block has been mined at the same exact time. Very improbable
-  		//if they have the same hash
-  		console.log('New block is the same as latest block. Placed in orphaned blocks');
-  		this.orphanedBlocks.push(newBlock);
-  		return false;
-
-  	}else{
-  		console.log('validated block but could not yet find a problem');
-  		console.log('Newblock:', newBlock);
-  		console.log('LatestBlock:', latestBlock);
-      this.orphanedBlocks.push(newBlock);
-  		return false;
-  	}
   }
 
   validateTransaction(transaction, token){
     if(transaction != undefined && token != undefined){
 
-
+      //To be worked on!
 
   			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
   			if(!balanceOfSendingAddr){
