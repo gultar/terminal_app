@@ -51,12 +51,12 @@ class Block{
 /////////////////////Blockchain///////////////////////
 class Blockchain{
 
-  constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}], ipAddresses=[], orphanedBlocks=[]){
+  constructor(chain=false, pendingTransactions=false, nodeAddresses={}, ipAddresses=[], orphanedBlocks=[]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: {});
     this.miningReward = 50;
-    this.nodeAddresses = (nodeAddresses.length > 0? nodeAddresses : []); //Stores all the node addresses of the P2P network
+    this.nodeAddresses = nodeAddresses; //Stores all the node addresses of the P2P network
     this.ipAddresses = ipAddresses;
     this.blockSize = 10; //Minimum Number of transactions per block
     this.orphanedBlocks = orphanedBlocks;
@@ -145,12 +145,12 @@ class Blockchain{
         trans = this.pendingTransactions[transHash];
 
         if(trans.fromAddress == address){
-          console.log("sending ",trans.amount);
+
           balance = balance - trans.amount;
         }
 
         if(trans.toAddress == address){
-          console.log("receiving ", balance);
+
           balance = balance + trans.amount;
         }
       }
