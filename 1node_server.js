@@ -101,8 +101,8 @@ ioServer.on('connection', (socket) => {
 			socket.join(room);
 	});
 
-	socket.on('checkBalance', () =>{
-		
+	socket.on('checkBalance', (block) =>{
+		blockchain.syncBlock(block);
 
 	})
 
@@ -194,6 +194,7 @@ ioServer.on('connection', (socket) => {
 			var isBlockValid = blockchain.validateBlock(newBlock);
 
 			if(newBlock != undefined){ //isBlockValid
+
 				blockchain.chain.push(newBlock);
 			}
 
@@ -632,6 +633,8 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 	}
 
 }
+
+const
 
 const sendMessage = (socket, message) =>{
 		socket.emit('message', message);

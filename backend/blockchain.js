@@ -76,6 +76,30 @@ class Blockchain{
     this.chain.push(newBlock);
   }
 
+  syncBlock(newBlock){
+
+    var nTrans = newBlock.transactions;
+    var pending = this.pendingTransactions;
+    this.chain.push(newBlock);
+    for(var i=0; i < nTrans.length; i++){
+      $.each(pending, function(i){
+        if(pending[i].hash == nTrans[i].hash) {
+            pending.splice(i,1);
+            return false;
+        }
+      });
+    }
+
+
+    // for(var i=0; i < newBlock.transactions.length; i++){
+    //   var pendingTrans = this.pendingTransactions;
+    //   pendingTrans = remove(pendingTrans, newBlock.transactions[i]);
+    // }
+    //
+    // this.pendingTransactions = pendingTrans;
+    // console.log(this.pendingTransactions.filter(x => !nTrans.includes(x)));
+  }
+
   hasEnoughTransactionsToMine(){
     if(this.pendingTransactions.length >= this.blockSize){
       return true
@@ -163,14 +187,14 @@ class Blockchain{
         for(var i=0; i < block.transactions.length; i++){
           trans = block.transactions[i];
 
-          
+
             if(trans.fromAddress == address){
-              console.log("sending ",trans.amount);
+
               balance = balance - trans.amount;
             }
 
             if(trans.toAddress == address){
-              console.log("receiving ", balance);
+
               balance = balance + trans.amount;
             }
 
@@ -291,6 +315,15 @@ class BlockbaseRecord{
 
 }
 
+function remove(array, element) {
+    const index = array.indexOf(element);
+
+    if (index !== -1) {
+        array.splice(index, 1);
+    }
+
+    return array;
+}
 
 function RecalculateHash(block){
   //console.log(sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString())
