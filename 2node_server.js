@@ -1,10 +1,7 @@
 //////////////////////////////////////////////////////////////
 /////////////////////////NODE SCRIPT /////////////////////////
 //////////////////////////////////////////////////////////////
-let blockchain;
-//////////////////////////////////////////////////////////////
-//This is a container for the blockchain copy taken from local file
-let blockchainFetched;
+
 
 
 //Express app and http server to run websockets on
@@ -31,6 +28,12 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
 				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
 
+let blockchain = new Blockchain();
+//////////////////////////////////////////////////////////////
+//This is a container for the blockchain copy taken from local file
+let blockchainFetched = new Blockchain();
+
+
 let thisNode = {
   'type' : 'node',
   'address' : ipList[0],
@@ -50,7 +53,7 @@ let clients = [];
 let peers = [];
 
 //Maybe implement a turned based mining system. It might be too cumbersome...
-let minersOnHold = [];
+let currentMiners = [];
 let sendTrials = 0;
 
 
@@ -193,13 +196,55 @@ ioServer.on('connection', (socket) => {
 		ioServer.emit('blockchain', blockchain);
 	})
 
+	socket.on('queryForChainData', (lengthOfChain, sendBlocks=false) =>{
+		var block;
+		var nextValidBlockData;
+		var blockGap = blockchain.chain.length - lengthOfChain;
+
+		if(blockchain != undefined){
+			//Checks the length of peer chain
+			if(blockchain.chain.length > lengthOfChain){
+				lastValidBlockData = createBlockMetaData(blockchain.chain[lengthOfChain]);
+				//Prepares a data packet with info on the next blockchain
+				if(sendBlocks){
+					for(var i=0; i < blockGap; i++){
+								socket.emit('newBlock', blockchain.chain[lengthOfChain + i]);
+
+					}
+
+				}else{
+					socket.emit('blockMetaData', nextValidBlockData, indexOfNextValidBlock);
+				}
+
+			}else if(blockchain.chain.length == lengthOfChain){
+				block = blockchain.getLatestBlock();
+
+
+			}else{
+				socket.emit('queryForChainData', blockchain.chain.length);
+			}
+		}else{
+			var msg = 'ERROR: Cannot send metadata of target block. Blockchain is undefined'
+		}
+
+
+	})
+
+	socket.on('blockMetaData', (blockDataArray, indexOfNextValidBlock) =>{
+		var nextValidBlock = blockchain.chain[indexOfNextValidBlock];
+		if(lastBlock.hash === metaDataArray.previousHash){
+
+		}
+	})
+
+
 	socket.on('newBlock', (newBlock) =>{
 
 		if(newBlock != undefined && blockchain != undefined){
-			console.log('Received newly mined block');
-			console.log('Bc:', blockchain.validateBlock(newBlock))
-			var isBlockValid = blockchain.validateBlock(newBlock);
+			console.log('Received new block');
 
+			var isBlockValid = blockchain.validateBlock(newBlock);
+			console.log('Valid?', isBlockValid);
 			if(newBlock != undefined){ //isBlockValid
 
 				// blockchain.chain.push(newBlock);
@@ -226,14 +271,27 @@ ioServer.on('connection', (socket) => {
 
   })
 
+
+
   socket.on('getBlockchain', (token) =>{
     //Query all nodes for blockchain
 		if(blockchain != undefined){
-				var msg = token.address + ' has requested a copy of the blockchain!';
-		    // console.log(msg);
-				sendEventToAllPeers('message', msg);
-				sendEventToAllPeers('blockchain', blockchain);
-		    ioServer.emit('blockchain', blockchain);
+
+			if(!(blockchain instanceof Blockchain)){
+				blockchain = instanciateBlockchain(blockchain);
+			}
+
+				if(blockchain.isChainValid()){
+					var msg = token.address + ' has requested a copy of the blockchain!';
+			    // console.log(msg);
+					sendEventToAllPeers('message', msg);
+					sendEventToAllPeers('blockchain', blockchain);
+			    ioServer.emit('blockchain', blockchain);
+				}else{
+					console.log('Current blockchain is invalid. Requesting a valid chain')
+				}
+
+
 
 		}else{
 			socket.emit('message', 'Blockchain is unavailable on node. It might be loading or saving.');
@@ -246,6 +304,12 @@ ioServer.on('connection', (socket) => {
     blockchain = compareBlockchains(blockchain, blockchainReceived);
     console.log('Received blockchain from node. Comparing it!');
   })
+
+	socket.on('minerStarted', (miningAddress) =>{
+		if(miningAddress != undefined){
+			currentMiners[miningAddress.hash] = miningAddress;
+		}
+	})
 
 	socket.on('disconnect', () =>{
 
@@ -289,17 +353,38 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 
 }
 
+// const sendBlocks = (lengthOfChain) =>{
+//
+//
+// }
+
 const syncBlockchain = () => {
-	sendEventToAllPeers('message', 'Syncing blockchain');
+	sendEventToAllPeers('message', thisNode.address+' is syncing blockchain');
 	// sendEventToAllPeers('getBlockchain', thisNode);
 	for(var i=0; i<peers.length; i++){
-		console.log('Trying to sync')
+
 		peers[i].emit('getBlockchain', thisNode);
 	}
 }
 
 
+const createBlockMetaData = (block) =>{
+	if(block != undefined && block instanceof Block){
+		var metadata = {
+			timestamp: block.timestamp,
+			hash: block.hash,
+			previousHash: block.previousHash,
+			nonce: block.nonce,
+			minedBy: block.minedBy
+		}
 
+		return metadata;
+	}else{
+		console.log('ERROR: Cannot create block metadata. Block is undefined');
+		return null;
+	}
+
+}
 
 //Init blockchain starting from local file
 const initBlockchain = (tryOnceAgain=true) => {
@@ -498,27 +583,37 @@ const saveBlockchain = (blockchainReceived) => {
 
 const startMining = (miningAddrToken) => {
 
+
+
   miningAddr = getMiningAddress(miningAddrToken);
 
-    miningSuccess = blockchain.minePendingTransactions(miningAddr);
+	if(miningAddr){
+		sendEventToAllPeers('message', miningAddrToken.address+ ' has started mining.');
+		sendEventToAllPeers('minerStarted', miningAddr);
+		miningSuccess = blockchain.minePendingTransactions(miningAddr);
 
-    if(miningSuccess){
+		if(miningSuccess){
 
-      console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
+			console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
 
-      var message =  'A new block has been mined by ' + miningAddr.hashSignature + '. Sending new block';
+			var message =  'A new block has been mined by ' + miningAddr.hashSignature + '. Sending new block';
 			var newBlock = blockchain.getLatestBlock();
-      ioServer.emit('miningApproved', blockchain);
-      ioServer.emit('message', message);
-      sendEventToAllPeers('message', message);
+			ioServer.emit('miningApproved', blockchain);
+			ioServer.emit('message', message);
+			sendEventToAllPeers('message', message);
 			sendEventToAllPeers('newBlock', newBlock);
-      // sendEventToAllPeers('blockchain', blockchain);
+			// sendEventToAllPeers('blockchain', blockchain);
 
 			return true;
 
-    }
+		}
 
 		return false;
+
+	}else{
+		console.log('Invalid mining address');
+	}
+
 
 
 }

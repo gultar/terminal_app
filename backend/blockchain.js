@@ -28,7 +28,8 @@ class Block{
     this.previousHash = previousHash;
     this.hash = this.calculateHash();
     this.nonce = 0;
-    this.valid = true
+    this.valid = true;
+    this.minedBy = '';
   }
 
   calculateHash(){
@@ -112,7 +113,8 @@ class Blockchain{
       this.pendingTransactions = {};
       block.previousHash = this.getLatestBlock().hash;
       block.mineBlock(this.difficulty);
-
+      block.minedBy = miningRewardAddress.hashSignature;
+      
       miningRewardAddress.minedOneBlock();
       miningRewardAddress.setBalance(this.miningReward);
 
