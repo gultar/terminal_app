@@ -79,16 +79,14 @@ ioServer.on('connection', (socket) => {
     //Create validation for connecting nodes
 		if(token != undefined){
 			clients[token.address] = token;
+
 			socket.id = token.address;
 
 	    console.log('Connected client hash: '+ token.hashSignature.substr(0, 10) + '...');
 	    console.log('At address:', token.address);
 
 	    socket.emit('message', 'You are now connected to ' + thisNode.address);
-			if(token.type == 'node'){
-				socket.emit('seedingNodes', thisNode);
 
-			}
 			getNumPeers();
 
 		}
@@ -101,8 +99,17 @@ ioServer.on('connection', (socket) => {
 			socket.join(room);
 	});
 
-	socket.on('checkBalance', (block) =>{
-		blockchain.syncBlock(block);
+	socket.on('checkBalance', (token) =>{
+		var test = Object.keys(blockchain.pendingTransactions);
+		console.log(test)
+		// console.log(blockchain.validateTransaction())
+
+	})
+
+	socket.on('storeToken', (token) =>{
+		if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
+			blockchain.nodeTokens[token.address] = token;
+		}
 
 	})
 
@@ -195,10 +202,11 @@ ioServer.on('connection', (socket) => {
 
 			if(newBlock != undefined){ //isBlockValid
 
-				blockchain.chain.push(newBlock);
+				// blockchain.chain.push(newBlock);
+				blockchain.syncBlock(newBlock);
 			}
 
-
+			ioServer.emit('blockchain', blockchain);
 
 		}else{
 			console.log('New block received or blockchain is undefined');
@@ -207,15 +215,6 @@ ioServer.on('connection', (socket) => {
 	});
 
 
-  socket.on('seedBlockchain', (clientToken) => {
-    //fetch most up to date blockchain from network
-    socket.emit('seedingNodes',seedNodeList(blockchain, clientToken));
-  });
-
-  socket.on('seedingNodes', (node) =>{
-    blockchain.nodeAddresses.push(node);
-    console.log('Seeding the blockchain with this address:', node);
-  })
 
   socket.on('queryForBlockchain', (queryingNodeToken) =>{
 
@@ -324,21 +323,12 @@ const initBlockchain = (tryOnceAgain=true) => {
 
       })
       blockchain = new Blockchain();
-      seedNodeList(blockchain, thisNode);
-
 
     }else{
-      blockchain = new Blockchain(blockchainFetched.chain, blockchainFetched.pendingTransactions, blockchainFetched.nodeAddresses);
-      seedNodeList(blockchain, thisNode);
-
+      blockchain = instanciateBlockchain(blockchainFetched);
 
     }
 
-
-    // console.log('Current blockchain:', blockchain);
-
-
-    // console.log('This node:',blockchain.nodeAddresses[thisNode.hashSignature]);
 
   }, 4000);
 
@@ -350,11 +340,12 @@ const initClientSocket = (address) =>{
 	var peerSocket = io(address, {'forceNew': true});
 
 	peerSocket.emit('client-connect', thisNode);
+	peerSocket.emit('storeToken', thisNode);
 	peerSocket.emit('message', 'You are connected to '+thisNode.address);
 
 	peerSocket.on('connect', () =>{
 		console.log('connection to node established');
-		peerSocket.emit('getBlockchain', thisNode);
+		// peerSocket.emit('getBlockchain', thisNode);
 		peers.push(peerSocket);
 	});
 
@@ -382,20 +373,9 @@ const connectToPeerNetwork = () => {
 
 };
 
-const getBlockchainAddress = (addressToken) => {
+const getMiningAddress = (addressToken) => {
   if(blockchain !== undefined){
-    let hash = addressToken.hashSignature;
-
-    // console.log('Address token:', addressToken);
-    // console.log('Node addresses:', blockchain.nodeAddresses);
-    if(blockchain.nodeAddresses[hash] === undefined){
-      blockchain.nodeAddresses[hash] = new BlockchainAddress(addressToken.address, addressToken.hashSignature);
-
-    }
-
-    return blockchain.nodeAddresses[hash];
-
-
+    return blockchain.miningAddresses[addressToken.hashSignature];
   }
 
 }
@@ -425,13 +405,8 @@ const loadBlockchainFromServer = () => {
 
 				if(data != undefined){
 						blockchainDataFromFile = JSON.parse(data);
-						blockchainFetched = new Blockchain(
-							blockchainDataFromFile.chain,
-							blockchainDataFromFile.pendingTransactions,
-							blockchainDataFromFile.nodeAddresses,
-							blockchainDataFromFile.ipAddresses,
-							blockchainDataFromFile.orphanedBlocks
-						);
+						blockchainFetched = instanciateBlockchain(blockchainDataFromFile);
+
 						//validateBlockchain(blockchainFetched); --- To be created
 						console.log('Blockchain successfully loaded from file and validated')
 						// blockchain = compareBlockchains(blockchain, blockchainFetched);
@@ -448,7 +423,7 @@ const loadBlockchainFromServer = () => {
 		}else {
 			console.log('Generating new blockchain')
 				let newBlockchain = new Blockchain();
-				newBlockchain = seedNodeList(newBlockchain, thisNode);
+				// newBlockchain = seedNodeList(newBlockchain, thisNode);
 				// seedNodeList(newBlockchain); //------------------------Have to find a better way to create nodes
 				blockchain = newBlockchain;
 				saveBlockchain(newBlockchain);
@@ -518,7 +493,7 @@ const saveBlockchain = (blockchainReceived) => {
 
 const startMining = (miningAddrToken) => {
 
-  miningAddr = getBlockchainAddress(miningAddrToken);
+  miningAddr = getMiningAddress(miningAddrToken);
 
     miningSuccess = blockchain.minePendingTransactions(miningAddr);
 
@@ -547,24 +522,7 @@ const calculateBlockHash = (block) =>{
 	return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
 }
 
-const seedNodeList = (blockchain, token) =>  {
-  //Seed the list of connected nodes
-  var returnValue;
-  // blockchain.addNodeAddress(thisNode);
-  if(blockchain){
-    if(blockchain.nodeAddresses[token.hashSignature] == undefined){
-      blockchain.nodeAddresses[token.hashSignature] = new BlockchainAddress(token.address, token.hashSignature, 0, 0);
 
-
-    }else{
-      // console.log('This node address already exists:', token.hashSignature);
-
-    }
-    // console.log('This node:', blockchain.nodeAddresses[thisNode.hashSignature]);
-    return blockchain.nodeAddresses;
-  }
-
-}
 
 const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
   let longestBlockchain;
@@ -634,7 +592,6 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
 }
 
-const
 
 const sendMessage = (socket, message) =>{
 		socket.emit('message', message);
@@ -651,7 +608,7 @@ const getNumPeers = () =>{
 }
 
 const instanciateBlockchain = (blockchain) =>{
-	return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeAddresses, blockchain.ipAddresses, blockchain.orphanedBlocks);
+	return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeTokens, blockchain.ipAddresses, blockchain.orphanedBlocks);
 }
 
 const validateTransaction = (transaction, token) =>{
@@ -686,10 +643,10 @@ const validateTransaction = (transaction, token) =>{
 
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
-
-
   connectToPeerNetwork();
-
+	setTimeout(() =>{
+		syncBlockchain();
+	}, 1500)
 
 }, 1500)
 

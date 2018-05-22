@@ -51,13 +51,14 @@ class Block{
 /////////////////////Blockchain///////////////////////
 class Blockchain{
 
-  constructor(chain=false, pendingTransactions=false, nodeAddresses={}, ipAddresses=[], orphanedBlocks=[]){
+  constructor(chain=false, pendingTransactions=false, nodeTokens={}, ipAddresses=[], orphanedBlocks=[]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: {});
     this.miningReward = 50;
-    this.nodeAddresses = nodeAddresses; //Stores all the node addresses of the P2P network
+    this.nodeTokens = nodeTokens; //Stores all the node addresses of the P2P network
     this.ipAddresses = ipAddresses;
+    this.miningAddresses = {};
     this.blockSize = 10; //Minimum Number of transactions per block
     this.orphanedBlocks = orphanedBlocks;
   }
@@ -68,6 +69,12 @@ class Blockchain{
 
   getLatestBlock(){
     return this.chain[this.chain.length - 1];
+  }
+
+  addMiningAddress(token){
+    if(!this.miningAddresses[token.hashSignature]){
+      this.miningAddresses[token.hashSignature] = new BlockchainAddress(token.address, token.hashSignature);
+    }
   }
 
   addBlock(newBlock){
