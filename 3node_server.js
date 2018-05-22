@@ -375,7 +375,12 @@ const connectToPeerNetwork = () => {
 
 const getMiningAddress = (addressToken) => {
   if(blockchain !== undefined){
-    return blockchain.miningAddresses[addressToken.hashSignature];
+		if(blockchain.miningAddresses[addressToken.hashSignature] && blockchain.miningAddresses[addressToken.hashSignature] instanceof BlockchainAddress){
+			return blockchain.miningAddresses[addressToken.hashSignature];
+		}else{
+			blockchain.addMiningAddress(addressToken);
+		}
+
   }
 
 }
