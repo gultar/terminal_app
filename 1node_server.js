@@ -101,8 +101,10 @@ ioServer.on('connection', (socket) => {
 			socket.join(room);
 	});
 
-	socket.on('checkBalance', (block) =>{
-		blockchain.syncBlock(block);
+	socket.on('checkBalance', (token) =>{
+		var test = Object.keys(blockchain.pendingTransactions);
+		console.log(test)
+		// console.log(blockchain.validateTransaction())
 
 	})
 

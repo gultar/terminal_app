@@ -54,7 +54,7 @@ class Blockchain{
   constructor(chain=false, pendingTransactions=false, nodeAddresses=[{}], ipAddresses=[], orphanedBlocks=[]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 3;
-    this.pendingTransactions = (pendingTransactions? pendingTransactions: []);
+    this.pendingTransactions = (pendingTransactions? pendingTransactions: {});
     this.miningReward = 50;
     this.nodeAddresses = (nodeAddresses.length > 0? nodeAddresses : []); //Stores all the node addresses of the P2P network
     this.ipAddresses = ipAddresses;
@@ -78,30 +78,21 @@ class Blockchain{
 
   syncBlock(newBlock){
 
-    var nTrans = newBlock.transactions;
+
     var pending = this.pendingTransactions;
-    this.chain.push(newBlock);
-    for(var i=0; i < nTrans.length; i++){
-      $.each(pending, function(i){
-        if(pending[i].hash == nTrans[i].hash) {
-            pending.splice(i,1);
-            return false;
-        }
-      });
+    var newTransactHashes = Object.keys(newBlock.transactions);
+    for(var hash of newTransactHashes){
+      delete pending[hash];
     }
 
+    this.chain.push(newBlock);
+    this.pendingTransactions = pending;
 
-    // for(var i=0; i < newBlock.transactions.length; i++){
-    //   var pendingTrans = this.pendingTransactions;
-    //   pendingTrans = remove(pendingTrans, newBlock.transactions[i]);
-    // }
-    //
-    // this.pendingTransactions = pendingTrans;
-    // console.log(this.pendingTransactions.filter(x => !nTrans.includes(x)));
+
   }
 
   hasEnoughTransactionsToMine(){
-    if(this.pendingTransactions.length >= this.blockSize){
+    if(Object.keys(this.pendingTransactions).length >= this.blockSize){
       return true
     }else{
       return false;
@@ -111,6 +102,7 @@ class Blockchain{
   minePendingTransactions(miningRewardAddress){
     if(this.hasEnoughTransactionsToMine()){
       let block = new Block(Date.now(), this.pendingTransactions);
+      this.pendingTransactions = {};
       block.previousHash = this.getLatestBlock().hash;
       block.mineBlock(this.difficulty);
 
@@ -122,9 +114,7 @@ class Blockchain{
 
       console.log("The Blockchain is " + this.chain.length + " blocks long.");
       console.log(miningRewardAddress.address + ' has mined ' + miningRewardAddress.blocksMined + ' blocks.');
-      this.pendingTransactions = [
-        new Transaction(null, miningRewardAddress.address, this.miningReward, "")
-      ];
+      this.createTransaction(new Transaction(null, miningRewardAddress.address, this.miningReward, "", Date.now()))
       return true;
     }else{
       console.log('Waiting for other transactions...');
@@ -134,7 +124,8 @@ class Blockchain{
   }
 
   createTransaction(transaction){
-    this.pendingTransactions.push(transaction);
+    // this.pendingTransactions.push(transaction);
+    this.pendingTransactions[transaction.hash] = transaction;
   }
 
   checkFundsThroughPendingTransactions(token){
@@ -150,8 +141,8 @@ class Blockchain{
         address = token.address
       }
       /******************************/
-      for(var i=0; i < this.pendingTransactions.length; i++){
-        trans = this.pendingTransactions[i];
+      for(var transHash of Object.keys(this.pendingTransactions)){
+        trans = this.pendingTransactions[transHash];
 
         if(trans.fromAddress == address){
           console.log("sending ",trans.amount);
@@ -164,6 +155,9 @@ class Blockchain{
         }
       }
 
+      return balance;
+    }else{
+      return false;
     }
 
   }
@@ -184,10 +178,8 @@ class Blockchain{
       /************************/
       for(var block of this.chain){
         // console.log(block);
-        for(var i=0; i < block.transactions.length; i++){
-          trans = block.transactions[i];
-
-
+        for(var transHash of Object.keys(block.transactions)){
+          trans = block.transactions[transHash]
             if(trans.fromAddress == address){
 
               balance = balance - trans.amount;
@@ -259,6 +251,33 @@ class Blockchain{
   		console.log('Newblock:', newBlock);
   		console.log('LatestBlock:', latestBlock);
       this.orphanedBlocks.push(newBlock);
+  		return false;
+  	}
+  }
+
+  validateTransaction(transaction, token){
+    if(transaction != undefined && token != undefined){
+
+
+
+  			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
+  			if(!balanceOfSendingAddr){
+  					console.log('Cannot verify balance of undefined address token');
+  			}else{
+  				if(balanceOfSendingAddr >= transaction.amount){
+  					console.log('Transaction validated successfully');
+  				}else if(transaction.type === 'query'){
+  					//handle blockbase queries
+  				}else{
+  					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
+  				}
+  			}
+
+
+
+
+  	}else{
+  		console.log('ERROR: Either the transaction or the token sent is undefined');
   		return false;
   	}
   }
