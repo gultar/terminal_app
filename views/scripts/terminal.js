@@ -256,7 +256,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           output(navigator.appVersion);
           // connection.send(JSON.stringify(new Transaction(localAddress, 'ws://192.168.0.154:8080', 10, clientConnectionToken)));
           // socket.emit('seedBlockchain', 'Hello world');
-          socket.emit('peerConnect', 'connect')
+          socket.emit('syncBlockchain', blockchain);
           break;
 
 

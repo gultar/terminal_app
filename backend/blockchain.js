@@ -114,12 +114,22 @@ class Blockchain{
       block.previousHash = this.getLatestBlock().hash;
       block.mineBlock(this.difficulty);
       block.minedBy = miningRewardAddress.hashSignature;
-      
+
       miningRewardAddress.minedOneBlock();
       miningRewardAddress.setBalance(this.miningReward);
 
       console.log("Block successfully mined!");
-      this.chain.push(block);
+      var containsCurrentBlock = checkIfChainHasHash(block.hash);
+      if(!containsCurrentBlock){
+        this.chain.push(block);
+      }else if(containsCurrentBlock == -1){
+        console.log('Current mined block is not linked with previous block. Sending it to orphanedBlocks')
+        this.orphanedBlocks.push(block);
+      }else if(containsCurrentBlock){
+        console.log('Block mined is already in the chain. Placing it in the orphanedBlocks')
+        this.orphanedBlocks.push(block);
+      }
+
 
       console.log("The Blockchain is " + this.chain.length + " blocks long.");
       console.log(miningRewardAddress.address + ' has mined ' + miningRewardAddress.blocksMined + ' blocks.');
@@ -169,6 +179,20 @@ class Blockchain{
       return false;
     }
 
+  }
+
+  checkIfChainHasHash(hash){
+    for(var i=this.chain.length; i > 0; i--){
+      if(this.chain[i-i].hash === hash){
+        return true
+      }
+
+      if(this.chain[i-1].previousHash !== hash){
+        return -1
+      }
+    }
+
+    return false;
   }
 
   getBalanceOfAddress(token){
