@@ -106,8 +106,9 @@ ioServer.on('connection', (socket) => {
 		// console.log(blockchain.getIndexOfBlockHash(token))
 		// console.log(blockchain.validateTransaction())
 		// console.log(buildChainHashes());
-		var he = findMissingBlocks(token);
-		socket.emit('blockchain', he);
+		var hashesOfBlocks = buildChainHashes();
+		sendEventToAllPeers('receiveChainSignatures', hashesOfBlocks);
+		// syncBlockchain();
 
 	})
 
@@ -209,8 +210,9 @@ ioServer.on('connection', (socket) => {
 		 socket.emit('receiveChainSignatures', hashesOfBlocks);
 	})
 
-	socket.on('receiveChainSignatures', (signatures=false) =>{
-		if(signatures){
+	socket.on('receiveChainSignatures', (signatures) =>{
+		console.log(signatures);
+		if(signatures != undefined){
 			var missingBlocks = findMissingBlocks(signatures);
 			console.log('missing:',missingBlocks)
 			if(missingBlocks){
@@ -222,6 +224,8 @@ ioServer.on('connection', (socket) => {
 				console.log('Chain is up to date');
 				//Is up to date
 			}
+		}else{
+			console.log('Block signatures received are undefined');
 		}
 	})
 
@@ -308,7 +312,7 @@ ioServer.on('connection', (socket) => {
 
   socket.on('blockchain', (blockchainReceived) => {
     blockchain = compareBlockchains(blockchain, blockchainReceived);
-    
+
   })
 
 	socket.on('minerStarted', (miningAddress) =>{
@@ -447,6 +451,11 @@ const connectToPeerNetwork = () => {
   }
 
 };
+
+
+const sendEventToTargetPeer = (eventType, data, token) =>{
+
+}
 
 const getMiningAddress = (addressToken) => {
   if(blockchain !== undefined){
@@ -819,9 +828,9 @@ const validateTransaction = (transaction, token) =>{
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   connectToPeerNetwork();
-	setTimeout(() =>{
-		syncBlockchain();
-	}, 3000)
+	// setTimeout(() =>{
+	// 	syncBlockchain();
+	// }, 3000)
 
 }, 1500)
 
