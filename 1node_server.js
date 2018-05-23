@@ -28,10 +28,10 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
 				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
 
-let blockchain = new Blockchain();
+let blockchain;
 //////////////////////////////////////////////////////////////
 //This is a container for the blockchain copy taken from local file
-let blockchainFetched = new Blockchain();
+let blockchainFetched;
 
 
 let thisNode = {
@@ -103,8 +103,11 @@ ioServer.on('connection', (socket) => {
 	});
 
 	socket.on('checkBalance', (token) =>{
-		socket.emit('blockchain', blockchain);
+		// console.log(blockchain.getIndexOfBlockHash(token))
 		// console.log(blockchain.validateTransaction())
+		// console.log(buildChainHashes());
+		var he = findMissingBlocks(token);
+		socket.emit('blockchain', he);
 
 	})
 
@@ -189,51 +192,54 @@ ioServer.on('connection', (socket) => {
 
   });
 
+	socket.on('chainSignatures', (fromIndex=false)=>{
+		var hashesOfBlocks;
+		var pieceOfChain = [];
+		if(fromIndex && typeof fromIndex == 'number'){
+			for(var i=fromIndex; i<blockchain.chain.length; i++){
+				pieceOfChain.push(blockchain.chain[i]);
+			}
+
+			hashesOfBlocks = buildChainHashes(pieceOfChain);
+		}else{
+			hashesOfBlocks = buildChainHashes()
+		}
+
+		 console.log(hashesOfBlocks);
+		 socket.emit('receiveChainSignatures', hashesOfBlocks);
+	})
+
+	socket.on('receiveChainSignatures', (signatures=false) =>{
+		if(signatures){
+			var missingBlocks = findMissingBlocks(signatures);
+
+			if(missingBlocks){
+				for(var block of missingBlocks){
+					var blockSignature = buildChainHashes(block);
+					socket.emit('sendBlock', blockSignature);
+				}
+			}else{
+				console.log('Chain is up to date');
+				//Is up to date
+			}
+		}
+	})
+
+	socket.on('sendBlock', (blockSignature) =>{
+		if(blockchain != undefined && blockSignature != undefined){
+			var index = blockchain.getIndexOfBlockHash(blockSignature.hash);
+			if(index){
+				socket.emit('newBlock', blockchain.chain[index]);
+			}else{
+				socket.emit('message', 'ERROR: Could not find block '+blockSignature.hash);
+			}
+		}
+	})
+
 	socket.on('syncBlockchain', (blockchainToSync=false)=>{
 		blockchain = compareBlockchains(blockchain, blockchainToSync);
 		console.log('Blockchain from peer:', blockchain);
 		ioServer.emit('blockchain', blockchain);
-	})
-
-	socket.on('queryForChainData', (lengthOfChain, sendBlocks=false) =>{
-		var block;
-		var nextValidBlockData;
-		var blockGap = blockchain.chain.length - lengthOfChain;
-
-		if(blockchain != undefined){
-			//Checks the length of peer chain
-			if(blockchain.chain.length > lengthOfChain){
-				lastValidBlockData = createBlockMetaData(blockchain.chain[lengthOfChain]);
-				//Prepares a data packet with info on the next blockchain
-				if(sendBlocks){
-					for(var i=0; i < blockGap; i++){
-								socket.emit('newBlock', blockchain.chain[lengthOfChain + i]);
-
-					}
-
-				}else{
-					socket.emit('blockMetaData', nextValidBlockData, indexOfNextValidBlock);
-				}
-
-			}else if(blockchain.chain.length == lengthOfChain){
-				block = blockchain.getLatestBlock();
-
-
-			}else{
-				socket.emit('queryForChainData', blockchain.chain.length);
-			}
-		}else{
-			var msg = 'ERROR: Cannot send metadata of target block. Blockchain is undefined'
-		}
-
-
-	})
-
-	socket.on('blockMetaData', (blockDataArray, indexOfNextValidBlock) =>{
-		var nextValidBlock = blockchain.chain[indexOfNextValidBlock];
-		if(lastBlock.hash === metaDataArray.previousHash){
-
-		}
 	})
 
 
@@ -367,24 +373,6 @@ const syncBlockchain = () => {
 	}
 }
 
-
-const createBlockMetaData = (block) =>{
-	if(block != undefined && block instanceof Block){
-		var metadata = {
-			timestamp: block.timestamp,
-			hash: block.hash,
-			previousHash: block.previousHash,
-			nonce: block.nonce,
-			minedBy: block.minedBy
-		}
-
-		return metadata;
-	}else{
-		console.log('ERROR: Cannot create block metadata. Block is undefined');
-		return null;
-	}
-
-}
 
 //Init blockchain starting from local file
 const initBlockchain = (tryOnceAgain=true) => {
@@ -590,6 +578,7 @@ const startMining = (miningAddrToken) => {
 	if(miningAddr){
 		sendEventToAllPeers('message', miningAddrToken.address+ ' has started mining.');
 		sendEventToAllPeers('minerStarted', miningAddr);
+
 		miningSuccess = blockchain.minePendingTransactions(miningAddr);
 
 		if(miningSuccess){
@@ -620,6 +609,88 @@ const startMining = (miningAddrToken) => {
 
 const calculateBlockHash = (block) =>{
 	return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
+}
+
+const findMissingBlocks = (signatures) =>{
+	var missingBlocks = [];
+	var blockGap;
+	if(blockchain != undefined && signatures != undefined){
+
+		if(blockchain.chain.length > signatures.length){
+			blockGap = blockchain.chain.length - signatures.length
+		}else if(signatures.length > blockchain.chain.length){
+			blockGap = signatures.length - blockchain.chain.length
+		}else{
+			blockGap = 0;
+		}
+
+		console.log('Blockgap:', blockGap);
+		for(var i=0; i< signatures.length; i++){
+			if(signatures[i].previousHash != '0'){
+				var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
+				console.log('Signature:', signatures[i]);
+				console.log('Index:', index);
+				if( !index){ //if the block signature hasn't been found
+
+					console.log(i)
+					missingBlocks.push(signatures[i]);
+				}
+			}
+
+		}
+
+		// if(blockGap >0){
+		// 	for(var y=0; y<blockGap; y++){
+		// 		missingBlocks.push(signatures[blockchain.chain.length + y]);
+		// 	}
+		//
+		// }
+
+		if(missingBlocks.length == 0){
+			return false;
+		}
+
+		return missingBlocks;
+
+	}else{
+		console.log('ERROR: Undefined blockchain or signatures');
+	}
+
+}
+
+const findIndexesOfBlocks = (signatures) =>{
+	var indexes = [];
+	var index;
+	for(var blockSign of signatures){
+		index = blockchain.getIndexOfBlockHash(blockSign.hash);
+		if(index){
+			indexes.push(index)
+		}else{
+			console.log('ERROR: Index of block '+blockSign.hash+' not found');
+		}
+
+	}
+
+	return indexes;
+}
+
+
+
+const buildChainHashes = (chain=false) =>{
+	var hashSignaturesOnChain = []
+	if(!chain && blockchain != undefined){
+		var chain = blockchain.chain;
+	}
+
+	for(var i=0; i<chain.length; i++){
+		hashSignaturesOnChain.push({
+			hash:chain[i].hash,
+			previousHash:chain[i].previousHash,
+			index:i
+		})
+	}
+
+	return hashSignaturesOnChain;
 }
 
 

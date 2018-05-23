@@ -194,6 +194,16 @@ class Blockchain{
     return false;
   }
 
+  getIndexOfBlockHash(hash){
+    for(var i=this.chain.length -1; i > 0; i--){
+      if(this.chain[i].hash === hash){
+        return i;
+      }
+    }
+
+    return false;
+  }
+
   checkIfBlockIsLinked(previousHash){
     var lastBlock = this.getLatestBlock();
     if(lastBlock.hash === previousHash){
