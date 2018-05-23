@@ -109,8 +109,8 @@ ioServer.on('connection', (socket) => {
 		var hashesOfBlocks = buildChainHashes();
 		console.log('ID',socket.id);
 		// console.log(peers);
-		sendToTargetPeer('message', 'hey', 'http://192.168.0.154:8081');
-		// sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
+
+		sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
 		// syncBlockchain();
 
 	})
@@ -259,10 +259,10 @@ ioServer.on('connection', (socket) => {
 			console.log('Valid?', isBlockValid);
 			if(newBlock != undefined){ //isBlockValid
 
-				// blockchain.chain.push(newBlock);
-				blockchain.syncBlock(newBlock);
+				blockchain.chain.push(newBlock);
+				// blockchain.syncBlock(newBlock);
 			}
-
+			sendEventToAllPeers('updateChain', )
 			ioServer.emit('blockchain', blockchain);
 
 		}else{
@@ -291,14 +291,16 @@ ioServer.on('connection', (socket) => {
 				console.log('Chain is up to date');
 				//Is up to date
 			}else{
-				for(var block of missingBlocks){
-					console.log('Missing Block!', block);
-					// socket.emit('newBlock', block);
-					setTimeout(()=>{
-						sendToTargetPeer('newBlock', block, token.address);
-					},1000)
+				// for(var block of missingBlocks){
+				// 	console.log('Missing Block!', block);
+				// 	// socket.emit('newBlock', block);
+				//
+				//
+				// }
 
-				}
+				setTimeout(()=>{
+					sendToTargetPeer('newBlock', missingBlocks[0], token.address);
+				},3000)
 			}
 		}else{
 			console.log('Block signatures received are undefined');
