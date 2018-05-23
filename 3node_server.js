@@ -107,7 +107,7 @@ ioServer.on('connection', (socket) => {
 		// console.log(blockchain.validateTransaction())
 		// console.log(buildChainHashes());
 		var hashesOfBlocks = buildChainHashes();
-		sendEventToAllPeers('receiveChainSignatures', hashesOfBlocks);
+		sendEventToAllPeers('updateChain');
 		// syncBlockchain();
 
 	})
@@ -279,6 +279,24 @@ ioServer.on('connection', (socket) => {
 		}
 
   })
+
+	socket.on('updateChain', (signatures) =>{
+		if(signatures != undefined){
+			var missingBlocks = findMissingBlocks(signatures);
+			console.log('missing:',missingBlocks)
+			if(missingBlocks){
+				for(var block of missingBlocks){
+					console.log('Missing Block!', block);
+					// socket.emit('newBlock', block);
+				}
+			}else{
+				console.log('Chain is up to date');
+				//Is up to date
+			}
+		}else{
+			console.log('Block signatures received are undefined');
+		}
+	})
 
 
 
@@ -630,7 +648,7 @@ const findMissingBlocks = (signatures) =>{
 		if(blockchain.chain.length > signatures.length){
 			blockGap = blockchain.chain.length - signatures.length
 		}else if(signatures.length > blockchain.chain.length){
-			blockGap = signatures.length - blockchain.chain.length
+			return false;
 		}else{
 			blockGap = 0;
 		}
