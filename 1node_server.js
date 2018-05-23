@@ -107,8 +107,10 @@ ioServer.on('connection', (socket) => {
 		// console.log(blockchain.validateTransaction())
 		// console.log(buildChainHashes());
 		var hashesOfBlocks = buildChainHashes();
-		console.log('Hashes',hashesOfBlocks);
-		sendEventToAllPeers('updateChain', hashesOfBlocks);
+		console.log('ID',socket.id);
+		// console.log(peers);
+		sendToTargetPeer('message', 'hey', 'http://192.168.0.154:8081');
+		// sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
 		// syncBlockchain();
 
 	})
@@ -216,14 +218,14 @@ ioServer.on('connection', (socket) => {
 		if(signatures != undefined){
 			var missingBlocks = findMissingBlocks(signatures);
 			console.log('missing:',missingBlocks)
-			if(missingBlocks){
+			if(!missingBlocks){
+				console.log('Chain is up to date');
+				//Is up to date
+			}else{
 				for(var block of missingBlocks){
 					var blockSignature = buildChainHashes(block);
 					socket.emit('sendBlock', blockSignature);
 				}
-			}else{
-				console.log('Chain is up to date');
-				//Is up to date
 			}
 		}else{
 			console.log('Block signatures received are undefined');
@@ -281,18 +283,22 @@ ioServer.on('connection', (socket) => {
 
   })
 
-	socket.on('updateChain', (signatures) =>{
-		if(signatures != undefined){
+	socket.on('updateChain', (signatures, token) =>{
+		if(signatures != undefined && token != undefined){
 			var missingBlocks = findMissingBlocks(signatures);
 
-			if(missingBlocks){
-				for(var block of missingBlocks){
-					console.log('Missing Block!', block);
-					socket.emit('newBlock', block);
-				}
-			}else{
+			if(!missingBlocks){
 				console.log('Chain is up to date');
 				//Is up to date
+			}else{
+				for(var block of missingBlocks){
+					console.log('Missing Block!', block);
+					// socket.emit('newBlock', block);
+					setTimeout(()=>{
+						sendToTargetPeer('newBlock', block, token.address);
+					},1000)
+
+				}
 			}
 		}else{
 			console.log('Block signatures received are undefined');
@@ -472,9 +478,7 @@ const connectToPeerNetwork = () => {
 };
 
 
-const sendEventToTargetPeer = (eventType, data, token) =>{
 
-}
 
 const getMiningAddress = (addressToken) => {
   if(blockchain !== undefined){
@@ -655,28 +659,26 @@ const findMissingBlocks = (signatures) =>{
 		}
 
 		console.log('Blockgap:', blockGap);
-		for(var i=0; i< signatures.length; i++){
-			if(signatures[i].previousHash != '0' && signatures.length > 1){
-				var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
-				console.log('Signature:', signatures[i]);
-				console.log('Index:', index);
-				if( !index){ //if the block signature hasn't been found
+		if(signatures.length >1){
+			for(var i=0; i< signatures.length; i++){
+				if(signatures[i].previousHash != '0'){
+					var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
+					console.log('Signature:', signatures[i]);
+					console.log('Index:', index);
+					if( !index){ //if the block signature hasn't been found
 
-					console.log(i)
-					missingBlocks.push(signatures[i]);
-				}
-			}else{
-				console.log('Sending a whole copy of the chain');
-				for(var y=0; y < blockchain.chain; y++){
-					if(block.previousHash != '0'){
-						missingBlocks.push(blockchain.chain[y]);
+						console.log(i)
+						missingBlocks.push(signatures[i]);
 					}
-
 				}
 
 			}
-
+		}else{
+			console.log('Sending the whole chain');
+			missingBlocks = blockchain.chain;
+			missingBlocks.splice(0,1);
 		}
+
 
 		if(missingBlocks.length == 0){
 			return false;
@@ -809,6 +811,16 @@ const getNumPeers = () =>{
 			return peers.length;
 		}
 
+	}
+}
+
+const sendToTargetPeer = (eventType, data, address) =>{
+	for(peer of peers){
+		var peerAddress = 'http://'+peer.io.opts.hostname +':'+ peer.io.opts.port
+		console.log('PEER:', peer);
+		if(peerAddress === address){
+			peer.emit(eventType, data);
+		}
 	}
 }
 
