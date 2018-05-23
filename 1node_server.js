@@ -205,14 +205,14 @@ ioServer.on('connection', (socket) => {
 			hashesOfBlocks = buildChainHashes()
 		}
 
-		 console.log(hashesOfBlocks);
+		 console.log('Hashes',hashesOfBlocks);
 		 socket.emit('receiveChainSignatures', hashesOfBlocks);
 	})
 
 	socket.on('receiveChainSignatures', (signatures=false) =>{
 		if(signatures){
 			var missingBlocks = findMissingBlocks(signatures);
-
+			console.log('missing:',missingBlocks)
 			if(missingBlocks){
 				for(var block of missingBlocks){
 					var blockSignature = buildChainHashes(block);
@@ -308,7 +308,7 @@ ioServer.on('connection', (socket) => {
 
   socket.on('blockchain', (blockchainReceived) => {
     blockchain = compareBlockchains(blockchain, blockchainReceived);
-    console.log('Received blockchain from node. Comparing it!');
+    
   })
 
 	socket.on('minerStarted', (miningAddress) =>{
@@ -365,12 +365,14 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 // }
 
 const syncBlockchain = () => {
-	sendEventToAllPeers('message', thisNode.address+' is syncing blockchain');
-	// sendEventToAllPeers('getBlockchain', thisNode);
-	for(var i=0; i<peers.length; i++){
+	// sendEventToAllPeers('message', thisNode.address+' is syncing blockchain');
+	// // sendEventToAllPeers('getBlockchain', thisNode);
+	// for(var i=0; i<peers.length; i++){
+	//
+	// 	peers[i].emit('getBlockchain', thisNode);
+	// }
 
-		peers[i].emit('getBlockchain', thisNode);
-	}
+	sendEventToAllPeers('chainSignatures');
 }
 
 
@@ -819,7 +821,7 @@ setTimeout(() =>{ //A little delay to let websocket open
   connectToPeerNetwork();
 	setTimeout(() =>{
 		syncBlockchain();
-	}, 1500)
+	}, 3000)
 
 }, 1500)
 

@@ -365,12 +365,14 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 // }
 
 const syncBlockchain = () => {
-	sendEventToAllPeers('message', thisNode.address+' is syncing blockchain');
-	// sendEventToAllPeers('getBlockchain', thisNode);
-	for(var i=0; i<peers.length; i++){
+	// sendEventToAllPeers('message', thisNode.address+' is syncing blockchain');
+	// // sendEventToAllPeers('getBlockchain', thisNode);
+	// for(var i=0; i<peers.length; i++){
+	//
+	// 	peers[i].emit('getBlockchain', thisNode);
+	// }
 
-		peers[i].emit('getBlockchain', thisNode);
-	}
+	socket.emit('chainSignatures');
 }
 
 
