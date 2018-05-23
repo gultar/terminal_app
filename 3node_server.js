@@ -714,9 +714,9 @@ const findIndexesOfBlocks = (signatures) =>{
 
 const buildChainHashes = () =>{
 	var hashSignaturesOnChain = []
-	if(!chain && blockchain != undefined){
-		var chain = blockchain.chain;
-	}
+
+	var chain = blockchain.chain;
+
 
 	for(var i=0; i<chain.length; i++){
 		hashSignaturesOnChain.push({
