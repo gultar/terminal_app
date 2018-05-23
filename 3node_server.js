@@ -107,7 +107,8 @@ ioServer.on('connection', (socket) => {
 		// console.log(blockchain.validateTransaction())
 		// console.log(buildChainHashes());
 		var hashesOfBlocks = buildChainHashes();
-		sendEventToAllPeers('updateChain');
+		console.log('Hashes',hashesOfBlocks);
+		sendEventToAllPeers('updateChain', hashesOfBlocks);
 		// syncBlockchain();
 
 	})
@@ -655,7 +656,7 @@ const findMissingBlocks = (signatures) =>{
 
 		console.log('Blockgap:', blockGap);
 		for(var i=0; i< signatures.length; i++){
-			if(signatures[i].previousHash != '0'){
+			if(signatures[i].previousHash != '0' && signatures.length > 1){
 				var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
 				console.log('Signature:', signatures[i]);
 				console.log('Index:', index);
@@ -664,6 +665,12 @@ const findMissingBlocks = (signatures) =>{
 					console.log(i)
 					missingBlocks.push(signatures[i]);
 				}
+			}else{
+				console.log('Sending a whole copy of the chain');
+				for(block of blockchain.chain){
+					missingBlocks.push(blockchain.chain);
+				}
+
 			}
 
 		}
