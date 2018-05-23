@@ -284,11 +284,11 @@ ioServer.on('connection', (socket) => {
 	socket.on('updateChain', (signatures) =>{
 		if(signatures != undefined){
 			var missingBlocks = findMissingBlocks(signatures);
-			console.log('missing:',missingBlocks)
+
 			if(missingBlocks){
 				for(var block of missingBlocks){
 					console.log('Missing Block!', block);
-					// socket.emit('newBlock', block);
+					socket.emit('newBlock', block);
 				}
 			}else{
 				console.log('Chain is up to date');
@@ -668,19 +668,15 @@ const findMissingBlocks = (signatures) =>{
 			}else{
 				console.log('Sending a whole copy of the chain');
 				for(block of blockchain.chain){
-					missingBlocks.push(blockchain.chain);
+					if(block.previousHash != '0'){
+						missingBlocks.push(blockchain.chain);
+					}
+
 				}
 
 			}
 
 		}
-
-		// if(blockGap >0){
-		// 	for(var y=0; y<blockGap; y++){
-		// 		missingBlocks.push(signatures[blockchain.chain.length + y]);
-		// 	}
-		//
-		// }
 
 		if(missingBlocks.length == 0){
 			return false;
