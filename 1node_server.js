@@ -670,7 +670,7 @@ const findMissingBlocks = (signatures) =>{
 					if( !index){ //if the block signature hasn't been found
 
 						console.log(i)
-						missingBlocks.push(signatures[i]);
+						missingBlocks.push(blockchain.chain[index]);
 					}
 				}
 
@@ -712,7 +712,7 @@ const findIndexesOfBlocks = (signatures) =>{
 
 
 
-const buildChainHashes = (chain=false) =>{
+const buildChainHashes = () =>{
 	var hashSignaturesOnChain = []
 	if(!chain && blockchain != undefined){
 		var chain = blockchain.chain;
