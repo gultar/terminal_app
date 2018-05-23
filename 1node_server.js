@@ -667,9 +667,9 @@ const findMissingBlocks = (signatures) =>{
 				}
 			}else{
 				console.log('Sending a whole copy of the chain');
-				for(block of blockchain.chain){
+				for(var y=0; y < blockchain.chain; y++){
 					if(block.previousHash != '0'){
-						missingBlocks.push(blockchain.chain);
+						missingBlocks.push(blockchain.chain[y]);
 					}
 
 				}
