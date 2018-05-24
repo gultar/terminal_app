@@ -291,12 +291,8 @@ ioServer.on('connection', (socket) => {
 				console.log('Chain is up to date');
 				//Is up to date
 			}else{
-				// for(var block of missingBlocks){
-				// 	console.log('Missing Block!', block);
-				// 	// socket.emit('newBlock', block);
-				//
-				//
-				// }
+
+				console.log(missingBlocks);
 
 				setTimeout(()=>{
 					sendToTargetPeer('newBlock', missingBlocks[0], token.address);
@@ -664,13 +660,17 @@ const findMissingBlocks = (signatures) =>{
 		if(signatures.length >1){
 			for(var i=0; i< signatures.length; i++){
 				if(signatures[i].previousHash != '0'){
+
+
+
+
 					var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
 					console.log('Signature:', signatures[i]);
 					console.log('Index:', index);
 					if( !index){ //if the block signature hasn't been found
 
-						console.log(i)
-						missingBlocks.push(blockchain.chain[index]);
+
+						missingBlocks.push(blockchain.chain[i]);
 					}
 				}
 
