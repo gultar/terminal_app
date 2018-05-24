@@ -293,10 +293,12 @@ ioServer.on('connection', (socket) => {
 			}else{
 
 				console.log(missingBlocks);
+				for(var i=0; i<missingBlocks.length; i++){
+					setTimeout(()=>{
+						sendToTargetPeer('newBlock', missingBlocks[i], token.address);
+					},3000)
+				}
 
-				setTimeout(()=>{
-					sendToTargetPeer('newBlock', missingBlocks[0], token.address);
-				},3000)
 			}
 		}else{
 			console.log('Block signatures received are undefined');
