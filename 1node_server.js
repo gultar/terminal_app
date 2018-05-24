@@ -179,30 +179,20 @@ ioServer.on('connection', (socket) => {
 
   socket.on('miningApproved', function(updatedBlockchain){
 		//This event is when a node is notified that a mining operation has been successfull
-		//Therefore, it receives a new blockchain. Will switch to receiving a newBlock
+
     var latestBlock = getLatestBlock(updatedBlockchain);
 
 		sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
-
-    blockchain = compareBlockchains(blockchain, updatedBlockchain);
-		// console.log('BLOCKCHAIN:', blockchain);
-
+		syncBlockchain();
+    // blockchain = compareBlockchains(blockchain, updatedBlockchain);
 
   });
-
-
-	socket.on('syncBlockchain', (blockchainToSync=false)=>{
-		// blockchain = compareBlockchains(blockchain, blockchainToSync);
-		// console.log('Blockchain from peer:', blockchain);
-		// ioServer.emit('blockchain', blockchain);
-		syncBlockchain();
-	})
 
 
 	socket.on('newBlock', (newBlock) =>{
 
 		if(newBlock != undefined && blockchain != undefined){
-			console.log('Received new block');
+			console.log('Received block:', newBlock.hash);
 
 			blockchain.syncBlock(newBlock);
 			ioServer.emit('blockchain', blockchain);
@@ -211,7 +201,7 @@ ioServer.on('connection', (socket) => {
 			console.log('New block received or blockchain is undefined');
 		}
 
-		syncBlockchain();
+		// syncBlockchain();
 	});
 
 
@@ -264,6 +254,7 @@ ioServer.on('connection', (socket) => {
 			    ioServer.emit('blockchain', blockchain);
 				}else{
 					console.log('Current blockchain is invalid. Requesting a valid chain');
+					blockchain = new Blockchain(); //Need to find a way to truncate invalid part of chain and sync valid blocks
 					syncBlockchain();
 				}
 
