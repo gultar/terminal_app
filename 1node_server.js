@@ -106,10 +106,10 @@ ioServer.on('connection', (socket) => {
 		// console.log(blockchain.getIndexOfBlockHash(token))
 		// console.log(blockchain.validateTransaction())
 		// console.log(buildChainHashes());
-		var hashesOfBlocks = buildChainHashes();
+
 
 		// console.log(peers);
-
+		var hashesOfBlocks = buildChainHashes();
 		sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
 		// syncBlockchain();
 
@@ -172,7 +172,7 @@ ioServer.on('connection', (socket) => {
     //need to validate miningAddr before allowing mining action;
 		///////////////////////////////////////////////////////////
     if(blockchain != undefined){
-
+			syncBlockchain();
       var hasMinedABlock = startMining(miningAddrToken);
 
 			if(hasMinedABlock){
@@ -196,57 +196,12 @@ ioServer.on('connection', (socket) => {
 
   });
 
-	socket.on('chainSignatures', (fromIndex=false)=>{
-		var hashesOfBlocks;
-		var pieceOfChain = [];
-		if(fromIndex && typeof fromIndex == 'number'){
-			for(var i=fromIndex; i<blockchain.chain.length; i++){
-				pieceOfChain.push(blockchain.chain[i]);
-			}
-
-			hashesOfBlocks = buildChainHashes(pieceOfChain);
-		}else{
-			hashesOfBlocks = buildChainHashes()
-		}
-
-		 console.log('Hashes',hashesOfBlocks);
-		 socket.emit('receiveChainSignatures', hashesOfBlocks);
-	})
-
-	socket.on('receiveChainSignatures', (signatures) =>{
-		console.log(signatures);
-		if(signatures != undefined){
-			var missingBlocks = findMissingBlocks(signatures);
-			console.log('missing:',missingBlocks)
-			if(!missingBlocks){
-				console.log('Chain is up to date');
-				//Is up to date
-			}else{
-				for(var block of missingBlocks){
-					var blockSignature = buildChainHashes(block);
-					socket.emit('sendBlock', blockSignature);
-				}
-			}
-		}else{
-			console.log('Block signatures received are undefined');
-		}
-	})
-
-	socket.on('sendBlock', (blockSignature) =>{
-		if(blockchain != undefined && blockSignature != undefined){
-			var index = blockchain.getIndexOfBlockHash(blockSignature.hash);
-			if(index){
-				socket.emit('newBlock', blockchain.chain[index]);
-			}else{
-				socket.emit('message', 'ERROR: Could not find block '+blockSignature.hash);
-			}
-		}
-	})
 
 	socket.on('syncBlockchain', (blockchainToSync=false)=>{
-		blockchain = compareBlockchains(blockchain, blockchainToSync);
-		console.log('Blockchain from peer:', blockchain);
-		ioServer.emit('blockchain', blockchain);
+		// blockchain = compareBlockchains(blockchain, blockchainToSync);
+		// console.log('Blockchain from peer:', blockchain);
+		// ioServer.emit('blockchain', blockchain);
+		syncBlockchain();
 	})
 
 
@@ -288,15 +243,13 @@ ioServer.on('connection', (socket) => {
 			var missingBlocks = findMissingBlocks(signatures);
 
 			if(!missingBlocks){
-				console.log('Chain is up to date');
+				sendToTargetPeer('message','Chain is up to date', token.address);
 				//Is up to date
 			}else{
-
-				console.log(missingBlocks);
 				for(var i=0; i<missingBlocks.length; i++){
 
 						sendToTargetPeer('newBlock', missingBlocks[i], token.address);
-					
+
 				}
 
 			}
@@ -388,20 +341,9 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 
 }
 
-// const sendBlocks = (lengthOfChain) =>{
-//
-//
-// }
-
 const syncBlockchain = () => {
-	// sendEventToAllPeers('message', thisNode.address+' is syncing blockchain');
-	// // sendEventToAllPeers('getBlockchain', thisNode);
-	// for(var i=0; i<peers.length; i++){
-	//
-	// 	peers[i].emit('getBlockchain', thisNode);
-	// }
-
-	sendEventToAllPeers('chainSignatures');
+	var hashesOfBlocks = buildChainHashes();
+	sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
 }
 
 
@@ -641,43 +583,46 @@ const startMining = (miningAddrToken) => {
 
 }
 
+//Used to revalidate block hashes
 const calculateBlockHash = (block) =>{
 	return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
 }
 
+//Used when a node needs to their chain with the longest copy
 const findMissingBlocks = (signatures) =>{
-	var missingBlocks = [];
-	var blockGap;
+	var missingBlocks = []; //Array of blocks that are missing from querying node
+	var blockGap; //Gap of blocks between longest accepted chain and querying node's copy of it
+
 	if(blockchain != undefined && signatures != undefined){
 
 		if(blockchain.chain.length > signatures.length){
-			blockGap = blockchain.chain.length - signatures.length
+			blockGap = blockchain.chain.length - signatures.length;
+
 		}else if(signatures.length > blockchain.chain.length){
+			syncBlockchain(); //If the signature is longer than the local chain, the local chain has to be synced
 			return false;
+
 		}else{
 			blockGap = 0;
 		}
 
 		console.log('Blockgap:', blockGap);
+
 		if(signatures.length >1){
 			for(var i=0; i< signatures.length; i++){
 				if(signatures[i].previousHash != '0'){
 
-
-
-
+					//Looks up the block's hash within local chain and returns index of said block
 					var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
-					console.log('Signature:', signatures[i]);
-					console.log('Index:', index);
+
 					if( !index){ //if the block signature hasn't been found
-
-
 						missingBlocks.push(blockchain.chain[i]);
 					}
 				}
 
 			}
 		}else{
+
 			console.log('Sending the whole chain');
 			missingBlocks = blockchain.chain;
 			missingBlocks.splice(0,1);
@@ -696,24 +641,24 @@ const findMissingBlocks = (signatures) =>{
 
 }
 
-const findIndexesOfBlocks = (signatures) =>{
-	var indexes = [];
-	var index;
-	for(var blockSign of signatures){
-		index = blockchain.getIndexOfBlockHash(blockSign.hash);
-		if(index){
-			indexes.push(index)
-		}else{
-			console.log('ERROR: Index of block '+blockSign.hash+' not found');
-		}
+// const findIndexesOfBlocks = (signatures) =>{
+// 	var indexes = [];
+// 	var index;
+// 	for(var blockSign of signatures){
+// 		index = blockchain.getIndexOfBlockHash(blockSign.hash);
+// 		if(index){
+// 			indexes.push(index)
+// 		}else{
+// 			console.log('ERROR: Index of block '+blockSign.hash+' not found');
+// 		}
+//
+// 	}
+//
+// 	return indexes;
+// }
 
-	}
 
-	return indexes;
-}
-
-
-
+//Creates an chain of block signatures, that is, the hash of the block and the previous hash only.
 const buildChainHashes = () =>{
 	var hashSignaturesOnChain = []
 
@@ -861,9 +806,9 @@ const validateTransaction = (transaction, token) =>{
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   connectToPeerNetwork();
-	// setTimeout(() =>{
-	// 	syncBlockchain();
-	// }, 3000)
+	setTimeout(() =>{
+		syncBlockchain();
+	}, 3000)
 
 }, 1500)
 
