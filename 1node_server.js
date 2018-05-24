@@ -589,15 +589,15 @@ const findMissingBlocks = (signatures) =>{
 
 		if(signatures.length >1){
 			for(var i=0; i< signatures.length; i++){
-				if(signatures[i].previousHash != '0'){
+				// if(signatures[i].previousHash != '0'){
 
 					//Looks up the block's hash within local chain and returns index of said block
 					var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
 
-					if( !index){ //if the block signature hasn't been found
+					if(index === false){ //if the block signature hasn't been found
 						missingBlocks.push(blockchain.chain[i]);
 					}
-				}
+				// }
 
 			}
 		}else{
