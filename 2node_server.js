@@ -107,7 +107,7 @@ ioServer.on('connection', (socket) => {
 		// console.log(blockchain.validateTransaction())
 		// console.log(buildChainHashes());
 		var hashesOfBlocks = buildChainHashes();
-		console.log('ID',socket.id);
+
 		// console.log(peers);
 
 		sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
@@ -758,10 +758,10 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
           let lastReceivedBlock = receivedBlockchain.getLatestBlock();
 
 					if(lastReceivedBlock.timestamp < lastStoredBlock.timestamp){
-						console.log('The last block on received chain is a older');
+						console.log('The last block on received chain is older');
 						longestBlockchain = receivedBlockchain;
 					}else if(lastStoredBlock.timestamp < lastReceivedBlock.timestamp){
-						console.log('The last block on local chain is a older');
+						console.log('The last block on local chain is older');
 						longestBlockchain = storedBlockchain;
 					}else{
 						console.log('The two chains and last two blocks are the same.')
@@ -802,10 +802,6 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 }
 
 
-const sendMessage = (socket, message) =>{
-		socket.emit('message', message);
-}
-
 const getNumPeers = () =>{
 	if(peers != undefined){
 		if(peers.length > 0){
@@ -819,7 +815,7 @@ const getNumPeers = () =>{
 const sendToTargetPeer = (eventType, data, address) =>{
 	for(peer of peers){
 		var peerAddress = 'http://'+peer.io.opts.hostname +':'+ peer.io.opts.port
-		console.log('PEER:', peer);
+
 		if(peerAddress === address){
 			peer.emit(eventType, data);
 		}
