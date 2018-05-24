@@ -93,10 +93,12 @@ class Blockchain{
       delete pending[hash];
     }
     if(this.validateBlock(newBlock)){
+      console.log('New Block validated successfully');
       this.chain.push(newBlock);
       this.pendingTransactions = pending;
     }else{
-      console.log('Received block from peer failed validation');
+      console.log('New Block failed validation...');
+      this.orphanedBlocks.push(newBlock);
     }
 
 

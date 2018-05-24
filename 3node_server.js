@@ -102,16 +102,10 @@ ioServer.on('connection', (socket) => {
 			socket.join(room);
 	});
 
-	socket.on('checkBalance', (token) =>{
-		// console.log(blockchain.getIndexOfBlockHash(token))
-		// console.log(blockchain.validateTransaction())
-		// console.log(buildChainHashes());
-
-
-		// console.log(peers);
-		var hashesOfBlocks = buildChainHashes();
-		sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
-		// syncBlockchain();
+	socket.on('validateChain', (token) =>{
+		if(blockchain != undefined){
+			console.log('Blockchain valid?',blockchain.isChainValid());
+		}
 
 	})
 
@@ -210,20 +204,14 @@ ioServer.on('connection', (socket) => {
 		if(newBlock != undefined && blockchain != undefined){
 			console.log('Received new block');
 
-			var isBlockValid = blockchain.validateBlock(newBlock);
-			console.log('Valid?', isBlockValid);
-			if(newBlock != undefined){ //isBlockValid
-
-				blockchain.chain.push(newBlock);
-				// blockchain.syncBlock(newBlock);
-			}
-			syncBlockchain();
+			blockchain.syncBlock(newBlock);
 			ioServer.emit('blockchain', blockchain);
 
 		}else{
 			console.log('New block received or blockchain is undefined');
 		}
 
+		syncBlockchain();
 	});
 
 
