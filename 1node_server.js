@@ -803,12 +803,21 @@ const validateTransaction = (transaction, token) =>{
 
 }
 
+const chainUpdater = () =>{
+	setTimeout(() =>{
+		if(blockchain != undefined){
+			syncBlockchain();
+		}else{
+			return chainUpdater();
+		}
+	}, 5000)
+
+}
+
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   connectToPeerNetwork();
-	setTimeout(() =>{
-		syncBlockchain();
-	}, 3000)
+
 
 }, 1500)
 
