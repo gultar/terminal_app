@@ -250,7 +250,7 @@ ioServer.on('connection', (socket) => {
 					var msg = token.address + ' has requested a copy of the blockchain!';
 			    // console.log(msg);
 					sendEventToAllPeers('message', msg);
-					sendEventToAllPeers('blockchain', blockchain);
+					sendToTargetPeer('blockchain', blockchain, token.address);
 			    ioServer.emit('blockchain', blockchain);
 				}else{
 					console.log('Current blockchain is invalid. Requesting a valid chain');
@@ -604,7 +604,7 @@ const findMissingBlocks = (signatures) =>{
 
 			console.log('Sending the whole chain');
 			missingBlocks = blockchain.chain;
-			missingBlocks.splice(0,1);
+			// missingBlocks.splice(0,1);
 		}
 
 
