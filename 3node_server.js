@@ -294,7 +294,7 @@ ioServer.on('connection', (socket) => {
 
 				console.log(missingBlocks);
 				for(var i=0; i<missingBlocks.length; i++){
-					setTimeout(()=>{
+					setTimeout((i)=>{
 						sendToTargetPeer('newBlock', missingBlocks[i], token.address);
 					},3000)
 				}
