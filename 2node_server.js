@@ -217,7 +217,7 @@ ioServer.on('connection', (socket) => {
 				blockchain.chain.push(newBlock);
 				// blockchain.syncBlock(newBlock);
 			}
-			sendEventToAllPeers('updateChain', )
+			syncBlockchain();
 			ioServer.emit('blockchain', blockchain);
 
 		}else{
@@ -817,7 +817,7 @@ const chainUpdater = () =>{
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   connectToPeerNetwork();
-
+	chainUpdater();
 
 }, 1500)
 
