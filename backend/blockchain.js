@@ -80,6 +80,9 @@ class Blockchain{
 
   createGenesisBlock(){
     return new Block("01/01/2018", "Genesis block", "0");
+    this.createTransaction(new Transaction('Genesis','http://192.168.0.154:8080',100, {}, Date.now()));
+    this.createTransaction(new Transaction('Genesis','http://192.168.0.154:8081',100, {}, Date.now()));
+    this.createTransaction(new Transaction('Genesis','http://192.168.0.153:8080',100, {}, Date.now()))
   }
 
   getLatestBlock(){
