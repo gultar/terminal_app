@@ -397,7 +397,7 @@ const initClientSocket = (address) =>{
 
 	peerSocket.on('connect', () =>{
 		console.log('connection to node established');
-		peerSocket.emit('getBlockchain', thisNode);
+		// peerSocket.emit('getBlockchain', thisNode);
 		peers.push(peerSocket);
 	});
 
