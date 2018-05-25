@@ -226,6 +226,7 @@ ioServer.on('connection', (socket) => {
 			console.log('New block received or blockchain is undefined');
 		}
 
+		saveBlockchain(blockchain);
 		// syncBlockchain();
 	});
 
@@ -574,7 +575,7 @@ const startMining = (miningAddrToken) => {
 			sendEventToAllPeers('message', message);
 			sendEventToAllPeers('newBlock', newBlock);
 			// sendEventToAllPeers('blockchain', blockchain);
-
+			saveBlockchain(blockchain);
 			return true;
 
 		}

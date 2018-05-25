@@ -413,7 +413,7 @@ function remove(array, element) {
 
 function RecalculateHash(block){
   //console.log(sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString())
-  return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
+  return sha256(block.previousHash + block.timestamp + recalculateMerkleRoot(block.transactions) + block.nonce).toString();
 }
 
 function recalculateMerkleRoot(transactions){
