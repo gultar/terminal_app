@@ -15,7 +15,7 @@ const io = require('socket.io-client');
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
 
 const fs = require('fs');
-
+const merkle = require('merkle');
 //For hashing the transactions and block signatures
 const sha256 = require('./backend/sha256');
 
@@ -102,11 +102,30 @@ ioServer.on('connection', (socket) => {
 			socket.join(room);
 	});
 
+	socket.on('test', (index)=>{
+		if(typeof index === 'number' && index < blockchain.chain.length){
+			var rootM = createMerkleRoot(blockchain.chain[index].transactions)
+			console.log('Root:', rootM.root());
+			console.log('Levels:', rootM.levels());
+			console.log('Depth:', rootM.depth());
+			console.log('Nodes:', rootM.nodes());
+
+			for(var i=0; i<rootM.levels(); i++){
+				console.log('Level '+i+': ' + rootM.level(i));
+			}
+		}
+
+	})
+
 	socket.on('validateChain', (token) =>{
 		if(blockchain != undefined){
 			console.log('Blockchain valid?',blockchain.isChainValid());
 		}
 
+	})
+
+	socket.on('getWholeCopy', (token)=>{
+		sendEventToAllPeers('getBlockchain', thisNode);
 	})
 
 	socket.on('storeToken', (token) =>{
@@ -116,7 +135,13 @@ ioServer.on('connection', (socket) => {
 
 	})
 
-
+	socket.on('sync', () =>{
+		if(blockchain != undefined){
+			var hashes = buildChainHashes();
+			ioServer.emit('message', hashes);
+			syncBlockchain();
+		}
+	})
 
 	socket.on('distributedTransaction', (transaction, fromNodeToken) => {
 		///////////////////////////////////////////////////////////
@@ -166,7 +191,7 @@ ioServer.on('connection', (socket) => {
     //need to validate miningAddr before allowing mining action;
 		///////////////////////////////////////////////////////////
     if(blockchain != undefined){
-			syncBlockchain();
+
       var hasMinedABlock = startMining(miningAddrToken);
 
 			if(hasMinedABlock){
@@ -225,8 +250,11 @@ ioServer.on('connection', (socket) => {
 				//Is up to date
 			}else{
 				for(var i=0; i<missingBlocks.length; i++){
+					var index =
+						setTimeout((index)=>{
+							sendToTargetPeer('newBlock', missingBlocks[index], token.address);
+						}, 2000, i)
 
-						sendToTargetPeer('newBlock', missingBlocks[i], token.address);
 
 				}
 
@@ -253,12 +281,10 @@ ioServer.on('connection', (socket) => {
 					sendToTargetPeer('blockchain', blockchain, token.address);
 			    ioServer.emit('blockchain', blockchain);
 				}else{
-					console.log('Current blockchain is invalid. Requesting a valid chain');
+					console.log('Current blockchain is invalid. Flushing local chain and requesting a valid one');
 					blockchain = new Blockchain(); //Need to find a way to truncate invalid part of chain and sync valid blocks
-					syncBlockchain();
+					sendEventToAllPeers('getBlockchain', thisNode);
 				}
-
-
 
 		}else{
 			socket.emit('message', 'Blockchain is unavailable on node. It might be loading or saving.');
@@ -269,7 +295,6 @@ ioServer.on('connection', (socket) => {
 
   socket.on('blockchain', (blockchainReceived) => {
     blockchain = compareBlockchains(blockchain, blockchainReceived);
-
   })
 
 	socket.on('minerStarted', (miningAddress) =>{
@@ -366,11 +391,13 @@ const initClientSocket = (address) =>{
 
 	peerSocket.emit('client-connect', thisNode);
 	peerSocket.emit('storeToken', thisNode);
+
 	peerSocket.emit('message', 'You are connected to '+thisNode.address);
+
 
 	peerSocket.on('connect', () =>{
 		console.log('connection to node established');
-		// peerSocket.emit('getBlockchain', thisNode);
+		peerSocket.emit('getBlockchain', thisNode);
 		peers.push(peerSocket);
 	});
 
@@ -578,7 +605,7 @@ const findMissingBlocks = (signatures) =>{
 			blockGap = blockchain.chain.length - signatures.length;
 
 		}else if(signatures.length > blockchain.chain.length){
-			syncBlockchain(); //If the signature is longer than the local chain, the local chain has to be synced
+			// syncBlockchain(); //If the signature is longer than the local chain, the local chain has to be synced
 			return false;
 
 		}else{
@@ -594,7 +621,7 @@ const findMissingBlocks = (signatures) =>{
 					//Looks up the block's hash within local chain and returns index of said block
 					var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
 
-					if(index === false){ //if the block signature hasn't been found
+					if(index === false && signatures[i].previousHash === '0'){ //if the block signature hasn't been found
 						missingBlocks.push(blockchain.chain[i]);
 					}
 				// }
@@ -620,22 +647,6 @@ const findMissingBlocks = (signatures) =>{
 
 }
 
-// const findIndexesOfBlocks = (signatures) =>{
-// 	var indexes = [];
-// 	var index;
-// 	for(var blockSign of signatures){
-// 		index = blockchain.getIndexOfBlockHash(blockSign.hash);
-// 		if(index){
-// 			indexes.push(index)
-// 		}else{
-// 			console.log('ERROR: Index of block '+blockSign.hash+' not found');
-// 		}
-//
-// 	}
-//
-// 	return indexes;
-// }
-
 
 //Creates an chain of block signatures, that is, the hash of the block and the previous hash only.
 const buildChainHashes = () =>{
@@ -654,6 +665,7 @@ const buildChainHashes = () =>{
 
 	return hashSignaturesOnChain;
 }
+
 
 
 
@@ -713,12 +725,26 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 
   }else if(storedBlockchain == undefined && receivedBlockchain != undefined){
 
-		console.log('Local chain is undefined. Using received chain');
-		return instanciateBlockchain(receivedBlockchain);
+
+		receivedBlockchain = instanciateBlockchain(receivedBlockchain);
+		if(receivedBlockchain.isChainValid()){
+			console.log('Local chain is undefined. Using received chain');
+      return receivedBlockchain;
+    }else{
+			console.log('Received chain is not valid. Returning new Blockchain')
+			return new Blockchain()
+		}
 
 	}else if(storedBlockchain != undefined && receivedBlockchain == undefined){
-		console.log('Received chain is undefined. Using received chain');
-    return instanciateBlockchain(storedBlockchain);
+
+		storedBlockchain = instanciateBlockchain(storedBlockchain);
+		if(storedBlockchain.isChainValid()){
+			console.log('Received chain is undefined. Using local chain');
+      return storedBlockchain;
+    }else{
+			console.log('Local chain is not valid. Returning new Blockchain')
+			return new Blockchain()
+		}
 
   }else{
 		console.log('Both copies of the blockchain were undefined. Returning new blockchain copy instead')
@@ -782,6 +808,18 @@ const validateTransaction = (transaction, token) =>{
 
 }
 
+function recalculateMerkleRoot(transactions){
+
+  if(transactions != undefined){
+    var transactionHashes = Object.keys(transactions);
+
+
+    let merkleRoot = merkle('sha256').sync(transactionHashes);
+    return merkleRoot.root();
+  }
+
+}
+
 const chainUpdater = () =>{
 	setTimeout(() =>{
 		if(blockchain != undefined){
@@ -793,11 +831,11 @@ const chainUpdater = () =>{
 
 }
 
+
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   connectToPeerNetwork();
 	chainUpdater();
-
 }, 1500)
 
 

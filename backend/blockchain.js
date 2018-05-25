@@ -1,6 +1,7 @@
 //Modules
 const sha256 = require('./sha256');
 const JSONdb = require('simple-json-db');
+const merkle = require('merkle');
 // const merkle = require('merkle');
 /******************************************/
 /***********Blockchain classes*************/
@@ -26,14 +27,14 @@ class Block{
     this.timestamp = timestamp;
     this.transactions = transactions;
     this.previousHash = previousHash;
-    this.hash = this.calculateHash();
+    this.hash = this.createMerkleRoot(this.transactions);
     this.nonce = 0;
     this.valid = true;
     this.minedBy = '';
   }
 
   calculateHash(){
-    return sha256(this.previousHash + this.timestamp + JSON.stringify(this.transactions) + this.nonce).toString();
+    return sha256(this.previousHash + this.timestamp + this.createMerkleRoot(this.transactions) + this.nonce).toString();
   }
 
   /*Proof of Work*/
@@ -46,6 +47,19 @@ class Block{
     console.log("Block mined: " + this.hash);
 
   }
+
+  createMerkleRoot(transactions){
+
+  	if(transactions != undefined){
+  		var transactionHashes = Object.keys(transactions);
+
+
+  		let merkleRoot = merkle('sha256').sync(transactionHashes);
+      return merkleRoot.root();
+  	}
+
+  }
+
 }
 
 
@@ -97,8 +111,8 @@ class Blockchain{
       this.chain.push(newBlock);
       this.pendingTransactions = pending;
     }else{
-      console.log('New Block failed validation...');
-      this.orphanedBlocks.push(newBlock);
+      console.log('New Block is invalid');
+
     }
 
 
@@ -299,7 +313,7 @@ class Blockchain{
       }
 
     }else if(containsCurrentBlock){
-      console.log('Block mined is already in the chain. Placing it in the orphanedBlocks')
+
       return false;
     }
 
@@ -398,5 +412,19 @@ function RecalculateHash(block){
   //console.log(sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString())
   return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
 }
+
+function recalculateMerkleRoot(transactions){
+
+  if(transactions != undefined){
+    var transactionHashes = Object.keys(transactions);
+
+
+    let merkleRoot = merkle('sha256').sync(transactionHashes);
+    return merkleRoot.root();
+  }
+
+}
+
+
 
 module.exports = { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord};
