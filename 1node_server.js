@@ -835,7 +835,8 @@ const chainUpdater = () =>{
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   connectToPeerNetwork();
-	chainUpdater();
+	// chainUpdater();
+	sendEventToAllPeers('getBlockchain', thisNode);
 }, 1500)
 
 
