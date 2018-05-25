@@ -103,7 +103,7 @@ class Blockchain{
 
   syncBlock(newBlock){
 
-    var isValid;
+    var blockStatus;
     var pending = this.pendingTransactions;
     var newTransactHashes = Object.keys(newBlock.transactions);
 
@@ -120,7 +120,7 @@ class Blockchain{
       return true;
     }else if(blockStatus > 0){
       return blockStatus;
-      
+
     }else if(blockStatus === false){
       console.log('New Block is invalid');
       return false;
