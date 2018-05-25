@@ -106,6 +106,7 @@ class Blockchain{
     var isValid;
     var pending = this.pendingTransactions;
     var newTransactHashes = Object.keys(newBlock.transactions);
+
     for(var hash of newTransactHashes){
       delete pending[hash];
     }
@@ -118,11 +119,12 @@ class Blockchain{
       this.pendingTransactions = pending;
       return true;
     }else if(blockStatus > 0){
-
       return blockStatus;
-
-    }else{
+      
+    }else if(blockStatus === false){
       console.log('New Block is invalid');
+      return false;
+    }else{
       return false;
     }
 
@@ -313,10 +315,15 @@ class Blockchain{
 
     var containsCurrentBlock = this.checkIfChainHasHash(block.hash);
     var isLinked = this.checkIfBlockIsLinked(block.previousHash);
-
+    var latestBlock = this.getLatestBlock();
     //Validate transactions using merkle root
     if(!containsCurrentBlock){
       if(!isLinked){
+        if(latestBlock.previousHash == block.previousHash){
+          console.log('New block received has been orphaned since latest block has been mined before.');
+          return false;
+        }
+
         console.log('Current mined block is not linked with previous block. Sending it to orphanedBlocks');
         return this.getIndexOfBlockHash(block.previousHash);
 
