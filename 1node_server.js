@@ -100,8 +100,8 @@ ioServer.on('connection', (socket) => {
 
   });
 
-	socket.on('room', function(room) {
-			socket.join(room);
+	socket.on('meh', function(msg) {
+		sendToTargetPeer('message', msg, 'http://192.168.1.72:8080');
 	});
 
 	socket.on('test', (index)=>{
