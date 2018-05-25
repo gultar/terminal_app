@@ -219,15 +219,23 @@ ioServer.on('connection', (socket) => {
 		if(newBlock != undefined && blockchain != undefined){
 			console.log('Received block:', newBlock.hash);
 
-			blockchain.syncBlock(newBlock);
-			ioServer.emit('blockchain', blockchain);
+			var isBlockSynced = blockchain.syncBlock(newBlock);
+			if(isBlockSynced){
+				ioServer.emit('blockchain', blockchain);
+			}else if(typeof isBlockSynced === 'number'){
+				//Start syncing from the index returned by syncBlock;
+				sendEventToAllPeers('getBlockchain', thisNode); //Use this meanwhile
+			}else{
+				sendEventToAllPeers('getBlockchain', thisNode);
+			}
+
 
 		}else{
 			console.log('New block received or blockchain is undefined');
 		}
 
 		saveBlockchain(blockchain);
-		// syncBlockchain();
+		
 	});
 
 

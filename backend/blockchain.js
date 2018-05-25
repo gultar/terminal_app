@@ -68,7 +68,7 @@ class Blockchain{
 
   constructor(chain=false, pendingTransactions=false, nodeTokens={}, ipAddresses=[], orphanedBlocks=[]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
-    this.difficulty = 3;
+    this.difficulty = 4;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: {});
     this.miningReward = 50;
     this.nodeTokens = nodeTokens; //Stores all the node addresses of the P2P network
@@ -103,19 +103,27 @@ class Blockchain{
 
   syncBlock(newBlock){
 
-
+    var isValid;
     var pending = this.pendingTransactions;
     var newTransactHashes = Object.keys(newBlock.transactions);
     for(var hash of newTransactHashes){
       delete pending[hash];
     }
-    if(this.validateBlock(newBlock)){
+    //Will return true if the block is valid, false if not or the index of the block to which it is linked if valid but out of sync
+    blockStatus = this.validateBlock(newBlock);
+
+    if(blockStatus === true){
       console.log('New Block validated successfully');
       this.chain.push(newBlock);
       this.pendingTransactions = pending;
+      return true;
+    }else if(blockStatus > 0){
+
+      return blockStatus;
+
     }else{
       console.log('New Block is invalid');
-
+      return false;
     }
 
 
@@ -305,18 +313,20 @@ class Blockchain{
 
     var containsCurrentBlock = this.checkIfChainHasHash(block.hash);
     var isLinked = this.checkIfBlockIsLinked(block.previousHash);
+
     //Validate transactions using merkle root
     if(!containsCurrentBlock){
       if(!isLinked){
-        console.log('Current mined block is not linked with previous block. Sending it to orphanedBlocks')
-        return false
+        console.log('Current mined block is not linked with previous block. Sending it to orphanedBlocks');
+        return this.getIndexOfBlockHash(block.previousHash);
+
       }else{
         console.log('New block successfully validated. Will be appended to current blockchain.')
         return true;
       }
 
     }else if(containsCurrentBlock){
-
+      console.log('Chain already contains that block')
       return false;
     }
 
