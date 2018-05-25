@@ -320,6 +320,7 @@ class Blockchain{
     if(!containsCurrentBlock){
       if(!isLinked){
         if(latestBlock.previousHash == block.previousHash){
+          
           console.log('New block received has been orphaned since latest block has been mined before.');
           return false;
         }

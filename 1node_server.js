@@ -26,7 +26,9 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 
 //Seed list of ip addresses of the p2p network
 const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
-				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082'];
+				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082',
+			'http://192.168.1.72:8080','http://192.168.1.72:8081','http://192.168.1.72:8082', 'http://192.168.1.74:8080', 'http://192.168.1.74:8081',
+			 'http://192.168.1.74:8082'];
 
 let blockchain;
 //////////////////////////////////////////////////////////////
@@ -235,7 +237,7 @@ ioServer.on('connection', (socket) => {
 		}
 
 		saveBlockchain(blockchain);
-		
+
 	});
 
 
