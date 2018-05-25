@@ -208,7 +208,7 @@ ioServer.on('connection', (socket) => {
     var latestBlock = getLatestBlock(updatedBlockchain);
 
 		sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
-		syncBlockchain();
+		// syncBlockchain();
     // blockchain = compareBlockchains(blockchain, updatedBlockchain);
 
   });

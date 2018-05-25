@@ -208,7 +208,7 @@ ioServer.on('connection', (socket) => {
     var latestBlock = getLatestBlock(updatedBlockchain);
 
 		sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
-		syncBlockchain();
+		// syncBlockchain();
     // blockchain = compareBlockchains(blockchain, updatedBlockchain);
 
   });
@@ -835,7 +835,8 @@ const chainUpdater = () =>{
 setTimeout(() =>{ //A little delay to let websocket open
   initBlockchain();
   connectToPeerNetwork();
-	chainUpdater();
+	// chainUpdater();
+	sendEventToAllPeers('getBlockchain', thisNode);
 }, 1500)
 
 
