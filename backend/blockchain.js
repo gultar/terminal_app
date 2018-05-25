@@ -27,7 +27,7 @@ class Block{
     this.timestamp = timestamp;
     this.transactions = transactions;
     this.previousHash = previousHash;
-    this.hash = this.createMerkleRoot(this.transactions);
+    this.hash = this.calculateHash();
     this.nonce = 0;
     this.valid = true;
     this.minedBy = '';
