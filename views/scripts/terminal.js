@@ -635,7 +635,7 @@ setTimeout(function(){
         console.log('Latest Block Hash:', latestBlock.hash);
         blockchain = updatedBlockchain;
         console.log("Blockchain:", updatedBlockchain);
-        output('Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
+        output('Block mined: ' + latestBlock.hash + " by " + latestBlock.minedBy);
       });
 
       socket.on('needMoreTransact', function(message){

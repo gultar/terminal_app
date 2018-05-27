@@ -71,7 +71,8 @@ function getSelectedCryptos(cryptoOne, cryptoTwo=false, cryptoThree=false,
     function(data){
 
       //blockchain.createTransaction(new Transaction('https://min-api.cryptocompare.com/data/pricemulti?fsyms=', '192.168.1.69', data[cryptoOne].USD, JSON.stringify(data)))
-      sendTransaction('https://min-api.cryptocompare.com/data/pricemulti?fsyms=', '192.168.1.69', data[cryptoOne].USD, JSON.stringify(data))
+      console.log(data);
+      sendTransaction('https://min-api.cryptocompare.com/data/pricemulti?fsyms=', null, data[cryptoOne].USD, JSON.stringify(data))
 
        updateCryptoValues(cryptoOne, data[cryptoOne]);
       (cryptoTwo ? updateCryptoValues(cryptoTwo, data[cryptoTwo]) : '');

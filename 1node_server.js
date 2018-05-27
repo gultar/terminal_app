@@ -891,6 +891,7 @@ const nodeMenu = () =>{
 			case '3':
 			case 'sync':
 				syncBlockchain();
+				// sendEventToAllPeers('getBlockchain', thisNode);
 			case '4':
 			case 'broadcast':
 				console.log('not implemented yet');
