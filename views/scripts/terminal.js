@@ -306,11 +306,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         case 'show-transact':
           runShowTransact();
           break;
-        case 'node-update-blockchain':
-        output('Sending blockchain remotely...');
-          broadcastBlockchain();
 
-          break;
         default:
           if (cmd) {
             output(cmd + ': command not found');
@@ -443,15 +439,18 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
 
       output('----------Pending Transactions----------')
-      blockchain.pendingTransactions.forEach(function(transaction){
-
-        var transactionKeys = Object.keys(transaction);
-        console.log(transaction);
-        var transactionOutput = loopThroughBlockTransactions(transactionKeys, transaction);
+      for(transactionKey of Object.keys(blockchain.pendingTransactions)){
+        var transaction = blockchain.pendingTransactions[transactionKey];
+        var keys = Object.keys(transaction);
+        // var transactionOutput = loopThroughBlockTransactions(transactionKeys, transaction);
+        var transactionOutput = loopThroughBlockTransactions(keys,transaction);
         output('<div class="block-data">' + transactionOutput + '</div>');
         transIndex++;
+      }
 
-      })
+
+
+
 
     }
 

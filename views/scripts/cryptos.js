@@ -155,6 +155,14 @@ function loopThroughBlockTransactions(keys, data){
   return blockTransactions;
 }
 
+function loopTransaction(transaction){
+  var output = '';
+  for (var property in transaction) {
+    output += property + ': ' + transaction[property]+'; ';
+  }
+  return output;
+}
+
 
 
 function loopThroughBlockchain(keys, data, expand=false){

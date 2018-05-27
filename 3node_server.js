@@ -3,38 +3,34 @@
 //////////////////////////////////////////////////////////////
 
 
-
-//Express app and http server to run websockets on
+//Server and p2p network stuff
 const express = require('express');
 const http = require('http');
 const app = express();
 const port = 8082
 const server = http.createServer(app).listen(port);
-var expressWs = require('express-ws')(app);
+const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
 
 const fs = require('fs');
-const merkle = require('merkle');
-//For hashing the transactions and block signatures
-const sha256 = require('./backend/sha256');
+const readline = require('readline');
 
-//All the necessary blockchain classes
 const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
-
-const { getIPAddress } = require('./backend/ipFinder.js');
+const merkle = require('merkle');
+const sha256 = require('./backend/sha256');
+const { encrypt, decrypt } = require('./backend/encryption.js')
 
 //Seed list of ip addresses of the p2p network
+const { getIPAddress } = require('./backend/ipFinder.js');
 const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
 				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082',
 			'http://192.168.1.72:8080','http://192.168.1.72:8081','http://192.168.1.72:8082', 'http://192.168.1.74:8080', 'http://192.168.1.74:8081',
-			 'http://192.168.1.74:8082'];
+			 'http://192.168.1.74:8082', 'http://10.112.106.71:8080', 'http://10.112.106.71:8081', 'http://10.112.106.71:8082'];
+
 
 let blockchain;
-//////////////////////////////////////////////////////////////
-//This is a container for the blockchain copy taken from local file
 let blockchainFetched;
-
 
 let thisNode = {
   'type' : 'node',
@@ -42,7 +38,6 @@ let thisNode = {
   'hashSignature' : sha256(ipList[0], Date.now())
 }
 
-const { encrypt, decrypt } = require('./backend/encryption.js')
 
 
 const room = 'sync';
@@ -58,287 +53,289 @@ let peers = [];
 let currentMiners = [];
 let sendTrials = 0;
 
+const startServer = () =>{
+	console.log('Starting server at '+thisNode.address+'/');
+	console.log('Node address:',thisNode.address);
+	console.log('Node Hash:', thisNode.hashSignature);
+	app.use(express.static(__dirname+'/views'));
 
-app.use(express.static(__dirname+'/views'));
-
-app.on('/', () => {
-  res.send(getIPAddress());
-})
-
-
-ioServer.on('connection', (socket) => {
-
-  // socket.broadcast.emit('message', 'this is node address ' + getIPAddress());
-
-  socket.on('message', (msg) => {
-    console.log('Client:', msg);
-  });
-
-	socket.on('error', (exception)=>{
-		console.log('Error:',exception);
-		socket.destroy();
+	app.on('/', () => {
+	  res.send(getIPAddress());
 	})
 
 
-  socket.on('client-connect', (token) => {
-    //Create validation for connecting nodes
-		if(token != undefined){
-			clients[token.address] = token;
+	ioServer.on('connection', (socket) => {
 
-			socket.id = token.address;
+	  // socket.broadcast.emit('message', 'this is node address ' + getIPAddress());
 
-	    console.log('Connected client hash: '+ token.hashSignature.substr(0, 10) + '...');
-	    console.log('At address:', token.address);
+	  socket.on('message', (msg) => {
+	    console.log('Client:', msg);
+	  });
 
-	    socket.emit('message', 'You are now connected to ' + thisNode.address);
-
-			getNumPeers();
-
-		}
+		socket.on('error', (exception)=>{
+			console.log('Error:',exception);
+			socket.destroy();
+		})
 
 
+	  socket.on('client-connect', (token) => {
+	    //Create validation for connecting nodes
+			if(token != undefined){
+				clients[token.address] = token;
 
-  });
+				socket.id = token.address;
 
-	socket.on('meh', function(msg) {
-		sendToTargetPeer('message', msg, 'http://192.168.1.72:8080');
-	});
+		    console.log('Connected client hash: '+ token.hashSignature.substr(0, 10) + '...');
+		    console.log('At address:', token.address);
 
-	socket.on('test', (index)=>{
-		if(typeof index === 'number' && index < blockchain.chain.length){
-			var rootM = createMerkleRoot(blockchain.chain[index].transactions)
-			console.log('Root:', rootM.root());
-			console.log('Levels:', rootM.levels());
-			console.log('Depth:', rootM.depth());
-			console.log('Nodes:', rootM.nodes());
+		    socket.emit('message', 'You are now connected to ' + thisNode.address);
 
-			for(var i=0; i<rootM.levels(); i++){
-				console.log('Level '+i+': ' + rootM.level(i));
+				getNumPeers();
+
 			}
-		}
 
-	})
 
-	socket.on('validateChain', (token) =>{
-		if(blockchain != undefined){
-			console.log('Blockchain valid?',blockchain.isChainValid());
-		}
 
-	})
+	  });
 
-	socket.on('getWholeCopy', (token)=>{
-		sendEventToAllPeers('getBlockchain', thisNode);
-	})
 
-	socket.on('storeToken', (token) =>{
-		if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
-			blockchain.nodeTokens[token.address] = token;
-		}
+		socket.on('test', (index)=>{
+			if(typeof index === 'number' && index < blockchain.chain.length){
+				var rootM = createMerkleRoot(blockchain.chain[index].transactions)
+				console.log('Root:', rootM.root());
+				console.log('Levels:', rootM.levels());
+				console.log('Depth:', rootM.depth());
+				console.log('Nodes:', rootM.nodes());
 
-	})
-
-	socket.on('sync', () =>{
-		if(blockchain != undefined){
-			var hashes = buildChainHashes();
-			ioServer.emit('message', hashes);
-			syncBlockchain();
-		}
-	})
-
-	socket.on('distributedTransaction', (transaction, fromNodeToken) => {
-		///////////////////////////////////////////////////////////
-		//Need to validate transaction everytime it is received
-		///////////////////////////////////////////////////////////
-		if(blockchain != undefined){
-			if(transaction != undefined && fromNodeToken != undefined){
-				console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
-				console.log(transaction);
-				var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
-
-				blockchain.createTransaction(transactionObj);
+				for(var i=0; i<rootM.levels(); i++){
+					console.log('Level '+i+': ' + rootM.level(i));
+				}
 			}
-		}
-	})
 
+		})
 
-  socket.on('transaction', (transaction, fromNodeToken) => {
-		///////////////////////////////////////////////////////////
-		//Need to validate transaction before adding to blockchain
-		///////////////////////////////////////////////////////////
-		if(blockchain != undefined){
-			if(transaction != undefined && fromNodeToken != undefined){
-				if(fromNodeToken.address != thisNode.address){
+		socket.on('validateChain', (token) =>{
+			if(blockchain != undefined){
+				console.log('Blockchain valid?',blockchain.isChainValid());
+			}
+
+		})
+
+		socket.on('getWholeCopy', (token)=>{
+			sendEventToAllPeers('getBlockchain', thisNode);
+		})
+
+		socket.on('storeToken', (token) =>{
+			if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
+				blockchain.nodeTokens[token.address] = token;
+			}
+
+		})
+
+		socket.on('sync', () =>{
+			if(blockchain != undefined){
+				var hashes = buildChainHashes();
+				ioServer.emit('message', hashes);
+				syncBlockchain();
+			}
+		})
+
+		socket.on('distributedTransaction', (transaction, fromNodeToken) => {
+			///////////////////////////////////////////////////////////
+			//Need to validate transaction everytime it is received
+			///////////////////////////////////////////////////////////
+			if(blockchain != undefined){
+				if(transaction != undefined && fromNodeToken != undefined){
+					console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
+					console.log(transaction);
 					var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
-					var transactIsValid = validateTransaction(transactionObj, fromNodeToken);
-
 					blockchain.createTransaction(transactionObj);
-					sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
-					console.log('Received new transaction:', transactionObj);
-					transactionObj = null;
 				}
-
-			}else{
-				socket.emit('message', 'ERROR: Either your transaction or your token is unreadable. Try again.')
 			}
-		}else{
-			socket.emit('message', 'Node is unavailable for receiving the transaction');
-		}
+		})
 
 
-  });
+	  socket.on('transaction', (transaction, fromNodeToken) => {
+			///////////////////////////////////////////////////////////
+			//Need to validate transaction before adding to blockchain
+			///////////////////////////////////////////////////////////
+			if(blockchain != undefined){
+				if(transaction != undefined && fromNodeToken != undefined){
+					if(fromNodeToken.address != thisNode.address){
+						var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
 
-  socket.on('miningRequest', (miningAddrToken) =>{
-		///////////////////////////////////////////////////////////
-    //need to validate miningAddr before allowing mining action;
-		///////////////////////////////////////////////////////////
-    if(blockchain != undefined){
+						var transactIsValid = validateTransaction(transactionObj, fromNodeToken);
 
-      var hasMinedABlock = startMining(miningAddrToken);
+						blockchain.createTransaction(transactionObj);
+						sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
+						console.log('Received new transaction:', transactionObj);
+						transactionObj = null;
+					}
 
-			if(hasMinedABlock){
-				saveBlockchain(blockchain);
-			}
-
-
-    }
-  });
-
-  socket.on('miningApproved', function(updatedBlockchain){
-		//This event is when a node is notified that a mining operation has been successfull
-
-    var latestBlock = getLatestBlock(updatedBlockchain);
-
-		sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
-		// syncBlockchain();
-    // blockchain = compareBlockchains(blockchain, updatedBlockchain);
-
-  });
-
-
-	socket.on('newBlock', (newBlock) =>{
-
-		if(newBlock != undefined && blockchain != undefined){
-			console.log('Received block:', newBlock.hash);
-
-			var isBlockSynced = blockchain.syncBlock(newBlock);
-			if(isBlockSynced){
-				ioServer.emit('blockchain', blockchain);
-			}else if(typeof isBlockSynced === 'number'){
-				//Start syncing from the index returned by syncBlock;
-				sendEventToAllPeers('getBlockchain', thisNode); //Use this meanwhile
-			}else{
-				sendEventToAllPeers('getBlockchain', thisNode);
-			}
-
-
-		}else{
-			console.log('New block received or blockchain is undefined');
-		}
-
-		saveBlockchain(blockchain);
-
-	});
-
-
-
-  socket.on('queryForBlockchain', (queryingNodeToken) =>{
-
-		if(queryingNodeToken != undefined){
-			syncBlockchain();
-		}else{
-			socket.emit('message', 'ERROR: Invalid token sent');
-		}
-
-  })
-
-	socket.on('updateChain', (signatures, token) =>{
-		if(signatures != undefined && token != undefined){
-			var missingBlocks = findMissingBlocks(signatures);
-
-			if(!missingBlocks){
-				sendToTargetPeer('message','Chain is up to date', token.address);
-				//Is up to date
-			}else{
-				for(var i=0; i<missingBlocks.length; i++){
-					var index =
-						setTimeout((index)=>{
-							sendToTargetPeer('newBlock', missingBlocks[index], token.address);
-						}, 2000, i)
-
-
-				}
-
-			}
-		}else{
-			console.log('Block signatures received are undefined');
-		}
-	})
-
-
-
-  socket.on('getBlockchain', (token) =>{
-    //Query all nodes for blockchain
-		if(blockchain != undefined){
-
-			if(!(blockchain instanceof Blockchain)){
-				blockchain = instanciateBlockchain(blockchain);
-			}
-
-				if(blockchain.isChainValid()){
-					var msg = token.address + ' has requested a copy of the blockchain!';
-			    // console.log(msg);
-					sendEventToAllPeers('message', msg);
-					sendToTargetPeer('blockchain', blockchain, token.address);
-			    ioServer.emit('blockchain', blockchain);
 				}else{
-					console.log('Current blockchain is invalid. Flushing local chain and requesting a valid one');
-					blockchain = new Blockchain(); //Need to find a way to truncate invalid part of chain and sync valid blocks
+					socket.emit('message', 'ERROR: Either your transaction or your token is unreadable. Try again.')
+				}
+			}else{
+				socket.emit('message', 'Node is unavailable for receiving the transaction');
+			}
+
+
+	  });
+
+	  socket.on('miningRequest', (miningAddrToken) =>{
+			///////////////////////////////////////////////////////////
+	    //need to validate miningAddr before allowing mining action;
+			///////////////////////////////////////////////////////////
+	    if(blockchain != undefined){
+
+	      var hasMinedABlock = startMining(miningAddrToken);
+
+				if(hasMinedABlock){
+					saveBlockchain(blockchain);
+				}
+
+
+	    }
+	  });
+
+	  socket.on('miningApproved', function(updatedBlockchain){
+			//This event is when a node is notified that a mining operation has been successfull
+
+	    var latestBlock = getLatestBlock(updatedBlockchain);
+
+			sendEventToAllPeers('message','Block mined: ' + latestBlock.hash + " by " + miningAddr.address);
+			// syncBlockchain();
+	    // blockchain = compareBlockchains(blockchain, updatedBlockchain);
+
+	  });
+
+
+		socket.on('newBlock', (newBlock) =>{
+
+			if(newBlock != undefined && blockchain != undefined){
+				console.log('Received block:', newBlock.hash);
+
+				var isBlockSynced = blockchain.syncBlock(newBlock);
+				if(isBlockSynced){
+					ioServer.emit('blockchain', blockchain);
+				}else if(typeof isBlockSynced === 'number'){
+					//Start syncing from the index returned by syncBlock;
+					sendEventToAllPeers('getBlockchain', thisNode); //Use this meanwhile
+				}else{
 					sendEventToAllPeers('getBlockchain', thisNode);
 				}
 
-		}else{
-			socket.emit('message', 'Blockchain is unavailable on node. It might be loading or saving.');
-		}
+
+			}else{
+				console.log('New block received or blockchain is undefined');
+			}
+
+			saveBlockchain(blockchain);
+
+		});
 
 
-  });
 
-  socket.on('blockchain', (blockchainReceived) => {
-    blockchain = compareBlockchains(blockchain, blockchainReceived);
-  })
+	  socket.on('queryForBlockchain', (queryingNodeToken) =>{
 
-	socket.on('minerStarted', (miningAddress) =>{
-		if(miningAddress != undefined){
-			currentMiners[miningAddress.hash] = miningAddress;
-		}
+			if(queryingNodeToken != undefined){
+				syncBlockchain();
+			}else{
+				socket.emit('message', 'ERROR: Invalid token sent');
+			}
+
+	  })
+
+		socket.on('updateChain', (signatures, token) =>{
+			if(signatures != undefined && token != undefined){
+				var missingBlocks = findMissingBlocks(signatures);
+
+				if(!missingBlocks){
+					sendToTargetPeer('message','Chain is up to date', token.address);
+					//Is up to date
+				}else{
+					for(var i=0; i<missingBlocks.length; i++){
+						var index =
+							setTimeout((index)=>{
+								sendToTargetPeer('newBlock', missingBlocks[index], token.address);
+							}, 2000, i)
+
+
+					}
+
+				}
+			}else{
+				console.log('Block signatures received are undefined');
+			}
+		})
+
+
+
+	  socket.on('getBlockchain', (token) =>{
+	    //Query all nodes for blockchain
+			if(blockchain != undefined){
+
+				if(!(blockchain instanceof Blockchain)){
+					blockchain = instanciateBlockchain(blockchain);
+				}
+
+					if(blockchain.isChainValid()){
+						var msg = token.address + ' has requested a copy of the blockchain!';
+				    // console.log(msg);
+						sendEventToAllPeers('message', msg);
+						sendToTargetPeer('blockchain', blockchain, token.address);
+				    ioServer.emit('blockchain', blockchain);
+					}else{
+						console.log('Current blockchain is invalid. Flushing local chain and requesting a valid one');
+						blockchain = new Blockchain(); //Need to find a way to truncate invalid part of chain and sync valid blocks
+						sendEventToAllPeers('getBlockchain', thisNode);
+					}
+
+			}else{
+				socket.emit('message', 'Blockchain is unavailable on node. It might be loading or saving.');
+			}
+
+
+	  });
+
+	  socket.on('blockchain', (blockchainReceived) => {
+	    blockchain = compareBlockchains(blockchain, blockchainReceived);
+	  })
+
+		socket.on('minerStarted', (miningAddress) =>{
+			if(miningAddress != undefined){
+				currentMiners[miningAddress.hash] = miningAddress;
+			}
+		})
+
+		socket.on('disconnect', () =>{
+
+		})
+
+		socket.on('broadcastMessage', (msg) =>{
+			sendEventToAllPeers('message', msg);
+		})
+
+
+	  socket.on('close', (token) => {
+
+	    clients[token.address] = null;
+
+	    console.log('Disconnected clients: '+ token.hashSignature.substr(0, 10) + '...');
+			getNumPeers();
+
+	  });
+
+
+	});
+
+	ioServer.on('disconnection', (socket) =>{
+		console.log('Lost connection with client');
+		socket.destroy();
 	})
+}
 
-	socket.on('disconnect', () =>{
-
-	})
-
-	socket.on('broadcastMessage', (msg) =>{
-		sendEventToAllPeers('message', msg);
-	})
-
-
-  socket.on('close', (token) => {
-
-    clients[token.address] = null;
-
-    console.log('Disconnected clients: '+ token.hashSignature.substr(0, 10) + '...');
-		getNumPeers();
-
-  });
-
-
-});
-
-ioServer.on('disconnection', (socket) =>{
-	console.log('Lost connection with client');
-	socket.destroy();
-})
 
 const sendEventToAllPeers = (eventType, data, moreData=false ) => {
   if(peers.length > 0){
@@ -408,7 +405,8 @@ const initClientSocket = (address) =>{
 
 	peerSocket.on('connect', () =>{
 		console.log('connection to node established');
-		// peerSocket.emit('getBlockchain', thisNode);
+		peerSocket.emit('getBlockchain', thisNode);
+		peerSocket.emit('blockchain', blockchain);
 		peers.push(peerSocket);
 	});
 
@@ -585,7 +583,7 @@ const startMining = (miningAddrToken) => {
 			sendEventToAllPeers('message', message);
 			sendEventToAllPeers('newBlock', newBlock);
 			// sendEventToAllPeers('blockchain', blockchain);
-			saveBlockchain(blockchain);
+
 			return true;
 
 		}
@@ -832,28 +830,78 @@ function recalculateMerkleRoot(transactions){
 }
 
 const chainUpdater = () =>{
+	sendEventToAllPeers('getBlockchain', thisNode);
 	setTimeout(() =>{
 		if(blockchain != undefined){
-			syncBlockchain();
+			// syncBlockchain();
+			sendEventToAllPeers('getBlockchain', thisNode);
 		}else{
+			console.log('blockchain is not loaded yet. Trying again');
 			return chainUpdater();
 		}
-	}, 5000)
+	}, 30000)
+
+}
+
+const mine = (token) =>{
+	setInterval(()=>{
+		if(blockchain != undefined){
+
+			var hasMinedABlock = startMining(token);
+
+			if(hasMinedABlock){
+				saveBlockchain(blockchain);
+			}
+
+
+		}
+	}, 10000)
 
 }
 
 
-setTimeout(() =>{ //A little delay to let websocket open
-  initBlockchain();
-  connectToPeerNetwork();
-	// chainUpdater();
-	sendEventToAllPeers('getBlockchain', thisNode);
-}, 1500)
+const nodeMenu = () =>{
+	let stdin = process.stdin;
+	let stdout = process.stdout;
+	console.log('NODE MENU:');
+	console.log('1. node: Start Blockchain Node');
+	console.log('2. mine: Mine blocks on blockchain');
+	console.log('3. sync: Sync blockchain to longest chain');
+	console.log('4. broadcast: Broadcast Message');
+	stdin.resume();
+	stdin.setEncoding('utf8');
+
+	stdin.on('data', function(data) {
+
+		let choice = data.toString().trim()
+		switch(choice){
+			case '1':
+			case 'node':
+				startServer()
+				initBlockchain();
+				setTimeout(()=>{
+					connectToPeerNetwork();
+					chainUpdater();
+				}, 1200)
+				break;
+			case '2':
+			case 'mine':
+				mine(thisNode);
+				break;
+			case '3':
+			case 'sync':
+				syncBlockchain();
+			case '4':
+			case 'broadcast':
+				console.log('not implemented yet');
+				break;
+			default:
+				stdout.write(`Options selected: ${choice}`);
+				break;
+		}
+	});
 
 
+}
 
-
-
-console.log('Starting server at '+thisNode.address+'/');
-console.log('Node address:',thisNode.address);
-console.log('Node Hash:', thisNode.hashSignature);
+nodeMenu()
