@@ -863,11 +863,14 @@ const mine = (token) =>{
 const nodeMenu = () =>{
 	let stdin = process.stdin;
 	let stdout = process.stdout;
-	console.log('NODE MENU:');
+	console.log('*********************************************');
+	console.log('*...........BLOCKCHAIN SIMULATOR............*');
+	console.log('*********************************************');
 	console.log('1. node: Start Blockchain Node');
 	console.log('2. mine: Mine blocks on blockchain');
 	console.log('3. sync: Sync blockchain to longest chain');
-	console.log('4. broadcast: Broadcast Message');
+	console.log("4. broadcast: Broadcast Message\n");
+	console.log("Type 0 or 'menu' to show this menu again\n");
 	stdin.resume();
 	stdin.setEncoding('utf8');
 
@@ -875,6 +878,10 @@ const nodeMenu = () =>{
 
 		let choice = data.toString().trim()
 		switch(choice){
+			case '0':
+			case 'menu':
+				nodeMenu();
+				break;
 			case '1':
 			case 'node':
 				startServer()
@@ -882,7 +889,7 @@ const nodeMenu = () =>{
 				setTimeout(()=>{
 					connectToPeerNetwork();
 					chainUpdater();
-				}, 1200)
+				}, 2500)
 				break;
 			case '2':
 			case 'mine':
