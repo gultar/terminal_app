@@ -12,7 +12,7 @@ const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
-
+const { compareBlockchains } = require('./backend/validation.js');
 const fs = require('fs');
 const readline = require('readline');
 
@@ -64,9 +64,12 @@ const startServer = () =>{
 	})
 
 
+
 	ioServer.on('connection', (socket) => {
 
 	  // socket.broadcast.emit('message', 'this is node address ' + getIPAddress());
+
+		sendmsg(socket);
 
 	  socket.on('message', (msg) => {
 	    console.log('Client:', msg);
@@ -117,6 +120,7 @@ const startServer = () =>{
 		socket.on('validateChain', (token) =>{
 			if(blockchain != undefined){
 				console.log('Blockchain valid?',blockchain.isChainValid());
+				sendmsg(socket);
 			}
 
 		})
@@ -404,9 +408,10 @@ const initClientSocket = (address) =>{
 
 
 	peerSocket.on('connect', () =>{
-		console.log('connection to node established');
+
 		peerSocket.emit('getBlockchain', thisNode);
 		peerSocket.emit('blockchain', blockchain);
+		console.log('Connected to ', address);
 		peers.push(peerSocket);
 	});
 
@@ -678,89 +683,6 @@ const buildChainHashes = () =>{
 
 
 
-const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
-  let longestBlockchain;
-
-
-  if(receivedBlockchain != undefined && storedBlockchain != undefined){
-
-		if(!(receivedBlockchain instanceof Blockchain)){
-			receivedBlockchain = instanciateBlockchain(receivedBlockchain);
-		}
-
-		if(!(storedBlockchain instanceof Blockchain)){
-			storedBlockchain = instanciateBlockchain(storedBlockchain);
-		}
-		 //Does it exist and is it an instance of Blockchain or an object?
-    if(receivedBlockchain.isChainValid()){ //Is the chain valid?
-			//Try sending a notice or command to node with invalid blockchain
-			console.log('Validated chain');
-      if(storedBlockchain.chain.length > receivedBlockchain.chain.length){ //Which chain is the longest?
-					console.log('Local chain is the longest. Choosing this one');
-          longestBlockchain = storedBlockchain;
-      }
-      else if(storedBlockchain.chain.length == receivedBlockchain.chain.length){ //Same nb of blocks
-
-          let lastStoredBlock = storedBlockchain.getLatestBlock();
-          let lastReceivedBlock = receivedBlockchain.getLatestBlock();
-
-					if(lastReceivedBlock.timestamp < lastStoredBlock.timestamp){
-						console.log('The last block on received chain is older');
-						longestBlockchain = receivedBlockchain;
-					}else if(lastStoredBlock.timestamp < lastReceivedBlock.timestamp){
-						console.log('The last block on local chain is older');
-						longestBlockchain = storedBlockchain;
-					}else{
-						console.log('The two chains and last two blocks are the same.')
-						longestBlockchain = storedBlockchain;
-					}
-
-        	//validated block
-      }
-      else{
-				console.log('Received chain is the longest. Choosing this one');
-        longestBlockchain = receivedBlockchain;
-      }
-
-      return longestBlockchain;
-    }
-    else if(storedBlockchain.isChainValid()){
-			console.log('Received blockchain not valid. Reverting to local chain');
-      return storedBlockchain;
-    }else{
-			return new Blockchain();
-		}
-
-
-  }else if(storedBlockchain == undefined && receivedBlockchain != undefined){
-
-
-		receivedBlockchain = instanciateBlockchain(receivedBlockchain);
-		if(receivedBlockchain.isChainValid()){
-			console.log('Local chain is undefined. Using received chain');
-      return receivedBlockchain;
-    }else{
-			console.log('Received chain is not valid. Returning new Blockchain')
-			return new Blockchain()
-		}
-
-	}else if(storedBlockchain != undefined && receivedBlockchain == undefined){
-
-		storedBlockchain = instanciateBlockchain(storedBlockchain);
-		if(storedBlockchain.isChainValid()){
-			console.log('Received chain is undefined. Using local chain');
-      return storedBlockchain;
-    }else{
-			console.log('Local chain is not valid. Returning new Blockchain')
-			return new Blockchain()
-		}
-
-  }else{
-		console.log('Both copies of the blockchain were undefined. Returning new blockchain copy instead')
-		return new Blockchain();
-	}
-
-}
 
 
 const getNumPeers = () =>{
@@ -781,6 +703,10 @@ const sendToTargetPeer = (eventType, data, address) =>{
 			peer.emit(eventType, data);
 		}
 	}
+}
+
+const sendmsg = (socket) =>{
+	socket.emit('message', 'caca');
 }
 
 const instanciateBlockchain = (blockchain) =>{
@@ -860,56 +786,10 @@ const mine = (token) =>{
 }
 
 
-const nodeMenu = () =>{
-	let stdin = process.stdin;
-	let stdout = process.stdout;
-	console.log('*********************************************');
-	console.log('*...........BLOCKCHAIN SIMULATOR............*');
-	console.log('*********************************************');
-	console.log('1. node: Start Blockchain Node');
-	console.log('2. mine: Mine blocks on blockchain');
-	console.log('3. sync: Sync blockchain to longest chain');
-	console.log("4. broadcast: Broadcast Message\n");
-	console.log("Type 0 or 'menu' to show this menu again\n");
-	stdin.resume();
-	stdin.setEncoding('utf8');
 
-	stdin.on('data', function(data) {
-
-		let choice = data.toString().trim()
-		switch(choice){
-			case '0':
-			case 'menu':
-				nodeMenu();
-				break;
-			case '1':
-			case 'node':
-				startServer()
-				initBlockchain();
-				setTimeout(()=>{
-					connectToPeerNetwork();
-					chainUpdater();
-				}, 2500)
-				break;
-			case '2':
-			case 'mine':
-				mine(thisNode);
-				break;
-			case '3':
-			case 'sync':
-				syncBlockchain();
-				// sendEventToAllPeers('getBlockchain', thisNode);
-			case '4':
-			case 'broadcast':
-				console.log('not implemented yet');
-				break;
-			default:
-				stdout.write(`Options selected: ${choice}`);
-				break;
-		}
-	});
-
-
-}
-
-nodeMenu()
+startServer()
+initBlockchain();
+setTimeout(()=>{
+	connectToPeerNetwork();
+	chainUpdater();
+}, 2500)
