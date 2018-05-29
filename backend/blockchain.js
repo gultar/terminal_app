@@ -102,30 +102,34 @@ class Blockchain{
   }
 
   syncBlock(newBlock){
+    if(newBlock != undefined){
+      var blockStatus;
+      var pending = this.pendingTransactions;
+      var newTransactHashes = Object.keys(newBlock.transactions);
 
-    var blockStatus;
-    var pending = this.pendingTransactions;
-    var newTransactHashes = Object.keys(newBlock.transactions);
+      for(var hash of newTransactHashes){
+        delete pending[hash];
+      }
+      //Will return true if the block is valid, false if not or the index of the block to which it is linked if valid but out of sync
+      blockStatus = this.validateBlock(newBlock);
 
-    for(var hash of newTransactHashes){
-      delete pending[hash];
-    }
-    //Will return true if the block is valid, false if not or the index of the block to which it is linked if valid but out of sync
-    blockStatus = this.validateBlock(newBlock);
+      if(blockStatus === true){
+        console.log('New Block validated successfully');
+        this.chain.push(newBlock);
+        this.pendingTransactions = pending;
+        return true;
+      }else if(blockStatus > 0){
+        return blockStatus;
 
-    if(blockStatus === true){
-      console.log('New Block validated successfully');
-      this.chain.push(newBlock);
-      this.pendingTransactions = pending;
-      return true;
-    }else if(blockStatus > 0){
-      return blockStatus;
+      }else if(blockStatus === false){
+        console.log('New Block is invalid');
+        return false;
+      }else{
+        return false;
+      }
 
-    }else if(blockStatus === false){
-      console.log('New Block is invalid');
-      return false;
     }else{
-      return false;
+      console.log('New block to be synced is undefined');
     }
 
 
@@ -320,7 +324,7 @@ class Blockchain{
     if(!containsCurrentBlock){
       if(!isLinked){
         if(latestBlock.previousHash == block.previousHash){
-          
+
           console.log('New block received has been orphaned since latest block has been mined before.');
           return false;
         }
