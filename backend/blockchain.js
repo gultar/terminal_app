@@ -102,7 +102,7 @@ class Blockchain{
   }
 
   syncBlock(newBlock){
-    if(newBlock != undefined){
+    
       var blockStatus;
       var pending = this.pendingTransactions;
       var newTransactHashes = Object.keys(newBlock.transactions);
@@ -128,9 +128,7 @@ class Blockchain{
         return false;
       }
 
-    }else{
-      console.log('New block to be synced is undefined');
-    }
+
 
 
 
