@@ -120,7 +120,7 @@ const startServer = () =>{
 		socket.on('validateChain', (token) =>{
 			if(blockchain != undefined){
 				console.log('Blockchain valid?',blockchain.isChainValid());
-				sendmsg(socket);
+				// sendmsg(socket);
 			}
 
 		})
@@ -132,6 +132,7 @@ const startServer = () =>{
 		socket.on('storeToken', (token) =>{
 			if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
 				blockchain.nodeTokens[token.address] = token;
+				blockchain.addMiningAddress(token);
 			}
 
 		})
@@ -359,6 +360,7 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 
 const syncBlockchain = () => {
 	var hashesOfBlocks = buildChainHashes();
+	console.log(hashesOfBlocks);
 	sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
 }
 
@@ -409,7 +411,7 @@ const initClientSocket = (address) =>{
 
 	peerSocket.on('connect', () =>{
 
-		peerSocket.emit('getBlockchain', thisNode);
+		// peerSocket.emit('getBlockchain', thisNode);
 		peerSocket.emit('blockchain', blockchain);
 		console.log('Connected to ', address);
 		peers.push(peerSocket);
@@ -619,7 +621,7 @@ const findMissingBlocks = (signatures) =>{
 			blockGap = blockchain.chain.length - signatures.length;
 
 		}else if(signatures.length > blockchain.chain.length){
-			// syncBlockchain(); //If the signature is longer than the local chain, the local chain has to be synced
+			syncBlockchain(); //If the signature is longer than the local chain, the local chain has to be synced
 			return false;
 
 		}else{
@@ -634,7 +636,7 @@ const findMissingBlocks = (signatures) =>{
 
 					//Looks up the block's hash within local chain and returns index of said block
 					var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
-
+					console.log('Index:', index);
 					if(index === false && signatures[i].previousHash === '0'){ //if the block signature hasn't been found
 						missingBlocks.push(blockchain.chain[i]);
 					}
@@ -688,7 +690,7 @@ const buildChainHashes = () =>{
 const getNumPeers = () =>{
 	if(peers != undefined){
 		if(peers.length > 0){
-			console.log('Number of peers on network:',peers.length);
+			console.log('Number of other available peers on network:',peers.length);
 			return peers.length;
 		}
 
@@ -759,8 +761,8 @@ const chainUpdater = () =>{
 	sendEventToAllPeers('getBlockchain', thisNode);
 	setTimeout(() =>{
 		if(blockchain != undefined){
-			// syncBlockchain();
-			sendEventToAllPeers('getBlockchain', thisNode);
+			syncBlockchain();
+			// sendEventToAllPeers('getBlockchain', thisNode);
 		}else{
 			console.log('blockchain is not loaded yet. Trying again');
 			return chainUpdater();
