@@ -116,7 +116,7 @@ const startServer = () =>{
 			// }
 
 			blockchain.chain.splice(99, 258);
-			
+
 			saveBlockchain(blockchain);
 
 		})
@@ -765,7 +765,7 @@ function recalculateMerkleRoot(transactions){
 
 }
 
-const handleNewBlock = () =>{
+const handleNewBlock = (newBlock) =>{
 
 	console.log('Received block:', newBlock.hash);
 
