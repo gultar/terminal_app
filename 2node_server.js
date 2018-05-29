@@ -103,7 +103,17 @@ const startServer = () =>{
 
 
 		socket.on('test', (index)=>{
-			blockchain.chain.splice(99, 257);
+			if(typeof index === 'number' && index < blockchain.chain.length){
+				var rootM = createMerkleRoot(blockchain.chain[index].transactions)
+				console.log('Root:', rootM.root());
+				console.log('Levels:', rootM.levels());
+				console.log('Depth:', rootM.depth());
+				console.log('Nodes:', rootM.nodes());
+
+				for(var i=0; i<rootM.levels(); i++){
+					console.log('Level '+i+': ' + rootM.level(i));
+				}
+			}
 
 		})
 
@@ -209,18 +219,13 @@ const startServer = () =>{
 		socket.on('newBlock', (newBlock) =>{
 
 			if(newBlock != undefined && blockchain != undefined){
-				console.log('Received block:', newBlock.hash);
-
-				var isBlockSynced = blockchain.syncBlock(newBlock);
-				if(isBlockSynced){
-					ioServer.emit('blockchain', blockchain);
-				}else if(typeof isBlockSynced === 'number'){
-					//Start syncing from the index returned by syncBlock;
-					sendEventToAllPeers('getBlockchain', thisNode); //Use this meanwhile
-				}else{
-					sendEventToAllPeers('getBlockchain', thisNode);
+				if(newBlock.length > 1){
+					for(oneBlock of newBlock){
+						handleNewBlock(oneBlock);
+					}
+				}else if(newBlock.length == 1){
+					handleNewBlock(newBlock)
 				}
-
 
 			}else{
 				console.log('New block received or blockchain is undefined');
@@ -250,14 +255,15 @@ const startServer = () =>{
 					sendToTargetPeer('message','Chain is up to date', token.address);
 					//Is up to date
 				}else{
-					for(var i=0; i<missingBlocks.length; i++){
-						var index =
-							setTimeout((index)=>{
-								sendToTargetPeer('newBlock', missingBlocks[index], token.address);
-							}, 2000, i)
-
-
-					}
+					// for(var i=0; i<missingBlocks.length; i++){
+					// 	var index =
+					// 		setTimeout((index)=>{
+					// 			sendToTargetPeer('newBlock', missingBlocks[index], token.address);
+					// 		}, 2000, i)
+					//
+					//
+					// }
+					sendEventToAllPeers('newBlock', missingBlocks, token.address);
 
 				}
 			}else{
@@ -604,12 +610,12 @@ const calculateBlockHash = (block) =>{
 const findMissingBlocks = (signatures) =>{
 	var missingBlocks = []; //Array of blocks that are missing from querying node
 	var blockGap; //Gap of blocks between longest accepted chain and querying node's copy of it
-
+	var localLength;
 	if(blockchain != undefined && signatures != undefined){
 
 		if(blockchain.chain.length > signatures.length){
 			blockGap = blockchain.chain.length - signatures.length;
-
+			localLength = blockchain.chain.length;
 		}else if(signatures.length > blockchain.chain.length){
 			syncBlockchain(); //If the signature is longer than the local chain, the local chain has to be synced
 			return false;
@@ -621,19 +627,26 @@ const findMissingBlocks = (signatures) =>{
 		console.log('Blockgap:', blockGap);
 
 		if(signatures.length >1){
-			for(var i=0; i< signatures.length; i++){
-				// if(signatures[i].previousHash != '0'){
+			// for(var i=0; i< signatures.length; i++){
+			// 	// if(signatures[i].previousHash != '0'){
+			//
+			// 		//Looks up the block's hash within local chain and returns index of said block
+			// 		var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
+			// 		console.log('Index:', index);
+			// 		if(index === false && signatures[i].previousHash !== '0'){ //if the block signature hasn't been found
+			// 			console.log('Found missing block at index:', i);
+			// 			missingBlocks.push(blockchain.chain[i]);
+			// 		}
+			// 	// }
+			//
+			// }
 
-					//Looks up the block's hash within local chain and returns index of said block
-					var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
-					console.log('Index:', index);
-					if(index === false && signatures[i].previousHash !== '0'){ //if the block signature hasn't been found
-						console.log('Found missing block at index:', i);
-						missingBlocks.push(blockchain.chain[i]);
-					}
-				// }
-
+			for(var i=blockGap; i < localLength; i++){
+				missingBlocks.push(blockchain.chain[i]);
 			}
+
+
+
 		}else{
 
 			console.log('Sending the whole chain');
@@ -745,6 +758,25 @@ function recalculateMerkleRoot(transactions){
     let merkleRoot = merkle('sha256').sync(transactionHashes);
     return merkleRoot.root();
   }
+
+}
+
+const handleNewBlock = () =>{
+
+	console.log('Received block:', newBlock.hash);
+
+	var isBlockSynced = blockchain.syncBlock(newBlock);
+	if(isBlockSynced){
+		ioServer.emit('blockchain', blockchain);
+	}else if(typeof isBlockSynced === 'number'){
+		//Start syncing from the index returned by syncBlock;
+		// sendEventToAllPeers('getBlockchain', thisNode); //Use this meanwhile
+		console.log('Block is already present')
+	}else{
+		// sendEventToAllPeers('getBlockchain', thisNode);
+		console.log('Block refused');
+	}
+
 
 }
 
