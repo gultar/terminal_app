@@ -763,7 +763,7 @@ function recalculateMerkleRoot(transactions){
 }
 
 const handleNewBlock = (newBlock) =>{
-
+if(newBlock != undefined){
 	console.log('Received block:', newBlock.hash);
 
 	var isBlockSynced = blockchain.syncBlock(newBlock);
@@ -777,6 +777,10 @@ const handleNewBlock = (newBlock) =>{
 		// sendEventToAllPeers('getBlockchain', thisNode);
 		console.log('Block refused');
 	}
+}else{
+	console.log('Block handler error: New block is undefined');
+}
+
 
 
 }
