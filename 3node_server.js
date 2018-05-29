@@ -412,7 +412,7 @@ const initClientSocket = (address) =>{
 	peerSocket.on('connect', () =>{
 
 		// peerSocket.emit('getBlockchain', thisNode);
-		peerSocket.emit('blockchain', blockchain);
+		// peerSocket.emit('blockchain', blockchain);
 		console.log('Connected to ', address);
 		peers.push(peerSocket);
 	});
@@ -637,7 +637,8 @@ const findMissingBlocks = (signatures) =>{
 					//Looks up the block's hash within local chain and returns index of said block
 					var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
 					console.log('Index:', index);
-					if(index === false && signatures[i].previousHash === '0'){ //if the block signature hasn't been found
+					if(index === false && signatures[i].previousHash !== '0'){ //if the block signature hasn't been found
+						console.log('Found missing block at index:', i);
 						missingBlocks.push(blockchain.chain[i]);
 					}
 				// }
