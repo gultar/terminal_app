@@ -115,10 +115,15 @@ const startServer = () =>{
 			// 	}
 			// }
 
-			blockchain.chain.splice(99, 258);
+			blockchain.chain.splice(108, 249);
 
 			saveBlockchain(blockchain);
 
+		})
+
+		socket.on('getIndexOfHash', (hash)=>{
+			ioServer.emit('message',blockchain.getIndexOfBlockHash(hash));
+			console.log(blockchain.getIndexOfBlockHash(hash))
 		})
 
 		socket.on('validateChain', (token) =>{
@@ -615,6 +620,7 @@ const findMissingBlocks = (signatures) =>{
 	var missingBlocks = []; //Array of blocks that are missing from querying node
 	var blockGap; //Gap of blocks between longest accepted chain and querying node's copy of it
 	var localLength;
+	var lastBlockSignature = signatures[signatures.length -1];
 	if(blockchain != undefined && signatures != undefined){
 
 		if(blockchain.chain.length > signatures.length){
@@ -631,21 +637,12 @@ const findMissingBlocks = (signatures) =>{
 		console.log('Blockgap:', blockGap);
 
 		if(signatures.length >1){
-			// for(var i=0; i< signatures.length; i++){
-			// 	// if(signatures[i].previousHash != '0'){
-			//
-			// 		//Looks up the block's hash within local chain and returns index of said block
-			// 		var index = blockchain.getIndexOfBlockHash(signatures[i].hash);
-			// 		console.log('Index:', index);
-			// 		if(index === false && signatures[i].previousHash !== '0'){ //if the block signature hasn't been found
-			// 			console.log('Found missing block at index:', i);
-			// 			missingBlocks.push(blockchain.chain[i]);
-			// 		}
-			// 	// }
-			//
-			// }
-
-			for(var i=blockGap; i < localLength; i++){
+			console.log('Last signature:', lastBlockSignature);
+			if(blockchain.checkIfChainHasHash(lastBlockSignature.hash)){
+				console.log('Part of it')
+			}
+			for(var i=signatures.length; i < localLength; i++){
+				 //Check if last signature if part of the blockchain
 				missingBlocks.push(blockchain.chain[i]);
 			}
 
