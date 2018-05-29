@@ -759,7 +759,7 @@ function recalculateMerkleRoot(transactions){
 }
 
 const chainUpdater = () =>{
-	sendEventToAllPeers('getBlockchain', thisNode);
+	// sendEventToAllPeers('getBlockchain', thisNode);
 	setTimeout(() =>{
 		if(blockchain != undefined){
 			syncBlockchain();
