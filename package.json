@@ -36,7 +36,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "push": "git stash && git add * && git commit -m '$MSG' && git push origin master",
+    "push": "git add * && git add * && git commit -m '$MSG' && git push origin master",
     "pull": "git stash && git pull & git rebase"
   },
   "repository": {
