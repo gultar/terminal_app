@@ -102,10 +102,16 @@ class Blockchain{
   }
 
   syncBlock(newBlock){
-    
+
       var blockStatus;
       var pending = this.pendingTransactions;
-      var newTransactHashes = Object.keys(newBlock.transactions);
+      
+      if(newBlock.transactions != undefined){
+        var newTransactHashes = Object.keys(newBlock.transactions);
+      }else{
+        return false
+      }
+
 
       for(var hash of newTransactHashes){
         delete pending[hash];
