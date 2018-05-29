@@ -787,7 +787,7 @@ if(newBlock != undefined && newBlock != null && typeof newBlock == 'object'){
 
 const chainUpdater = () =>{
 	// sendEventToAllPeers('getBlockchain', thisNode);
-	setTimeout(() =>{
+	setInterval(() =>{
 		if(blockchain != undefined){
 			syncBlockchain();
 			// sendEventToAllPeers('getBlockchain', thisNode);
