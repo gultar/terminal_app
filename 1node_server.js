@@ -103,17 +103,21 @@ const startServer = () =>{
 
 
 		socket.on('test', (index)=>{
-			if(typeof index === 'number' && index < blockchain.chain.length){
-				var rootM = createMerkleRoot(blockchain.chain[index].transactions)
-				console.log('Root:', rootM.root());
-				console.log('Levels:', rootM.levels());
-				console.log('Depth:', rootM.depth());
-				console.log('Nodes:', rootM.nodes());
+			// if(typeof index === 'number' && index < blockchain.chain.length){
+			// 	var rootM = createMerkleRoot(blockchain.chain[index].transactions)
+			// 	console.log('Root:', rootM.root());
+			// 	console.log('Levels:', rootM.levels());
+			// 	console.log('Depth:', rootM.depth());
+			// 	console.log('Nodes:', rootM.nodes());
+			//
+			// 	for(var i=0; i<rootM.levels(); i++){
+			// 		console.log('Level '+i+': ' + rootM.level(i));
+			// 	}
+			// }
 
-				for(var i=0; i<rootM.levels(); i++){
-					console.log('Level '+i+': ' + rootM.level(i));
-				}
-			}
+			blockchain.chain.splice(99, 258);
+			
+			saveBlockchain(blockchain);
 
 		})
 
