@@ -105,7 +105,7 @@ class Blockchain{
 
       var blockStatus;
       var pending = this.pendingTransactions;
-      
+
       if(newBlock.transactions != undefined){
         var newTransactHashes = Object.keys(newBlock.transactions);
       }else{

@@ -39,9 +39,6 @@ let thisNode = {
 }
 
 
-
-const room = 'sync';
-
 //Container for all connected client tokens
 let clients = [];
 
@@ -136,6 +133,14 @@ const startServer = () =>{
 
 		socket.on('getWholeCopy', (token)=>{
 			sendEventToAllPeers('getBlockchain', thisNode);
+		})
+
+		socket.on('triggerTokenExchange', (token)=>{
+			if(token.address !== thisNode.address){
+				sendEventToAllPeers('storeToken', thisNode);
+				sendEventToAllPeers('triggerTokenExchange', thisNode);
+			}
+
 		})
 
 		socket.on('storeToken', (token) =>{
