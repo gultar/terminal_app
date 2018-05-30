@@ -136,7 +136,9 @@ const startServer = () =>{
 		})
 
 		socket.on('triggerTokenExchange', (token)=>{
-			if(token.address !== thisNode.address){
+			var hasNodeToken = (blockchain.nodeTokens[token.address] != token);
+
+			if(!hasNodeToken){
 				console.log('Triggered token exchange')
 				sendEventToAllPeers('storeToken', thisNode);
 				sendEventToAllPeers('triggerTokenExchange', thisNode);

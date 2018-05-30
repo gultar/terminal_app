@@ -66,7 +66,6 @@ const startServer = () =>{
 
 	  // socket.broadcast.emit('message', 'this is node address ' + getIPAddress());
 
-		sendmsg(socket);
 
 	  socket.on('message', (msg) => {
 	    console.log('Client:', msg);
@@ -126,7 +125,7 @@ const startServer = () =>{
 		socket.on('validateChain', (token) =>{
 			if(blockchain != undefined){
 				console.log('Blockchain valid?',blockchain.isChainValid());
-				// sendmsg(socket);
+			
 			}
 
 		})
@@ -136,7 +135,9 @@ const startServer = () =>{
 		})
 
 		socket.on('triggerTokenExchange', (token)=>{
-			if(token.address !== thisNode.address){
+			var hasNodeToken = (blockchain.nodeTokens[token.address] != token);
+
+			if(!hasNodeToken){
 				console.log('Triggered token exchange')
 				sendEventToAllPeers('storeToken', thisNode);
 				sendEventToAllPeers('triggerTokenExchange', thisNode);
@@ -372,7 +373,7 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 
 const syncBlockchain = () => {
 	var hashesOfBlocks = buildChainHashes();
-	console.log(hashesOfBlocks);
+	
 	sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
 }
 
@@ -646,7 +647,7 @@ const findMissingBlocks = (signatures) =>{
 		if(signatures.length >1){
 			console.log('Last signature:', lastBlockSignature);
 			if(blockchain.checkIfChainHasHash(lastBlockSignature.hash)){
-				console.log('Part of it')
+				
 			}
 			for(var i=signatures.length; i < localLength; i++){
 				 //Check if last signature if part of the blockchain
@@ -719,9 +720,7 @@ const sendToTargetPeer = (eventType, data, address) =>{
 	}
 }
 
-const sendmsg = (socket) =>{
-	socket.emit('message', 'caca');
-}
+
 
 const instanciateBlockchain = (blockchain) =>{
 	return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeTokens, blockchain.ipAddresses, blockchain.orphanedBlocks);
