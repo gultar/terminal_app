@@ -241,7 +241,7 @@ const startServer = () =>{
 			if(newBlock != undefined && blockchain != undefined){
 				if(newBlock.length > 1){
 					for(oneBlock of newBlock){
-						setTimeout((){
+						setTimeout(()=>{
 							hasSynced = handleNewBlock(oneBlock);
 						}, 1000)
 
