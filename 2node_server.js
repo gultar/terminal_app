@@ -237,21 +237,25 @@ const startServer = () =>{
 
 
 		socket.on('newBlock', (newBlock) =>{
-
+			var hasSynced = false;
 			if(newBlock != undefined && blockchain != undefined){
 				if(newBlock.length > 1){
 					for(oneBlock of newBlock){
-						handleNewBlock(oneBlock);
+						hasSynced = handleNewBlock(oneBlock);
 					}
+
 				}else if(newBlock.length == 1){
-					handleNewBlock(newBlock)
+					hasSynced = handleNewBlock(newBlock)
 				}
 
 			}else{
 				console.log('New block received or blockchain is undefined');
 			}
+			
+			if(hasSynced){
+				saveBlockchain(blockchain);
+			}
 
-			saveBlockchain(blockchain);
 
 		});
 
@@ -787,30 +791,37 @@ const handleNewBlock = (newBlock) =>{
 		var isBlockSynced = blockchain.syncBlock(newBlock);
 		if(isBlockSynced){
 			ioServer.emit('blockchain', blockchain);
+			return true;
 		}else if(typeof isBlockSynced === 'number'){
 			//Start syncing from the index returned by syncBlock;
 			// sendEventToAllPeers('getBlockchain', thisNode); //Use this meanwhile
-			console.log('Block is already present')
+			console.log('Block is already present');
+			return false;
 		}else{
 			// sendEventToAllPeers('getBlockchain', thisNode);
 			console.log('Block refused');
+			return false;
 		}
 	}else{
 		console.log('Block handler error: New block is undefined');
+		return false;
 	}
 
 }
 
 const sendBlocksFromHash = (hash, token) =>{
 	if(blockchain != undefined && hash != undefined && token != undefined){
-		var blocks = blockchain.getBlocksFromHash(hash);
-		if(blocks){
-			sendToTargetPeer('newBlock', blocks, token.address);
-			return true;
-		}else{
-			sendEventToAllPeers('message', 'No block found with received hash', token.address);
-			return false;
+		if(blockchain.checkIfChainHasHash(hash)){
+			var blocks = blockchain.getBlocksFromHash(hash);
+			if(blocks){
+				sendToTargetPeer('newBlock', blocks, token.address);
+				return true;
+			}else{
+				sendEventToAllPeers('message', 'No block found with received hash', token.address);
+				return false;
+			}
 		}
+
 	}
 }
 
