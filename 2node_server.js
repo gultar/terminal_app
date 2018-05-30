@@ -7,7 +7,7 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-const port = 8081
+const port = 8080
 const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
@@ -241,7 +241,10 @@ const startServer = () =>{
 			if(newBlock != undefined && blockchain != undefined){
 				if(newBlock.length > 1){
 					for(oneBlock of newBlock){
-						hasSynced = handleNewBlock(oneBlock);
+						setTimeout((){
+							hasSynced = handleNewBlock(oneBlock);
+						}, 1000)
+
 					}
 
 				}else if(newBlock.length == 1){
@@ -251,7 +254,7 @@ const startServer = () =>{
 			}else{
 				console.log('New block received or blockchain is undefined');
 			}
-			
+
 			if(hasSynced){
 				saveBlockchain(blockchain);
 			}
