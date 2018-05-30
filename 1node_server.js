@@ -137,6 +137,7 @@ const startServer = () =>{
 
 		socket.on('triggerTokenExchange', (token)=>{
 			if(token.address !== thisNode.address){
+				console.log('Triggered token exchange')
 				sendEventToAllPeers('storeToken', thisNode);
 				sendEventToAllPeers('triggerTokenExchange', thisNode);
 			}
@@ -145,6 +146,7 @@ const startServer = () =>{
 
 		socket.on('storeToken', (token) =>{
 			if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
+				console.log('Received a node token from ', token.address);
 				blockchain.nodeTokens[token.address] = token;
 				blockchain.addMiningAddress(token);
 			}
