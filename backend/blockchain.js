@@ -311,11 +311,22 @@ class Blockchain{
 
         console.log('currentblock hash does not match previousblock hash');
         console.log('Invalid block is :' + i + ' with hash: ' + currentBlock.hash + ' and previous hash: ' + previousBlock.hash);
-        return false;
+        console.log('Truncating chain from invalid block');
+        this.truncateChain(i);
       }
     }
 
     return true;
+  }
+
+  truncateChain(index){
+    if(index >= this.chain.length){
+      var blockDifference = this.chain.length - index;
+      this.chain.splice(index, blockDifference);
+    }else{
+      console.log('Segment of chain to truncate has out of range index');
+    }
+
   }
 
 
@@ -348,6 +359,24 @@ class Blockchain{
 
   }
 
+  getBlocksFromHash(lastHash){
+  	var blocks = [];
+  	var index = this.getIndexOfBlockHash(lastHash);
+
+  	if(index && index >=0){
+
+  		for(var i=index; i< this.chain.length; i++){
+        blocks.push(this.chain[i]);
+      }
+
+  		return blocks;
+  	}else{
+  		console.log('ERROR: Hash not found');
+      return false;
+  	}
+
+  }
+
   validateTransaction(transaction, token){
     if(transaction != undefined && token != undefined){
 
@@ -373,6 +402,8 @@ class Blockchain{
   		console.log('ERROR: Either the transaction or the token sent is undefined');
   		return false;
   	}
+
+
   }
 }
 
