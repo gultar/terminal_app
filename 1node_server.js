@@ -115,15 +115,32 @@ const startServer = () =>{
 
 		})
 
-		socket.on('syncFromHash', (hash, token)=>{
-			var blocksSent = sendBlocksFromHash(hash, token);
-			if(blocksSent){
-				console.log('Sent blocks following hash: '+hash);
-				console.log('To node address:', token.address);
-			}else{
-				console.log('Received hash is invalid');
-			}
-		})
+		// socket.on('syncFromHash', (hash, token)=>{
+		// 	if(blockchain != undefined && hash != undefined && token != undefined){
+		//
+		// 			var blocks = blockchain.getBlocksFromHash(hash);
+		// 			console.log(blocks);
+		// 			if(blocks){
+		// 				sendToTargetPeer('newBlock', blocks, token.address);
+		//
+		// 			}else{
+		// 				sendEventToAllPeers('message', 'No block found with received hash', token.address);
+		//
+		// 			}
+		//
+		//
+		// 	}
+		// 	// var blocksSent = sendBlocksFromHash(hash, token);
+		// 	// console.log('TOKEN', token)
+		// 	// console.log('HASH', hash);
+		// 	// console.log(blocksSent);
+		// 	// if(blocksSent){
+		// 	// 	console.log('Sent blocks following hash: '+hash);
+		// 	// 	console.log('To node address:', token.address);
+		// 	// }else{
+		// 	// 	console.log('Received hash is invalid');
+		// 	// }
+		// })
 
 		socket.on('validateChain', (token) =>{
 			if(blockchain != undefined){
@@ -137,16 +154,16 @@ const startServer = () =>{
 			sendEventToAllPeers('getBlockchain', thisNode);
 		})
 
-		socket.on('triggerTokenExchange', (token)=>{
-			var hasNodeToken = (blockchain.nodeTokens[token.address] != token);
-
-			if(!hasNodeToken){
-				console.log('Triggered token exchange')
-				sendEventToAllPeers('storeToken', thisNode);
-				sendEventToAllPeers('triggerTokenExchange', thisNode);
-			}
-
-		})
+		// socket.on('triggerTokenExchange', (token)=>{
+		// 	var hasNodeToken = (blockchain.nodeTokens[token.address] != token);
+		//
+		// 	if(!hasNodeToken){
+		// 		console.log('Triggered token exchange')
+		// 		sendEventToAllPeers('storeToken', thisNode);
+		// 		sendEventToAllPeers('triggerTokenExchange', thisNode);
+		// 	}
+		//
+		// })
 
 		socket.on('storeToken', (token) =>{
 			if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
@@ -389,10 +406,10 @@ const syncBlockchain = () => {
 	sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
 }
 
-const sync = () =>{
-	var latestBlock = blockchain.getLatestBlock();
-	sendEventToAllPeers('syncFromHash', latestBlock.hash, thisNode);
-}
+// const sync = () =>{
+// 	var latestBlock = blockchain.getLatestBlock();
+// 	sendEventToAllPeers('syncFromHash', latestBlock.hash, thisNode);
+// }
 
 
 //Init blockchain starting from local file
@@ -812,28 +829,14 @@ const handleNewBlock = (newBlock) =>{
 
 }
 
-const sendBlocksFromHash = (hash, token) =>{
-	if(blockchain != undefined && hash != undefined && token != undefined){
-		if(blockchain.checkIfChainHasHash(hash)){
-			var blocks = blockchain.getBlocksFromHash(hash);
-			if(blocks){
-				sendToTargetPeer('newBlock', blocks, token.address);
-				return true;
-			}else{
-				sendEventToAllPeers('message', 'No block found with received hash', token.address);
-				return false;
-			}
-		}
 
-	}
-}
 
 const chainUpdater = () =>{
 	// sendEventToAllPeers('getBlockchain', thisNode);
 	setInterval(() =>{
 		if(blockchain != undefined){
-			// syncBlockchain();
-			sync();
+			syncBlockchain();
+			// sync();
 			// sendEventToAllPeers('getBlockchain', thisNode);
 		}else{
 			console.log('blockchain is not loaded yet. Trying again');

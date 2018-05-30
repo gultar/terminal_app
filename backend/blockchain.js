@@ -359,22 +359,17 @@ class Blockchain{
 
   }
 
-  getBlocksFromHash(lastHash){
+  getBlocksFromHash(hash){
   	var blocks = [];
-  	var index = this.getIndexOfBlockHash(lastHash);
+  	var index = this.getIndexOfBlockHash(hash);
 
   	if(index && index >=0){
-      if(index < this.chain.length - 1){
+
         for(var i=index; i< this.chain.length; i++){
           blocks.push(this.chain[i]);
         }
         return blocks;
-      }else{
-        console.log('Hash is at last block');
-        console.log("Node's chain is up to date");
-      }
-
-  	}else{
+    }else{
   		console.log('ERROR: Hash not found');
       return false;
   	}
