@@ -266,15 +266,16 @@ const startServer = () =>{
 		socket.on('newBlock', (newBlock) =>{
 			var hasSynced = false;
 			if(newBlock != undefined && blockchain != undefined){
-				if(newBlock.length > 1){
-					for(oneBlock of newBlock){
+				if(newBlock.length > 1 && Array.isArray(newBlock)){
+					for(var i=0; i<newBlock.length; i++){
 						setTimeout(()=>{
-							hasSynced = handleNewBlock(oneBlock);
+							console.log('Syncing:', newBlock[i].hash)
+							hasSynced = handleNewBlock(newBlock[i]);
 						}, 1000)
 
 					}
 
-				}else if(newBlock.length == 1){
+				}else if(newBlock !== undefined){
 					hasSynced = handleNewBlock(newBlock)
 				}
 
