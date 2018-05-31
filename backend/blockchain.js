@@ -95,6 +95,16 @@ class Blockchain{
     }
   }
 
+  getMiningAddress(addressToken){
+    if(addressToken != undefined){
+      if(this.miningAddresses[addressToken.hashSignature] && this.miningAddresses[addressToken.hashSignature] instanceof BlockchainAddress){
+  			return this.miningAddresses[addressToken.hashSignature];
+  		}else{
+  			this.addMiningAddress(addressToken);
+  		}
+    }
+  }
+
   addBlock(newBlock){
     newBlock.previousHash = this.getLatestBlock().hash;
     newBlock.mineBlock(this.difficulty); //Proof of work in action
