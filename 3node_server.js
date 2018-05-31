@@ -111,36 +111,37 @@ const startServer = () =>{
 			// 	}
 			// }
 			blockchain.chain.splice(200, 632);
+			sync();
 			ioServer.emit('blockchain', blockchain);
 
 		})
 
-		// socket.on('syncFromHash', (hash, token)=>{
-		// 	if(blockchain != undefined && hash != undefined && token != undefined){
-		//
-		// 			var blocks = blockchain.getBlocksFromHash(hash);
-		// 			console.log(blocks);
-		// 			if(blocks){
-		// 				sendToTargetPeer('newBlock', blocks, token.address);
-		//
-		// 			}else{
-		// 				sendEventToAllPeers('message', 'No block found with received hash', token.address);
-		//
-		// 			}
-		//
-		//
-		// 	}
-		// 	// var blocksSent = sendBlocksFromHash(hash, token);
-		// 	// console.log('TOKEN', token)
-		// 	// console.log('HASH', hash);
-		// 	// console.log(blocksSent);
-		// 	// if(blocksSent){
-		// 	// 	console.log('Sent blocks following hash: '+hash);
-		// 	// 	console.log('To node address:', token.address);
-		// 	// }else{
-		// 	// 	console.log('Received hash is invalid');
-		// 	// }
-		// })
+		socket.on('syncFromHash', (hash, token)=>{
+			if(blockchain != undefined && hash != undefined && token != undefined){
+
+					var blocks = blockchain.getBlocksFromHash(hash);
+					console.log(blocks);
+					if(blocks){
+						sendToTargetPeer('newBlock', blocks, token.address);
+
+					}else{
+						sendEventToAllPeers('message', 'No block found with received hash', token.address);
+
+					}
+
+
+			}
+			var blocksSent = sendBlocksFromHash(hash, token);
+			console.log('TOKEN', token)
+			console.log('HASH', hash);
+			console.log(blocksSent);
+			if(blocksSent){
+				console.log('Sent blocks following hash: '+hash);
+				console.log('To node address:', token.address);
+			}else{
+				console.log('Received hash is invalid');
+			}
+		})
 
 		socket.on('validateChain', (token) =>{
 			if(blockchain != undefined){
@@ -406,10 +407,10 @@ const syncBlockchain = () => {
 	sendEventToAllPeers('updateChain', hashesOfBlocks, thisNode);
 }
 
-// const sync = () =>{
-// 	var latestBlock = blockchain.getLatestBlock();
-// 	sendEventToAllPeers('syncFromHash', latestBlock.hash, thisNode);
-// }
+const sync = () =>{
+	var latestBlock = blockchain.getLatestBlock();
+	sendEventToAllPeers('syncFromHash', latestBlock.hash, thisNode);
+}
 
 
 //Init blockchain starting from local file
@@ -636,7 +637,12 @@ const startMining = (miningAddrToken) => {
 			ioServer.emit('miningApproved', blockchain);
 			ioServer.emit('message', message);
 			sendEventToAllPeers('message', message);
-			sendEventToAllPeers('newBlock', newBlock);
+			console.log(message);
+			setTimeout(()=>{
+				console.log('Sending:', newBlock)
+				sendEventToAllPeers('newBlock', newBlock);
+			}, 3000)
+
 			// sendEventToAllPeers('blockchain', blockchain);
 
 			return true;
@@ -868,5 +874,5 @@ startServer()
 initBlockchain();
 setTimeout(()=>{
 	connectToPeerNetwork();
-	chainUpdater();
+	// chainUpdater();
 }, 2500)
