@@ -847,5 +847,5 @@ startServer()
 initBlockchain();
 setTimeout(()=>{
 	connectToPeerNetwork();
-	// chainUpdater();
+	chainUpdater();
 }, 2500)
