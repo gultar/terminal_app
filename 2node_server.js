@@ -490,7 +490,7 @@ const storeToken = (token) =>{
   This is a listener function that redistributes a transaction once its been received
   from an endpoint client
 */
-const distributeTransaction = (transaction, fromNodeToken) =>{
+const distributeTransaction = (socket, transaction, fromNodeToken) =>{
   ///////////////////////////////////////////////////////////
   //Need to validate transaction everytime it is received
   ///////////////////////////////////////////////////////////
