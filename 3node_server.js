@@ -729,6 +729,10 @@ const chainUpdater = () =>{
 	// sendEventToAllPeers('getBlockchain', thisNode);
 	setInterval(() =>{
 		if(blockchain != undefined){
+
+			if(blockchain.chain.length == 1){
+				sendEventToAllPeers('getBlockchain', thisNode);
+			}
 			// syncBlockchain();
       var latestBlock = blockchain.getLatestBlock();
     	sendEventToAllPeers('sync', latestBlock.hash, thisNode);
@@ -784,6 +788,8 @@ setTimeout(()=>{
 	connectToPeerNetwork();
 	chainUpdater();
 }, 2500)
+
+
 
 
 // class Node{

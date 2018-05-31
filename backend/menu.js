@@ -34,8 +34,6 @@ const nodeMenu = () =>{
 	console.log('1. node: Start Blockchain Node');
 	console.log('2. light: Start a light node');
 	console.log('3. miner: Start a miner node');
-	console.log("4. broadcast: Broadcast Message\n");
-	console.log("Type 0 or 'menu' to show this menu again\n");
 	stdin.resume();
 	stdin.setEncoding('utf8');
 
@@ -43,28 +41,20 @@ const nodeMenu = () =>{
 
 		let choice = data.toString().trim()
 		switch(choice){
-			case '0':
-			case 'menu':
-				nodeMenu();
-				break;
 			case '1':
 			case 'node':
-				//node.js
+				startFullNode();
 				break;
 			case '2':
 			case 'light':
-				mine(thisNode);
+				startLightNode();
 				break;
 			case '3':
-			case 'sync':
-				// syncBlockchain();
-				sendEventToAllPeers('getBlockchain', thisNode);
-			case '4':
-			case 'broadcast':
-				sendEventToAllPeers('message', 'coucou');
+			case 'miner':
+				startMinerNode();
 				break;
 			default:
-				stdout.write(`Options selected: ${choice}`);
+				stdout.write(`Unkown command: ${choice}`);
 				break;
 		}
 	});
@@ -73,4 +63,19 @@ const nodeMenu = () =>{
 }
 
 
-module.exports = { nodeMenu }
+const startFullNode = () =>{
+	runScript('./1node_server.js', function(err){
+		console.log('err');
+	})
+}
+
+const startLightNode = () =>{
+
+}
+
+const startMinerNode = () =>{
+
+}
+
+nodeMenu();
+// module.exports = { nodeMenu }
