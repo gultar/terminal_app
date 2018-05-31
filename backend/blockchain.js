@@ -379,6 +379,8 @@ class Blockchain{
           blocks.push(this.chain[i]);
         }
         return blocks;
+    }else if(index==0){
+      return this.chain[0];
     }else{
   		console.log('ERROR: Hash not found');
       return false;

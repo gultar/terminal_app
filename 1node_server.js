@@ -466,9 +466,6 @@ const sync = (hash, token) =>{
       if(blocks){
         sendToTargetPeer('newBlock', blocks, token.address);
 
-      }else{
-        sendEventToAllPeers('message', 'No block found with received hash', token.address);
-
       }
 
   }
@@ -735,6 +732,7 @@ const chainUpdater = () =>{
 			}
 			// syncBlockchain();
       var latestBlock = blockchain.getLatestBlock();
+			console.log('Sending hash:', latestBlock.hash);
     	sendEventToAllPeers('sync', latestBlock.hash, thisNode);
 			// sendEventToAllPeers('getBlockchain', thisNode);
 		}else{
