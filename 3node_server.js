@@ -113,6 +113,8 @@ const startServer = () =>{
 			blockchain.chain.splice(200, 632);
 			sync();
 			ioServer.emit('blockchain', blockchain);
+			ioServer.emit('blockchain', blockchain.getBlocksFromHash(hash));
+			ioServer.emit('blockchain', blockchain.getIndexOfBlockHash(hash));
 
 		})
 
@@ -131,16 +133,16 @@ const startServer = () =>{
 
 
 			}
-			var blocksSent = sendBlocksFromHash(hash, token);
-			console.log('TOKEN', token)
-			console.log('HASH', hash);
-			console.log(blocksSent);
-			if(blocksSent){
-				console.log('Sent blocks following hash: '+hash);
-				console.log('To node address:', token.address);
-			}else{
-				console.log('Received hash is invalid');
-			}
+			// var blocksSent = sendBlocksFromHash(hash, token);
+			// console.log('TOKEN', token)
+			// console.log('HASH', hash);
+			// console.log(blocksSent);
+			// if(blocksSent){
+			// 	console.log('Sent blocks following hash: '+hash);
+			// 	console.log('To node address:', token.address);
+			// }else{
+			// 	console.log('Received hash is invalid');
+			// }
 		})
 
 		socket.on('validateChain', (token) =>{
@@ -722,6 +724,7 @@ const findMissingBlocks = (signatures) =>{
 }
 
 
+
 //Creates an chain of block signatures, that is, the hash of the block and the previous hash only.
 const buildChainHashes = () =>{
 	var hashSignaturesOnChain = []
@@ -841,8 +844,8 @@ const chainUpdater = () =>{
 	// sendEventToAllPeers('getBlockchain', thisNode);
 	setInterval(() =>{
 		if(blockchain != undefined){
-			syncBlockchain();
-			// sync();
+			// syncBlockchain();
+			sync();
 			// sendEventToAllPeers('getBlockchain', thisNode);
 		}else{
 			console.log('blockchain is not loaded yet. Trying again');
