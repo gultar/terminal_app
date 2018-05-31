@@ -97,6 +97,10 @@ const startServer = () =>{
 
 	  });
 
+		socket.on('index', (hash)=>{
+			ioServer.emit('blockchain', blockchain.getIndexOfBlockHash(hash));
+		})
+
 
 		socket.on('test', (hash)=>{
 			// if(typeof index === 'number' && index < blockchain.chain.length){
@@ -122,7 +126,10 @@ const startServer = () =>{
 			if(blockchain != undefined && hash != undefined && token != undefined){
 
 					var blocks = blockchain.getBlocksFromHash(hash);
-					console.log(blocks);
+					// console.log(blocks);
+					for(block of blocks){
+						console.log('Block hash:', block.hash);
+					}
 					if(blocks){
 						sendToTargetPeer('newBlock', blocks, token.address);
 

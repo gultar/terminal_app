@@ -365,7 +365,7 @@ class Blockchain{
 
   	if(index && index >=0){
 
-        for(var i=index+1; i< this.chain.length; i++){
+        for(var i=index; i< this.chain.length; i++){
           blocks.push(this.chain[i]);
         }
         return blocks;
