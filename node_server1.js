@@ -8,8 +8,12 @@ const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = r
 var expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 5000, 'forceNew':false });
-// const P2P = require('socket.io-p2p');
-// const p2p = require('socket.io-p2p-server').Server;
+const { getIPAddress } = require('./backend/ipFinder.js');
+const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
+				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082',
+			'http://192.168.1.72:8080','http://192.168.1.72:8081','http://192.168.1.72:8082', 'http://192.168.1.74:8080', 'http://192.168.1.74:8081',
+			 'http://192.168.1.74:8082', 'http://10.112.106.71:8080', 'http://10.112.106.71:8081', 'http://10.112.106.71:8082'];
+
 const fs = require('fs');
 const { getIPAddress } = require('./backend/ipFinder.js');
 

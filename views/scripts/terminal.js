@@ -449,9 +449,6 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       }
 
 
-
-
-
     }
 
     }
@@ -625,10 +622,10 @@ setTimeout(function(){
         outputDebug('Server:'+message)
       })
 
-      socket.on('seedingNodes', function(node){
-        blockchain.nodeAddresses.push(node);
-        console.log('Seeding the blockchain with this address:', node);
-      })
+      // socket.on('seedingNodes', function(node){
+      //   blockchain.nodeAddresses.push(node);
+      //   console.log('Seeding the blockchain with this address:', node);
+      // })
 
       socket.on('miningApproved', function(updatedBlockchain){
         var latestBlock = getLatestBlock(updatedBlockchain);
