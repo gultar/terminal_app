@@ -110,9 +110,9 @@ const startServer = () =>{
 			// 		console.log('Level '+i+': ' + rootM.level(i));
 			// 	}
 			// }
-			// blockchain.chain.splice(830, 2);
-			// sync();
-			// ioServer.emit('blockchain', blockchain);
+			blockchain.chain.splice(800, 32);
+			sync();
+			ioServer.emit('blockchain', blockchain);
 			// ioServer.emit('blockchain', blockchain.getBlocksFromHash(hash));
 			// ioServer.emit('blockchain', blockchain.getIndexOfBlockHash(hash));
 
@@ -122,10 +122,7 @@ const startServer = () =>{
 			if(blockchain != undefined && hash != undefined && token != undefined){
 
 					var blocks = blockchain.getBlocksFromHash(hash);
-					// console.log(blocks);
-					for(block of blocks){
-						console.log('Block hash:', block.hash);
-					}
+			
 					if(blocks){
 						sendToTargetPeer('newBlock', blocks, token.address);
 
@@ -241,7 +238,7 @@ const startServer = () =>{
 		socket.on('newBlock', (newBlock) =>{
 			var hasSynced = false;
 			if(newBlock != undefined && blockchain != undefined){
-				console.log('Syncing:', newBlock)
+
 				if(newBlock.length > 1 && Array.isArray(newBlock)){
 					for(var i=0; i<newBlock.length; i++){
 
@@ -785,7 +782,7 @@ function recalculateMerkleRoot(transactions){
 
 const handleNewBlock = (newBlock) =>{
 	if(newBlock != undefined && newBlock != null && typeof newBlock == 'object'){
-		console.log('Received block:', newBlock.hash);
+		// console.log('Received block:', newBlock.hash);
 
 		var isBlockSynced = blockchain.syncBlock(newBlock);
 		if(isBlockSynced){
@@ -798,7 +795,7 @@ const handleNewBlock = (newBlock) =>{
 			return false;
 		}else{
 			// sendEventToAllPeers('getBlockchain', thisNode);
-			console.log('Block refused');
+			// console.log('Block refused');
 			return false;
 		}
 	}else{
