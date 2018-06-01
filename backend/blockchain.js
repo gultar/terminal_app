@@ -376,7 +376,7 @@ class Blockchain{
        Only sends block(s) if the hash sent is not the same as the current
        latest block on the chain, thus avoiding too much useless exchange
     */
-    if(latestBlock.hash !== hash){
+    // if(latestBlock.hash != hash){
       if(index && index >=0){
 
           for(var i=index+1; i< this.chain.length; i++){
@@ -389,9 +389,9 @@ class Blockchain{
     		console.log('ERROR: Hash not found');
         return false;
     	}
-    }else{
-      return false;
-    }
+    // }else{
+    //   return false;
+    // }
 
 
   }

@@ -744,15 +744,10 @@ const chainUpdater = () =>{
 	// sendEventToAllPeers('getBlockchain', thisNode);
 	setInterval(() =>{
 		if(blockchain != undefined){
-
-			// if(blockchain.chain.length == 1){
-			// 	sendEventToAllPeers('getBlockchain', thisNode);
-			// }
-			// syncBlockchain();
       var latestBlock = blockchain.getLatestBlock();
-			console.log('Sending hash:', latestBlock.hash);
+
     	sendEventToAllPeers('sync', latestBlock.hash, thisNode);
-			// sendEventToAllPeers('getBlockchain', thisNode);
+			
 		}else{
 			console.log('blockchain is not loaded yet. Trying again');
 			return chainUpdater();
