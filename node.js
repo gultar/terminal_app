@@ -125,7 +125,7 @@ class Node{
 
 
     		socket.on('newBlock', (newBlock) =>{
-          receiveNewBlock(newBlock);
+          this.receiveNewBlock(newBlock);
     		});
 
     	  socket.on('getBlockchain', (token) =>{
@@ -429,7 +429,7 @@ class Node{
   }
 
   sync(hash, token){
-    if(hash != undefined && token != undefined){ 
+    if(hash != undefined && token != undefined){
         var blocks = this.blockchain.getBlocksFromHash(hash);
 
         if(blocks){
@@ -441,6 +441,78 @@ class Node{
 
     }
   }
+
+  /*
+    Listener funcction that catches a block or a group of blocks, validates everything and
+    appends it to current chain. With every single block, there needs to be thorough validation,
+    on every single transaction
+  */
+  receiveNewBlock(newBlock){
+    var hasSynced = false;
+    if(newBlock != undefined){
+
+      if(newBlock.length > 1 && Array.isArray(newBlock)){
+        for(var i=0; i<newBlock.length; i++){
+
+            hasSynced = this.handleNewBlock(newBlock[i]);
+
+        }
+
+      }else if(newBlock !== undefined){
+        hasSynced = this.handleNewBlock(newBlock)
+      }
+
+    }else{
+      console.log('New block received or blockchain is undefined');
+    }
+
+    if(hasSynced){
+      this.save(this.blockchain);
+    }
+  }
+
+  handleNewBlock(newBlock){
+  	if(newBlock != undefined && newBlock != null && typeof newBlock == 'object'){
+  		// console.log('Received block:', newBlock.hash);
+
+  		var isBlockSynced = this.blockchain.syncBlock(newBlock);
+  		if(isBlockSynced){
+  			ioServer.emit('blockchain', blockchain);
+  			return true;
+  		}else if(typeof isBlockSynced === 'number'){
+  			//Start syncing from the index returned by syncBlock;
+  			// sendEventToAllPeers('getBlockchain', thisNode); //Use this meanwhile
+  			console.log('Block is already present');
+  			return false;
+  		}else{
+  			// sendEventToAllPeers('getBlockchain', thisNode);
+  			// console.log('Block refused');
+  			return false;
+  		}
+  	}else{
+  		console.log('Block handler error: New block is undefined');
+  		return false;
+  	}
+
+  }
+
+  /*
+    Routine that pokes network to know if this node has missed a broadcasted change
+  */
+  chainUpdater(){
+  	// sendEventToAllPeers('getBlockchain', thisNode);
+  	setInterval(() =>{
+
+        var latestBlock = this.blockchain.getLatestBlock();
+  			console.log('Sending hash:', latestBlock.hash);
+      	this.sendEventToAllPeers('sync', latestBlock.hash, this.token);
+
+  	}, 30000)
+
+  }
+
+
+
 
   /*
     Transactions
@@ -494,4 +566,5 @@ setTimeout(()=>{ //always wait for readstream to close before saving or vice ver
   // myNode.save(blockc);
   myNode.startServer();
   myNode.connectToPeerNetwork();
+  myNode.chainUpdater();
 }, 3000)
