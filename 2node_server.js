@@ -103,8 +103,8 @@ const startServer = () =>{
 		})
 
     socket.on('tokenRequest', (peerToken)=>{
-      this.storeToken(peerToken);
-      this.sendToTargetPeer('storeToken', this.token, peerToken.address);
+      storeToken(peerToken);
+      sendToTargetPeer('storeToken', thisNode, peerToken.address);
     })
 
 		socket.on('storeToken', (token) =>{ storeToken(token)	})
