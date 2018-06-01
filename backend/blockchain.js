@@ -378,13 +378,13 @@ class Blockchain{
     */
     // if(latestBlock.hash != hash){
     console.log('INDEX', index);
-      if(index == true && index >=0){
+      if(index > -1){
 
-          for(var i=index+1; i< this.chain.length; i++){
+          for(var i=index+1; i < this.chain.length; i++){
             blocks.push(this.chain[i]);
           }
           return blocks;
-      }else{
+      }else if(index == false){
     		console.log('ERROR: Hash not found');
         return false;
     	}
