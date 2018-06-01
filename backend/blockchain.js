@@ -377,7 +377,7 @@ class Blockchain{
        latest block on the chain, thus avoiding too much useless exchange
     */
     // if(latestBlock.hash != hash){
-    console.log('INDEX', index);
+    
       if(index > -1){
 
           for(var i=index+1; i < this.chain.length; i++){

@@ -478,7 +478,7 @@ const sync = (hash, token) =>{
   if(blockchain != undefined && hash != undefined && token != undefined){
 
       var blocks = blockchain.getBlocksFromHash(hash);
-      console.log(blocks);
+
       if(blocks){
         sendToTargetPeer('newBlock', blocks, token.address);
 
@@ -745,7 +745,7 @@ const chainUpdater = () =>{
 	setInterval(() =>{
 		if(blockchain != undefined){
       var latestBlock = blockchain.getLatestBlock();
-      console.log('HASH:', latestBlock.hash)
+      
     	sendEventToAllPeers('sync', latestBlock.hash, thisNode);
 
 		}else{
