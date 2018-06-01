@@ -223,7 +223,7 @@ const initClientSocket = (address) =>{
 	var peerSocket = io(address, {'forceNew': true});
 
 	peerSocket.emit('client-connect', thisNode);
-	peerSocket.emit('storeToken', thisNode);
+	peerSocket.emit('tokenRequest', thisNode);
 
 	peerSocket.emit('message', 'You are connected to '+thisNode.address);
 
