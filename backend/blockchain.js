@@ -371,19 +371,26 @@ class Blockchain{
   getBlocksFromHash(hash){
   	var blocks = [];
   	var index = this.getIndexOfBlockHash(hash);
+    var latestBlock = this.getLatestBlock();
+    /*
+       Only sends block(s) if the hash sent is not the same as the current
+       latest block on the chain, thus avoiding too much useless exchange
+    */
+    if(latestBlock.hash !== hash){
+      if(index && index >=0){
 
-  	if(index && index >=0){
+          for(var i=index+1; i< this.chain.length; i++){
+            blocks.push(this.chain[i]);
+          }
+          return blocks;
+      }else if(index==0){
+        return this.chain[0];
+      }else{
+    		console.log('ERROR: Hash not found');
+        return false;
+    	}
+    }
 
-        for(var i=index+1; i< this.chain.length; i++){
-          blocks.push(this.chain[i]);
-        }
-        return blocks;
-    }else if(index==0){
-      return this.chain[0];
-    }else{
-  		console.log('ERROR: Hash not found');
-      return false;
-  	}
 
   }
 

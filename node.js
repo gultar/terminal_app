@@ -306,7 +306,8 @@ class Node{
   }
 
   initClientSocket(address){
-    var peerSocket = io(address, {'forceNew': true});
+    var peerSocket = io(address, {'forceNew': true, 'timeout':5000, 'connect timeout': 5000});
+
 
   	peerSocket.emit('client-connect', this.token);
   	peerSocket.emit('tokenRequest', this.token);
@@ -325,7 +326,7 @@ class Node{
   	peerSocket.on('disconnect', () =>{
   		console.log('connection with peer dropped');
   		this.peers.splice(this.peers.indexOf(peerSocket), 1);
-  		peerSocket.emit('close', this.tokenNode);
+  		peerSocket.emit('close', this.token);
   	})
   }
 
@@ -428,8 +429,7 @@ class Node{
   }
 
   sync(hash, token){
-    if(hash != undefined && token != undefined){
-
+    if(hash != undefined && token != undefined){ 
         var blocks = this.blockchain.getBlocksFromHash(hash);
 
         if(blocks){
