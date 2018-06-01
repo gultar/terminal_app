@@ -241,7 +241,7 @@ class Blockchain{
   }
 
   getIndexOfBlockHash(hash){
-    for(var i=this.chain.length -1; i > 0; i--){
+    for(var i=0; i < this.chain.length; i++){
       if(this.chain[i].hash === hash){
         return i;
       }
@@ -377,6 +377,7 @@ class Blockchain{
        latest block on the chain, thus avoiding too much useless exchange
     */
     // if(latestBlock.hash != hash){
+    console.log('INDEX', index);
       if(index && index >=0){
 
           for(var i=index+1; i< this.chain.length; i++){
