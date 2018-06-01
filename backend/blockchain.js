@@ -115,30 +115,29 @@ class Blockchain{
 
       var blockStatus;
       var pending = this.pendingTransactions;
-
       if(newBlock.transactions != undefined){
         var newTransactHashes = Object.keys(newBlock.transactions);
       }else{
         return false
       }
 
-
-      for(var hash of newTransactHashes){
-        delete pending[hash];
-      }
       //Will return true if the block is valid, false if not or the index of the block to which it is linked if valid but out of sync
       blockStatus = this.validateBlock(newBlock);
 
       if(blockStatus === true){
         console.log('New Block validated successfully');
+        for(var hash of newTransactHashes){
+          delete pending[hash];
+        }
         this.chain.push(newBlock);
         this.pendingTransactions = pending;
         return true;
       }else if(blockStatus > 0){
-        return blockStatus;
-
+        /*Handle chain forking between two peers*/
+        // return blockStatus;
+        return false;
       }else if(blockStatus === false){
-        console.log('New Block is invalid');
+        // console.log('New Block is invalid');
         return false;
       }else{
         return false;
@@ -349,8 +348,7 @@ class Blockchain{
     if(!containsCurrentBlock){
       if(!isLinked){
         if(latestBlock.previousHash == block.previousHash){
-
-          console.log('New block received has been orphaned since latest block has been mined before.');
+          /*New block received has been orphaned since latest block has been mined before.*/
           return false;
         }
 
@@ -363,7 +361,8 @@ class Blockchain{
       }
 
     }else if(containsCurrentBlock){
-      console.log('Chain already contains that block')
+      // console.log('Chain already contains that block')
+      /*Chain already contains that block*/
       return false;
     }
 

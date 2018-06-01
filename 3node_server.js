@@ -85,7 +85,7 @@ const startServer = () =>{
 		})
 
 		socket.on('sync', (hash, token)=>{
-      sync(token, token)
+      sync(hash, token)
     })
 
 		socket.on('validateChain', (token) =>{
@@ -364,7 +364,7 @@ const saveBlockchain = (blockchainReceived) => {
 						var wstream = fs.createWriteStream('blockchain.json');
 
 						wstream.write(json);
-
+						wstream.end();
 
 					}
 
@@ -379,6 +379,7 @@ const saveBlockchain = (blockchainReceived) => {
 						var wstream = fs.createWriteStream('blockchain.json');
 
 						wstream.write(json);
+						wstream.end();
           }
 
 			}
@@ -466,7 +467,9 @@ const sync = (hash, token) =>{
       if(blocks){
         sendToTargetPeer('newBlock', blocks, token.address);
 
-      }
+      }else if(!blocks){
+
+			}
 
   }
 }
@@ -649,7 +652,7 @@ const getBlockchain = (socket, token) =>{
         // console.log(msg);
         sendEventToAllPeers('message', msg);
         sendToTargetPeer('blockchain', blockchain, token.address);
-        ioServer.emit('blockchain', blockchain);
+        // ioServer.emit('blockchain', blockchain);
       }else{
         console.log('Current blockchain is invalid. Flushing local chain and requesting a valid one');
         blockchain = new Blockchain(); //Need to find a way to truncate invalid part of chain and sync valid blocks
@@ -786,20 +789,3 @@ setTimeout(()=>{
 	connectToPeerNetwork();
 	chainUpdater();
 }, 2500)
-
-
-
-
-// class Node{
-// 	constructor(server, blockchain=new Blockchain()){
-//     this.server = server;
-//     this.blockchain = blockchain;
-//     this.token = {
-//       'type' : 'node',
-//       'address' : ipList[0],
-//       'hashSignature' : sha256(ipList[0], Date.now()) };
-//
-//
-// 	}
-//
-// }

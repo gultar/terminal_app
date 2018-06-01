@@ -65,7 +65,7 @@ const nodeMenu = () =>{
 
 const startFullNode = () =>{
 	runScript('./1node_server.js', function(err){
-		console.log('err');
+		console.log(err);
 	})
 }
 
@@ -74,6 +74,10 @@ const startLightNode = () =>{
 }
 
 const startMinerNode = () =>{
+	runScript('./1node_server.js', function(err){
+		console.log('err');
+		mine();
+	})
 
 }
 
