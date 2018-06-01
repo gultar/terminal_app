@@ -389,6 +389,8 @@ class Blockchain{
     		console.log('ERROR: Hash not found');
         return false;
     	}
+    }else{
+      return false;
     }
 
 
