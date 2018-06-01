@@ -748,7 +748,7 @@ function getLatestBlock(blockchain){
 
 function issueClientToken(address=localAddress){
   clientConnectionToken = {
-    'type' : 'endpointClient',
+    'type' : 'endpoint',
     'address' : address,
     'hashSignature' : sha256(address, currentTime)
   }

@@ -547,7 +547,7 @@ const buildChainHashes = () =>{
 		hashSignaturesOnChain.push({
 			hash:chain[i].hash,
 			previousHash:chain[i].previousHash,
-			index:i
+			timestamp:chain[i].timestamp
 		})
 	}
 

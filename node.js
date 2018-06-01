@@ -53,14 +53,14 @@ class Node{
       'type' : 'node',
       'address' : ipList[0],
       'hashSignature' : sha256(ipList[0], Date.now()) };
-    this.peers;
+    this.peers = [];
 
 	}
 
   startServer(){
-    	console.log('Starting server at '+thisNode.address+'/');
-    	console.log('Node address:',thisNode.address);
-    	console.log('Node Hash:', thisNode.hashSignature);
+    	console.log('Starting server at '+this.token.address+'/');
+    	console.log('Node address:',this.token.address);
+    	console.log('Node Hash:', this.token.hashSignature);
     	app.use(express.static(__dirname+'/views'));
 
     	app.on('/', () => {
@@ -82,7 +82,7 @@ class Node{
 
          //Create validation for connecting nodes
     	  socket.on('client-connect', (token) => {
-          clientConnect(socket, token);
+          this.clientConnect(socket, token);
         });
 
 
@@ -124,7 +124,7 @@ class Node{
     		});
 
     	  socket.on('getBlockchain', (token) =>{
-          getBlockchain(socket, token);
+          this.getBlockchain(socket, token);
     	  });
 
     	  socket.on('blockchain', (blockchainReceived) => {
@@ -214,11 +214,9 @@ class Node{
 
 					rstream.on('close', () =>{  // done
 
-						if(data !== undefined && data != null){
-								blockchainDataFromFile = JSON.parse(data, function(err, err2){
-                  console.log(data);
-                  console.log(err2)
-                });
+						if(data !== undefined && data != null && data != 'undefined:1'){
+              // console.log(data);
+								blockchainDataFromFile = JSON.parse(data);
 
 								dataBuffer = that.createBlockchainInstance(blockchainDataFromFile);
 
@@ -277,7 +275,6 @@ class Node{
 
             }
 
-            // });
           }
 
           } else {
@@ -295,10 +292,145 @@ class Node{
         });
   }
 
+  storeToken(token){
+    if(token != undefined){
+      console.log('Received a node token from ', token.address);
+      this.nodeTokens[token.address] = token;
+      this.addMiningAddress(token);
+    }
+  }
 
+  initClientSocket(address){
+    var peerSocket = io(address, {'forceNew': true});
+
+  	peerSocket.emit('client-connect', thisNode);
+  	peerSocket.emit('storeToken', thisNode);
+
+  	peerSocket.emit('message', 'You are connected to '+thisNode.address);
+
+
+  	peerSocket.on('connect', () =>{
+
+  		// peerSocket.emit('getBlockchain', thisNode);
+  		// peerSocket.emit('blockchain', blockchain);
+  		console.log('Connected to ', address);
+  		this.peers.push(peerSocket);
+  	});
+
+  	peerSocket.on('disconnect', () =>{
+  		console.log('connection with peer dropped');
+  		this.peers.splice(this.peers.indexOf(peerSocket), 1);
+  		peerSocket.emit('close', thisNode);
+  	})
+  }
+
+  connectToPeerNetwork(){
+    let peerConnections = [];
+
+    for(var i=0; i < ipList.length; i++){
+
+      if(ipList[i] != this.token.address){
+
+  			var address = ipList[i];
+  			this.initClientSocket(address);
+
+      }
+    }
+
+  };
+
+  clientConnect(socket, token){
+    if(token != undefined){
+      clients[token.address] = token;
+
+      console.log('Connected client hash: '+ token.hashSignature.substr(0, 10) + '...');
+      console.log('At address:', token.address);
+
+      socket.emit('message', 'You are now connected to ' + thisNode.address);
+
+      this.getNumPeers();
+    }else{
+      console.log('Connection error')
+    }
+  }
+
+  sendToTargetPeer(eventType, data, address){
+    for(var peer of this.peers){
+  		var peerAddress = 'http://'+peer.io.opts.hostname +':'+ peer.io.opts.port
+
+  		if(peerAddress === address){
+  			peer.emit(eventType, data);
+  		}
+  	}
+  }
+
+  sendEventToAllPeers(eventType, data, moreData=false ){
+    if(this.peers.length > 0){
+
+      for(var i=0; i<this.peers.length; i++){
+        if(!moreData){
+          this.peers[i].emit(eventType, data);
+        }else{
+          this.peers[i].emit(eventType, data, moreData);
+        }
+      }
+    }
+
+  }
+
+  getNumPeers(){
+    if(this.peers != undefined){
+  		if(this.peers.length > 0){
+  			console.log('Number of other available peers on network:',this.peers.length);
+  			return this.peers.length;
+  		}
+
+  	}
+  }
+
+  getBlockchain(socket, token){
+    var validityStatus;
+
+    //Query all nodes for blockchain
+    if(this.blockchain != undefined && token != undefined){
+
+      if(!(this.blockchain instanceof Blockchain)){
+        this.blockchain = this.createBlockchainInstance(this.blockchain);
+      }
+        validityStatus = this.blockchain.isChainValid();
+
+        if(validityStatus === true){
+          var msg = token.address + ' has requested a copy of the blockchain!';
+          // console.log(msg);
+          if(token.type === 'node'){
+            this.sendEventToAllPeers('message', msg);
+            this.sendToTargetPeer('blockchain', this.blockchain, token.address);
+          }else if(token.type === 'endpoint'){
+            ioServer.emit('blockchain', this.blockchain);
+          }
+
+
+        }else{
+          console.log('Current blockchain is invalid. Flushing local chain and requesting a valid one');
+          this.blockchain = new Blockchain(); //Need to find a way to truncate invalid part of chain and sync valid blocks
+          this.sendEventToAllPeers('getBlockchain', this.token);
+        }
+
+    }else{
+      socket.emit('message', 'Blockchain is unavailable on node. It might be loading or saving.');
+    }
+
+  }
 
 }
 
 var myNode = new Node();
 
 myNode.initChain();
+var blockc = myNode.blockchain;
+console.log(blockc)
+setTimeout(()=>{ //always wait for readstream to close before saving or vice versa
+  // myNode.save(blockc);
+  myNode.startServer();
+  myNode.connectToPeerNetwork();
+}, 3000)
