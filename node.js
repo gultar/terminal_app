@@ -54,6 +54,7 @@ class Node{
       'address' : ipList[0],
       'hashSignature' : sha256(ipList[0], Date.now()) };
     this.peers = [];
+    this.nodeTokens = [];
 
 	}
 
@@ -91,27 +92,31 @@ class Node{
     		})
 
     		socket.on('sync', (hash, token)=>{
-          sync(token, token)
+          this.sync(hash, token)
         })
 
     		socket.on('validateChain', (token) =>{
-    			if(blockchain != undefined){
-    				console.log('Blockchain valid?',blockchain.isChainValid());
-    			}
+    				console.log('Blockchain valid?',this.blockchain.isChainValid());
     		})
+
+        socket.on('tokenRequest', (peerToken)=>{
+          this.storeToken(peerToken);
+          this.sendToTargetPeer('storeToken', this.token, peerToken.address);
+        })
 
     		socket.on('getWholeCopy', (token)=>{
-    			sendEventToAllPeers('getBlockchain', thisNode);
+    			this.sendEventToAllPeers('getBlockchain', thisNode);
     		})
 
-    		socket.on('storeToken', (token) =>{ storeToken(token)	})
+    		socket.on('storeToken', (token) =>{ this.storeToken(token)	})
 
     		socket.on('distributedTransaction', (transaction, fromNodeToken) => {
-          distributeTransaction(socket, transaction, fromNodeToken);
+          console.log('from:', fromNodeToken);
+          this.distributeTransaction(socket, transaction, fromNodeToken);
     		})
 
     	  socket.on('transaction', (transaction, fromNodeToken) => {
-          receiveTransactionFromClient(socket, transaction, fromNodeToken);
+          this.receiveTransactionFromClient(socket, transaction, fromNodeToken);
     	  });
 
     	  socket.on('miningRequest', (miningAddrToken) =>{
@@ -142,14 +147,14 @@ class Node{
     		})
 
     		socket.on('broadcastMessage', (msg) =>{
-    			sendEventToAllPeers('message', msg);
+    			this.sendEventToAllPeers('message', msg);
     		})
 
 
     	  socket.on('close', (token) => {
     	    clients[token.address] = null;
     	    console.log('Disconnected clients: ', token.address);
-    			getNumPeers();
+    			this.getNumPeers();
     	  });
 
 
@@ -296,17 +301,17 @@ class Node{
     if(token != undefined){
       console.log('Received a node token from ', token.address);
       this.nodeTokens[token.address] = token;
-      this.addMiningAddress(token);
+      this.blockchain.addMiningAddress(token);
     }
   }
 
   initClientSocket(address){
     var peerSocket = io(address, {'forceNew': true});
 
-  	peerSocket.emit('client-connect', thisNode);
-  	peerSocket.emit('storeToken', thisNode);
+  	peerSocket.emit('client-connect', this.token);
+  	peerSocket.emit('tokenRequest', this.token);
 
-  	peerSocket.emit('message', 'You are connected to '+thisNode.address);
+  	peerSocket.emit('message', 'You are connected to '+this.token.address);
 
 
   	peerSocket.on('connect', () =>{
@@ -320,7 +325,7 @@ class Node{
   	peerSocket.on('disconnect', () =>{
   		console.log('connection with peer dropped');
   		this.peers.splice(this.peers.indexOf(peerSocket), 1);
-  		peerSocket.emit('close', thisNode);
+  		peerSocket.emit('close', this.tokenNode);
   	})
   }
 
@@ -419,6 +424,62 @@ class Node{
     }else{
       socket.emit('message', 'Blockchain is unavailable on node. It might be loading or saving.');
     }
+
+  }
+
+  sync(hash, token){
+    if(hash != undefined && token != undefined){
+
+        var blocks = this.blockchain.getBlocksFromHash(hash);
+
+        if(blocks){
+          this.sendToTargetPeer('newBlock', blocks, token.address);
+
+        }else if(!blocks){
+
+  			}
+
+    }
+  }
+
+  /*
+    Transactions
+  */
+  distributeTransaction(socket, transaction, fromNodeToken){
+    ///////////////////////////////////////////////////////////
+    //Need to validate transaction everytime it is received
+    ///////////////////////////////////////////////////////////
+
+      if(transaction != undefined && fromNodeToken != undefined){
+        console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
+        console.log(transaction);
+        var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+
+        this.blockchain.createTransaction(transactionObj);
+      }
+
+  }
+
+  receiveTransactionFromClient(socket, transaction, fromNodeToken){
+    ///////////////////////////////////////////////////////////
+    //Need to validate transaction before adding to blockchain
+    ///////////////////////////////////////////////////////////
+
+      if(transaction != undefined && fromNodeToken != undefined){
+        if(fromNodeToken.address != this.token.address){
+          var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+          //Need to validate transact before broadcasting it
+          var transactIsValid = this.blockchain.validateTransaction(transactionObj, fromNodeToken);
+          console.log(transactIsValid);
+          this.blockchain.createTransaction(transactionObj);
+          this.sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
+          console.log('Received new transaction:', transactionObj);
+          transactionObj = null;
+        }
+
+      }else{
+        socket.emit('message', 'ERROR: Either your transaction or your token is unreadable. Try sending again.')
+      }
 
   }
 

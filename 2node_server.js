@@ -102,6 +102,11 @@ const startServer = () =>{
 			sendEventToAllPeers('getBlockchain', thisNode);
 		})
 
+    socket.on('tokenRequest', (peerToken)=>{
+      this.storeToken(peerToken);
+      this.sendToTargetPeer('storeToken', this.token, peerToken.address);
+    })
+
 		socket.on('storeToken', (token) =>{ storeToken(token)	})
 
 		socket.on('distributedTransaction', (transaction, fromNodeToken) => {
