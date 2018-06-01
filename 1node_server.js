@@ -18,7 +18,11 @@ const { compareBlockchains } = require('./backend/validation.js');
   List of peer ips and self ip finder
 */
 const { getIPAddress } = require('./backend/ipFinder.js');
-const { ipList } = require('./backend/iplist.js')
+// const { ipList } = require('./backend/iplist.js')
+const ipList = ['http://'+getIPAddress()+':'+port, 'http://192.168.0.153:8080', 'http://192.168.0.154:8080',
+				'http://192.168.0.153:8081', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', 'http://192.168.0.153:8082',
+			'http://192.168.1.72:8080','http://192.168.1.72:8081','http://192.168.1.72:8082', 'http://192.168.1.74:8080', 'http://192.168.1.74:8081',
+			 'http://192.168.1.74:8082', 'http://10.112.106.71:8080', 'http://10.112.106.71:8081', 'http://10.112.106.71:8082'];
 /*
   Blockchain classes and tools
 */
@@ -730,9 +734,9 @@ const chainUpdater = () =>{
 	setInterval(() =>{
 		if(blockchain != undefined){
 
-			if(blockchain.chain.length == 1){
-				sendEventToAllPeers('getBlockchain', thisNode);
-			}
+			// if(blockchain.chain.length == 1){
+			// 	sendEventToAllPeers('getBlockchain', thisNode);
+			// }
 			// syncBlockchain();
       var latestBlock = blockchain.getLatestBlock();
 			console.log('Sending hash:', latestBlock.hash);
@@ -789,3 +793,5 @@ setTimeout(()=>{
 	connectToPeerNetwork();
 	chainUpdater();
 }, 2500)
+
+module.exports = { port }
