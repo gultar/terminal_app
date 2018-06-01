@@ -656,7 +656,7 @@ const getBlockchain = (socket, token) =>{
         // console.log(msg);
         sendEventToAllPeers('message', msg);
         sendToTargetPeer('blockchain', blockchain, token.address);
-        // ioServer.emit('blockchain', blockchain);
+        ioServer.emit('blockchain', blockchain);
       }else{
         console.log('Current blockchain is invalid. Flushing local chain and requesting a valid one');
         blockchain = new Blockchain(); //Need to find a way to truncate invalid part of chain and sync valid blocks
