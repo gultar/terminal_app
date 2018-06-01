@@ -43,16 +43,32 @@ const nodeMenu = () =>{
 		switch(choice){
 			case '1':
 			case 'node':
-				startFullNode();
+      case 'node 1':
+				startFullNode('1');
+        stdin.end();
 				break;
+      case 'node 2':
+        startFullNode('2');
+        break;
+      case 'node 3':
+        startFullNode('3');
+        break;
 			case '2':
 			case 'light':
 				startLightNode();
 				break;
 			case '3':
 			case 'miner':
-				startMinerNode();
+      case 'miner 1':
+				startFullNode('1');
+        stdin.end();
 				break;
+      case 'miner 2':
+        startFullNode('2');
+        break;
+      case 'miner 3':
+        startFullNode('3');
+        break;
 			default:
 				stdout.write(`Unkown command: ${choice}`);
 				break;
@@ -60,11 +76,13 @@ const nodeMenu = () =>{
 	});
 
 
+
+
 }
 
 
-const startFullNode = () =>{
-	runScript('./1node_server.js', function(err){
+const startFullNode = (num) =>{
+	runScript('./'+num+'node_server.js', function(err){
 		console.log(err);
 	})
 }
@@ -73,13 +91,13 @@ const startLightNode = () =>{
 
 }
 
-const startMinerNode = () =>{
-	runScript('./1node_server.js', function(err){
-		console.log('err');
-		mine();
+const startMinerNode = (num) =>{
+  runScript('./'+num+'node_server.js', function(err){
+		console.log(err);
+    mine();
 	})
-
 }
 
 nodeMenu();
+
 // module.exports = { nodeMenu }

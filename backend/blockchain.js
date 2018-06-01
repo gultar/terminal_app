@@ -74,7 +74,7 @@ class Blockchain{
     this.nodeTokens = nodeTokens; //Stores all the node addresses of the P2P network
     this.ipAddresses = ipAddresses;
     this.miningAddresses = {};
-    this.blockSize = 10; //Minimum Number of transactions per block
+    this.blockSize = 20; //Minimum Number of transactions per block
     this.orphanedBlocks = orphanedBlocks;
   }
 
@@ -377,7 +377,7 @@ class Blockchain{
        latest block on the chain, thus avoiding too much useless exchange
     */
     // if(latestBlock.hash != hash){
-    
+
       if(index > -1){
 
           for(var i=index+1; i < this.chain.length; i++){

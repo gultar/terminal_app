@@ -18,7 +18,15 @@ const { compareBlockchains } = require('./backend/validation.js');
   List of peer ips and self ip finder
 */
 const { getIPAddress } = require('./backend/ipFinder.js');
-const { ipList } = require('./backend/iplist.js')
+const ipList = [
+      'http://'+getIPAddress()+':'+port,
+      'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
+      'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop
+      'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082', //rasbpi at home
+      'http://192.168.0.154:8080', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', //laptop at home
+			'http://192.168.1.72:8080', 'http://192.168.1.72:8081', 'http://192.168.1.72:8082', //rasbpi at mom's
+      'http://192.168.1.74:8080', 'http://192.168.1.74:8081', 'http://192.168.1.74:8082', //laptop at mom's
+      ]; //desn't work - laptop at maria's
 /*
   Blockchain classes and tools
 */
@@ -433,7 +441,11 @@ class Node{
         var blocks = this.blockchain.getBlocksFromHash(hash);
 
         if(blocks){
-          this.sendToTargetPeer('newBlock', blocks, token.address);
+          if(blocks.length > 0){
+
+            this.sendEventToAllPeers('message', 'Updating the chain of peer '+token.address+"Sending "+blocks.length+" blocks");
+            this.sendToTargetPeer('newBlock', blocks, token.address);
+          }
 
         }else if(!blocks){
 
@@ -443,7 +455,7 @@ class Node{
   }
 
   /*
-    Listener funcction that catches a block or a group of blocks, validates everything and
+    Listener function that catches a block or a group of blocks, validates everything and
     appends it to current chain. With every single block, there needs to be thorough validation,
     on every single transaction
   */
@@ -467,6 +479,7 @@ class Node{
     }
 
     if(hasSynced){
+      ioServer.emit('blockchain', blockchain);
       this.save(this.blockchain);
     }
   }
@@ -477,7 +490,7 @@ class Node{
 
   		var isBlockSynced = this.blockchain.syncBlock(newBlock);
   		if(isBlockSynced){
-  			ioServer.emit('blockchain', blockchain);
+
   			return true;
   		}else if(typeof isBlockSynced === 'number'){
   			//Start syncing from the index returned by syncBlock;
