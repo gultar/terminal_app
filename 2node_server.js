@@ -694,7 +694,7 @@ const getBlockchain = (socket, token) =>{
 const receiveNewBlock = (newBlock) =>{
   var hasSynced = false;
   if(newBlock != undefined && blockchain != undefined){
-
+    // console.log(newBlock);
     if(newBlock.length > 1 && Array.isArray(newBlock)){
       for(var i=0; i<newBlock.length; i++){
 
@@ -711,6 +711,7 @@ const receiveNewBlock = (newBlock) =>{
   }
 
   if(hasSynced){
+    ioServer.emit('blockchain', blockchain);
     saveBlockchain(blockchain);
   }
 }
@@ -724,7 +725,7 @@ const handleNewBlock = (newBlock) =>{
 
 		var isBlockSynced = blockchain.syncBlock(newBlock);
 		if(isBlockSynced){
-			ioServer.emit('blockchain', blockchain);
+
 			return true;
 		}else if(typeof isBlockSynced === 'number'){
 			//Start syncing from the index returned by syncBlock;
@@ -804,6 +805,5 @@ initBlockchain();
 setTimeout(()=>{
 	connectToPeerNetwork();
 	chainUpdater();
-}, 2500)
 
-module.exports = { port }
+}, 2500)
