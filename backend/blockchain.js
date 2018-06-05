@@ -68,13 +68,13 @@ class Blockchain{
 
   constructor(chain=false, pendingTransactions=false, nodeTokens={}, ipAddresses=[], orphanedBlocks=[]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
-    this.difficulty = 4;
+    this.difficulty = 3;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: {});
     this.miningReward = 50;
     this.nodeTokens = nodeTokens; //Stores all the node addresses of the P2P network
     this.ipAddresses = ipAddresses;
     this.miningAddresses = {};
-    this.blockSize = 20; //Minimum Number of transactions per block
+    this.blockSize = 10; //Minimum Number of transactions per block
     this.orphanedBlocks = orphanedBlocks;
   }
 
@@ -299,6 +299,28 @@ class Blockchain{
     return balance;
   }
 
+  getBalanceFromBlockIndex(index){
+
+    console.log('INDEX:', index);
+    for(var i=0; i < index; i++){
+      for(var transHash of Object.keys(this.chain[i].transactions)){
+        trans = this.chain[i].transactions[transHash]
+          if(trans.fromAddress == address){
+
+            balance = balance - trans.amount;
+          }
+
+          if(trans.toAddress == address){
+
+            balance = balance + trans.amount;
+          }
+
+
+      }
+    }
+
+  }
+
 
 
   addBlockbaseRecord(address){
@@ -356,6 +378,10 @@ class Blockchain{
         return this.getIndexOfBlockHash(block.previousHash);
 
       }else{
+        // if(block.difficulty = )
+        /*
+          validate difficulty level
+        */
         console.log('New block successfully validated. Will be appended to current blockchain.')
         return true;
       }
@@ -456,25 +482,169 @@ class BlockchainAddress{
 
 
 class BlockbaseRecord{
-  constructor(address, data=[{}]){
+  constructor(name, tableName, address, data={}){ //, createTransaction
+    this.name = name;
+    this.tableName = tableName;
     this.address = address;
-    this.data = data;
-    this.createdAt = Date.now();
+    this.data = data.toString();
+    this.createdAt = (Date.now()).toString();
     this.modifiedAt = 0;
     this.nbTimesModified = 0;
+    this.uniqueKey = sha256(name, tableName, data, address, this.createdAt);
+    // createTransaction(this)
   }
 
-  getFullData(){
-    return data;
-  }
-
-  getDataValue(keyToLookup){
-    var valueFound = [];
-    valueFound = recursiveLookup(keyToLookup, data, true);
-    console.log('Value:', valueFound);
+  getData(){
+    return this.data;
   }
 
 }
+
+// class BlockbaseTable{
+//   constructor(records=[]){
+//     this.name;
+//     this.records = records;
+//     this.fingerPrint = '';
+//   }
+//
+//   getRecordByName(name){
+//     /*Verify if has been tempered with*/
+//     for(var record of this.records){
+//       if(record.name === name){
+//         return record;
+//       }else{
+//         console.log('Record name '+name+' not found.');
+//         return false;
+//       }
+//     }
+//   }
+//
+//   recalculateMerkleRoot(record){
+//     if(record){
+//
+//     }
+//     record.uniqueKey = this.createMerkleRoot(record)
+//   }
+//
+//   addRecord(record){
+//     if(record != undefined){
+//       this.records[record.uniqueKey] = record;
+//       recalculateMerkleRoot();
+//     }
+//   }
+//
+//   modifyRecord(name, value, createBlockchainTransaction){
+//
+//     if(name != undefined){
+//       var record = this.getRecordByName(name);
+//       if(record !== false){
+//         var isValid = (record.uniqueKey === regenerateUniqueKey(record.data, record.address, record.createdAt))
+//         if(value != undefined){
+//           var oldUniqueKey = record.uniqueKey;
+//           record.data = value;
+//           record.nbTimesModified++;
+//           record.modifiedAt = Date.now();
+//           recalculateMerkleRoot();
+//           this.records[oldUniqueKey] = record;
+//
+//           createBlockchainTransaction();
+//
+//         }else{
+//           console.log('Value is undefined');
+//           return false;
+//         }
+//       }else{
+//         false
+//       }
+//
+//     }else{
+//       console.log('Record name is undefined');
+//       return false;
+//     }
+//
+//   }
+//
+//   deleteRecord(record){
+//
+//   }
+//
+//
+// }
+
+class Blockbase{
+  constructor(ownerAddress){
+    this.ownerAddress = ownerAddress
+    this.tables = [];
+  }
+
+  buildTables(chain){
+    var tables = [];
+    var records;
+
+    if(chain !== undefined){
+      if(Array.isArray(chain)){ //
+        for(var i=0; i<chain.length; i++){ //var block of chain
+          var block = chain[i]
+
+          if(block.transactions !== 'Genesis block'){
+            records = this.findRecords(block.transactions);
+
+            if(records){
+
+
+                tables.push(records);
+
+
+            }
+          }
+
+        }
+        // console.log(tables)
+        return tables;
+
+      }
+    }
+  }
+
+  findRecords(transactions){
+    var recordsOfBlock = [];
+    var record;
+    var transactionHashes;
+    if(transactions != undefined){
+      if(typeof transactions === 'object'){
+        transactionHashes = Object.keys(transactions);
+        // console.log(transactionHashes);
+        for(var hash of transactionHashes){
+          console.log(hash);
+          if(transactions[hash].toAddress === 'blockbase'){
+
+            recordsOfBlock[hash] = transactions[hash].data;
+            try{
+              recordsOfBlock[hash] =  JSON.parse(transactions[hash].data)
+            }catch(err){
+              // console.log(err);
+            }
+            // console.log(transactions[hash].data);
+            return recordsOfBlock;
+
+          }else{
+
+          }
+        }
+
+
+      }
+    }
+    return false;
+
+  }
+
+  encryptBlockbase(){
+
+  }
+}
+
+
 
 function remove(array, element) {
     const index = array.indexOf(element);
@@ -488,16 +658,20 @@ function remove(array, element) {
 
 function RecalculateHash(block){
   //console.log(sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString())
-  return sha256(block.previousHash + block.timestamp + recalculateMerkleRoot(block.transactions) + block.nonce).toString();
+  return sha256(block.previousHash + block.timestamp + merkleRoot(block.transactions) + block.nonce).toString();
 }
 
-function recalculateMerkleRoot(transactions){
+const regenerateUniqueKey = (name, tableName, data, address, createdAt) =>{
+    return sha256(name, tableName, data, address, createdAt)
+}
 
-  if(transactions != undefined){
-    var transactionHashes = Object.keys(transactions);
+function merkleRoot(dataSets){
+
+  if(dataSets != undefined){
+    var hashes = Object.keys(dataSets);
 
 
-    let merkleRoot = merkle('sha256').sync(transactionHashes);
+    let merkleRoot = merkle('sha256').sync(hashes);
     return merkleRoot.root();
   }
 
@@ -505,4 +679,4 @@ function recalculateMerkleRoot(transactions){
 
 
 
-module.exports = { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord};
+module.exports = { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase};

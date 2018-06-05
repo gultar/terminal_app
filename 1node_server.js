@@ -32,7 +32,7 @@ const ipList = [
 /*
   Blockchain classes and tools
 */
-const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord } = require('./backend/blockchain');
+const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase } = require('./backend/blockchain');
 const merkle = require('merkle');
 const sha256 = require('./backend/sha256');
 const { encrypt, decrypt } = require('./backend/encryption.js')
@@ -42,8 +42,8 @@ let dataBuffer;
 
 let thisNode = {
   'type' : 'node',
-  'address' : ipList[0],
-  'hashSignature' : sha256(ipList[0], Date.now())
+  'address' : ipList[0], //
+  'hashSignature' : sha256(ipList[0], Date.now()) //ipList[0]
 }
 
 
@@ -310,11 +310,18 @@ const loadBlockchainFromServer = () => {
 			rstream.on('close', () =>{  // done
 
 				if(data != undefined){
-						blockchainDataFromFile = JSON.parse(data);
-						dataBuffer = instanciateBlockchain(blockchainDataFromFile);
+          try{
+            blockchainDataFromFile = JSON.parse(data);
+            dataBuffer = instanciateBlockchain(blockchainDataFromFile);
+            console.log('Blockchain successfully loaded from file and validated')
+          }catch(err){
+            console.error(err);
+          }
+
+
 
 						//validateBlockchain(dataBuffer); --- To be created
-						console.log('Blockchain successfully loaded from file and validated')
+
 						// blockchain = compareBlockchains(blockchain, dataBuffer);
 
 						return dataBuffer;
@@ -806,4 +813,42 @@ setTimeout(()=>{
 	connectToPeerNetwork();
 	chainUpdater();
 
+
 }, 2500)
+
+setTimeout(()=>{
+  var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))
+
+    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myRecord), Date.now(), myRecord.uniqueKey));
+
+
+  var mySecondRecord = new BlockbaseRecord('test2', 'testTable',thisNode.address, {  test: "permission to read this file can connect to Tor. If you're going to run" })
+
+    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(mySecondRecord), Date.now(), mySecondRecord.uniqueKey));
+
+  //
+  var myThirdRecord = new BlockbaseRecord('test3', 'testTable',thisNode.address, {  test: "your script with the same user or permission group as Tor then this is the" })
+
+    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myThirdRecord), Date.now(), myThirdRecord.uniqueKey));
+
+
+  var myFourthRecord = new BlockbaseRecord('test4', 'testTable',thisNode.address, {  test: "easiest method of authentication to use." })
+
+    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, encrypt(JSON.stringify(myFourthRecord)), Date.now(), myFourthRecord.uniqueKey));
+
+
+  var myFifthRecord = new BlockbaseRecord('test5', 'testTable',thisNode.address, {  test: "Alternatively we can authenticate with a password. To set a password first" })
+
+    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myFifthRecord), Date.now(), myFifthRecord.uniqueKey));
+
+  // console.log(encrypt(JSON.stringify(myRecord.data)));
+
+  // console.log(blockchain.pendingTransactions);
+
+  var bb = new Blockbase(thisNode.address);
+  var berp = bb.buildTables(blockchain.chain);
+  setTimeout(() =>{
+    ioServer.emit('blockchain', berp)
+  },9000)
+
+}, 6000)

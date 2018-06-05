@@ -548,7 +548,7 @@ function startMining(blockchainAddr){
 
 
 
-  },5000);
+  },2000);
 
 }
 
