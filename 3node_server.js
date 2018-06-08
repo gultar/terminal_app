@@ -43,8 +43,8 @@ let dataBuffer;
 let thisNode = {
   'type' : 'node',
   'address' : ipList[0], //
-  'hashSignature' : sha256(ipList[0], Date.now()), //ipList[0]
-  'isMining': false
+  'hashSignature' : sha256(ipList[0], Date.now()),
+  'isMining': false //ipList[0]
 }
 
 
@@ -53,6 +53,7 @@ let clients = [];
 
 //Container for all peer socket connections
 let peers = [];
+let miner = false;
 
 let currentMiners = [];
 let peerBuildsNextBlock = false;
@@ -140,25 +141,19 @@ const startServer = () =>{
 		});
 
     socket.on('peerBuildingBlock', (token) =>{
-      if(!peerBuildsNextBlock){
-        peerBuildsNextBlock = token;
-        console.log('Another peer is building the next block. Cancelled Mining Operation...')
-        attemptMining(thisNode, true);
+      if(token != undefined && currentMiners[token.hash] === token){
+        console.log('helo');
+        cancelMining();
       }else{
-        console.log('Peer already building a block. Falling back to mining mode');
+        console.log('Not building')
       }
-
     })
 
     socket.on('peerFinishedBlock', (token) =>{
-      if(peerBuildsNextBlock === token){
-        peerBuildsNextBlock = false;
-
-        setTimeout(()=>{
-          attemptMining(thisNode);
-        }, 5000)
+      if(token != undefined && currentMiners[token.hash] === token){
+        console.log('Peer finished block+++++++++++++++++++++++++=')
       }else{
-        console.log('Conflict of peers on next block construction. Falling back to listen mode');
+        
       }
 
 
@@ -821,17 +816,28 @@ const chainUpdater = () =>{
   Listener function that runs the miner and saves if it has a new block
   Not too useful, could be put into socket listener directly
 */
-const attemptMining = (miningAddrToken, alreadyMining=false) =>{
+
+const cancelMining = () =>{
+  if(miner){
+    clearInterval(miner)
+    thisNode.isMining = false;
+    miner = false;
+  }else{
+    console.log('Miner is not active');
+  }
+
+}
+
+const attemptMining = (miningAddrToken) =>{
 
   ///////////////////////////////////////////////////////////
   //need to validate miningAddr before allowing mining action;
   ///////////////////////////////////////////////////////////
-  if(!alreadyMining){
 
     thisNode.isMining = true;
     sendEventToAllPeers('message', miningAddrToken.address+ ' has started mining.');
 		sendEventToAllPeers('minerStarted', miningAddrToken);
-    var miner = setInterval(()=>{
+    miner = setInterval(()=>{
       if(blockchain != undefined){
 
         var hasMinedABlock = startMining(miningAddrToken);
@@ -843,10 +849,6 @@ const attemptMining = (miningAddrToken, alreadyMining=false) =>{
 
       }
     }, 1000)
-  }else{
-    clearInterval(miner);
-    thisNode.isMining = false;
-  }
 
 
 }
