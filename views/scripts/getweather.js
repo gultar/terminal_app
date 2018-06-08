@@ -60,7 +60,8 @@ function fetchWeatherData(city, country, forecast=false){
     console.log(result);
     if(forecast){
       console.log(result);
-      outputForecastData(result);
+      $('#element').jsonView(result);
+      // outputForecastData(result);
       return
     }
     outputWeatherData(result);

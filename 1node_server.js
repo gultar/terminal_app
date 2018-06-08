@@ -43,7 +43,8 @@ let dataBuffer;
 let thisNode = {
   'type' : 'node',
   'address' : ipList[0], //
-  'hashSignature' : sha256(ipList[0], Date.now()) //ipList[0]
+  'hashSignature' : sha256(ipList[0], Date.now()), //ipList[0]
+  'isMining': false
 }
 
 
@@ -53,8 +54,8 @@ let clients = [];
 //Container for all peer socket connections
 let peers = [];
 
-//Maybe implement a turned based mining system. It might be too cumbersome...
 let currentMiners = [];
+let peerBuildsNextBlock = false;
 let sendTrials = 0;
 
 /*
@@ -91,7 +92,8 @@ const startServer = () =>{
 
 
 		socket.on('test', (hash)=>{
-
+      // var derp = blockchain.blockbase.jsonDB(blockchain);
+      // console.log(derp);
 		})
 
 		socket.on('sync', (hash, token)=>{
@@ -123,14 +125,44 @@ const startServer = () =>{
       receiveTransactionFromClient(socket, transaction, fromNodeToken);
 	  });
 
-	  socket.on('miningRequest', (miningAddrToken) =>{
-      attemptMining(miningAddrToken);
+	  socket.on('miningRequest', () =>{
+      if(!thisNode.isMining){
+        attemptMining(thisNode);
+      }else{
+        attemptMining(thisNode, true);
+      }
+
 	  });
 
 
 		socket.on('newBlock', (newBlock) =>{
       receiveNewBlock(newBlock);
 		});
+
+    socket.on('peerBuildingBlock', (token) =>{
+      if(!peerBuildsNextBlock){
+        peerBuildsNextBlock = token;
+        console.log('Another peer is building the next block. Cancelled Mining Operation...')
+        attemptMining(thisNode, true);
+      }else{
+        console.log('Peer already building a block. Falling back to mining mode');
+      }
+
+    })
+
+    socket.on('peerFinishedBlock', (token) =>{
+      if(peerBuildsNextBlock === token){
+        peerBuildsNextBlock = false;
+
+        setTimeout(()=>{
+          attemptMining(thisNode);
+        }, 5000)
+      }else{
+        console.log('Conflict of peers on next block construction. Falling back to listen mode');
+      }
+
+
+    })
 
 	  socket.on('getBlockchain', (token) =>{
       getBlockchain(socket, token);
@@ -410,17 +442,25 @@ const saveBlockchain = (blockchainReceived) => {
 
 /*
   Ran once, this attempts to mine all pending transactions if their number
-  is at least equal to the blocksize
+  is at least equal to the current blocksize
 */
 const startMining = (miningAddrToken) => {
 
   miningAddr = blockchain.getMiningAddress(miningAddrToken);
 
 	if(miningAddr){
-		sendEventToAllPeers('message', miningAddrToken.address+ ' has started mining.');
-		sendEventToAllPeers('minerStarted', miningAddr);
 
-		miningSuccess = blockchain.minePendingTransactions(miningAddr);
+
+		miningSuccess = blockchain.minePendingTransactions(miningAddr, (isMiningBlock, finishedBlock)=>{
+      if(isMiningBlock && !finishedBlock){
+        
+        sendEventToAllPeers('peerBuildingBlock', thisNode);
+      }else if(!isMiningBlock && finishedBlock){
+
+        sendEventToAllPeers('peerFinishedBlock', thisNode);
+      }
+
+    });
 
 		if(miningSuccess){
 
@@ -445,6 +485,7 @@ const startMining = (miningAddrToken) => {
 
 	}else{
 		console.log('Invalid mining address');
+    return false;
 	}
 
 
@@ -459,16 +500,14 @@ const calculateBlockHash = (block) =>{
 }
 
 /*
-  This the socket listener function for when a peer
+  This is the socket listener function for when a peer
   Connects to this node as a client
 */
 const clientConnect = (socket, token) =>{
   if(token != undefined){
     clients[token.address] = token;
 
-    // socket.id = token.address;
-
-    console.log('Connected client hash: '+ token.hashSignature.substr(0, 10) + '...');
+    console.log('Connected client hash: '+ token.hashSignature.substr(0, 15) + '...');
     console.log('At address:', token.address);
 
     socket.emit('message', 'You are now connected to ' + thisNode.address);
@@ -624,21 +663,28 @@ const validateTransaction = (transaction, token) =>{
 		if(blockchain != undefined && blockchain instanceof Blockchain){
 
 			var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
+
 			if(!balanceOfSendingAddr){
 					console.log('Cannot verify balance of undefined address token');
 			}else{
+
 				if(balanceOfSendingAddr >= transaction.amount){
 					console.log('Transaction validated successfully');
+          return true;
+
 				}else if(transaction.type === 'query'){
 					//handle blockbase queries
 				}else{
 					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
+          return false
 				}
+
 			}
 
 
 		}else{
 			console.log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
+      return false
 		}
 
 	}else{
@@ -700,9 +746,10 @@ const getBlockchain = (socket, token) =>{
 */
 const receiveNewBlock = (newBlock) =>{
   var hasSynced = false;
+
   if(newBlock != undefined && blockchain != undefined){
     // console.log(newBlock);
-    if(newBlock.length > 1 && Array.isArray(newBlock)){
+    if(newBlock.length >= 1 && Array.isArray(newBlock)){
       for(var i=0; i<newBlock.length; i++){
 
           hasSynced = handleNewBlock(newBlock[i]);
@@ -774,36 +821,34 @@ const chainUpdater = () =>{
   Listener function that runs the miner and saves if it has a new block
   Not too useful, could be put into socket listener directly
 */
-const attemptMining = (miningAddrToken) =>{
+const attemptMining = (miningAddrToken, alreadyMining=false) =>{
+
   ///////////////////////////////////////////////////////////
   //need to validate miningAddr before allowing mining action;
   ///////////////////////////////////////////////////////////
-  if(blockchain != undefined){
+  if(!alreadyMining){
 
-    var hasMinedABlock = startMining(miningAddrToken);
+    thisNode.isMining = true;
+    sendEventToAllPeers('message', miningAddrToken.address+ ' has started mining.');
+		sendEventToAllPeers('minerStarted', miningAddrToken);
+    var miner = setInterval(()=>{
+      if(blockchain != undefined){
 
-    if(hasMinedABlock){
-      saveBlockchain(blockchain);
-    }
+        var hasMinedABlock = startMining(miningAddrToken);
+
+        if(hasMinedABlock){
+          saveBlockchain(blockchain);
+        }
 
 
+      }
+    }, 1000)
+  }else{
+    clearInerval(miner);
+    thisNode.isMining = false;
   }
-}
-
-//In case of CLI menu, automatic miner loop
-const mine = (token) =>{
-	setInterval(()=>{
-		if(blockchain != undefined){
-
-			var hasMinedABlock = startMining(token);
-
-			if(hasMinedABlock){
-				saveBlockchain(blockchain);
-			}
 
 
-		}
-	}, 10000)
 }
 
 
@@ -822,22 +867,22 @@ setTimeout(()=>{
     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myRecord), Date.now(), myRecord.uniqueKey));
 
 
-  var mySecondRecord = new BlockbaseRecord('test2', 'testTable',thisNode.address, {  test: "permission to read this file can connect to Tor. If you're going to run" })
+  var mySecondRecord = new BlockbaseRecord('test2', 'testTable',thisNode.address,  JSON.stringify({  test: "permission to read this file can connect to Tor. If you're going to run" }))
 
     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(mySecondRecord), Date.now(), mySecondRecord.uniqueKey));
 
   //
-  var myThirdRecord = new BlockbaseRecord('test3', 'testTable',thisNode.address, {  test: "your script with the same user or permission group as Tor then this is the" })
+  var myThirdRecord = new BlockbaseRecord('test3', 'testTable',thisNode.address,  JSON.stringify({  test: "your script with the same user or permission group as Tor then this is the" }))
 
     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myThirdRecord), Date.now(), myThirdRecord.uniqueKey));
 
 
-  var myFourthRecord = new BlockbaseRecord('test4', 'testTable',thisNode.address, {  test: "easiest method of authentication to use." })
+  var myFourthRecord = new BlockbaseRecord('test4', 'testTable',thisNode.address,  JSON.stringify({  test: "easiest method of authentication to use." }))
 
     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, encrypt(JSON.stringify(myFourthRecord)), Date.now(), myFourthRecord.uniqueKey));
 
 
-  var myFifthRecord = new BlockbaseRecord('test5', 'testTable',thisNode.address, {  test: "Alternatively we can authenticate with a password. To set a password first" })
+  var myFifthRecord = new BlockbaseRecord('test5', 'testTable',thisNode.address,  JSON.stringify({  test: "Alternatively we can authenticate with a password. To set a password first" }))
 
     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myFifthRecord), Date.now(), myFifthRecord.uniqueKey));
 
@@ -845,10 +890,17 @@ setTimeout(()=>{
 
   // console.log(blockchain.pendingTransactions);
 
-  var bb = new Blockbase(thisNode.address);
-  var berp = bb.buildTables(blockchain.chain);
-  setTimeout(() =>{
-    ioServer.emit('blockchain', berp)
-  },9000)
+  var blockBase = new Blockbase(thisNode.address);
+  var bTables = [];
+  blockBase.buildTables(blockchain.chain, (tables)=>{
+    // console.log(tables)
+    blockBase.tables = tables;
+    // console.log(blockBase.tables);
+    blockchain.blockbase = blockBase;
+
+  })
+    ioServer.emit('testJSON', blockchain);
+
+
 
 }, 6000)

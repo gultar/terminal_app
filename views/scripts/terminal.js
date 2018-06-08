@@ -247,7 +247,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           if(args[0] == 's' || args[0] == 'stop')
             ConsoleLogHTML.disconnect(); // Stop redirecting
           break;
-
+        case 'ls':
         case 'help':
           output('<div class="ls-files">' + '<p>' +CMDS_.join('<br>')+ '</p>'+ '</div>');
           break;
@@ -294,6 +294,9 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           runShowBlocks(args, cmd);
           break;
 
+        case 'show-chain':
+          $('#element').jsonView(blockchain);
+          break;
         case 'valid-blocks':
           if(blockchain.isChainValid()){
             output('Blockchain still valid');
@@ -527,28 +530,21 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 function outputDebug(html) {
 
   debugOutput_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
+
+
 }
 
 
-function startMining(blockchainAddr){
+function startMining(mining=false){
 
+  if(!mining){
+    output('Starting the miner...');
+    socket.emit('miningRequest');
+  }else{
+    output('Stopping the miner...');
+    socket.emit('miningRequest');
+  }
 
-  output('Starting the miner...');
-  setInterval(function(){
-
-      miningAddr = clientConnectionToken;
-
-      // $.post('http://localhost:5000/mine', { address: miningAddr}, function(data, status, response){
-      if(socket.connected){
-        socket.emit('miningRequest', miningAddr);
-
-
-
-      }
-
-
-
-  },2000);
 
 }
 
@@ -619,7 +615,12 @@ setTimeout(function(){
 
       socket.on('message', function(message){
         console.log('Server:', message);
-        outputDebug('Server:'+message)
+        outputDebug('Server: '+message)
+      })
+
+      socket.on('serverMessage', function(message){
+        console.log('Server', message);
+        outputDebug('Server: '+message);
       })
 
       // socket.on('seedingNodes', function(node){

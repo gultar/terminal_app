@@ -1,8 +1,6 @@
 //Modules
 const sha256 = require('./sha256');
-const JSONdb = require('simple-json-db');
 const merkle = require('merkle');
-// const merkle = require('merkle');
 /******************************************/
 /***********Blockchain classes*************/
 /******************************************/
@@ -11,13 +9,14 @@ const merkle = require('merkle');
 //A transaction is done if there is a
 //change of data on the blockchain
 class Transaction{
-  constructor(fromAddress, toAddress, amount, data='', timestamp, hash){
+  constructor(fromAddress, toAddress, amount, data='', timestamp, hash, type=''){
     this.fromAddress = fromAddress;
     this.toAddress = toAddress;
     this.amount = amount;
     this.data = data;
     this.timestamp = timestamp;
     this.hash = (hash != undefined ? hash : sha256(this.fromAddress+ this.toAddress+ this.amount+ this.data+ this.timestamp));
+    this.type = type;
   }
 }
 
@@ -76,6 +75,8 @@ class Blockchain{
     this.miningAddresses = {};
     this.blockSize = 10; //Minimum Number of transactions per block
     this.orphanedBlocks = orphanedBlocks;
+    this.blockbase = '';
+
   }
 
   createGenesisBlock(){
@@ -157,9 +158,14 @@ class Blockchain{
     }
   }
 
-  minePendingTransactions(miningRewardAddress){
-    if(this.hasEnoughTransactionsToMine()){
+  minePendingTransactions(miningRewardAddress, callback){
+
+    var isMining = this.hasEnoughTransactionsToMine()
+    callback(isMining, false);
+    if(isMining){
+
       let block = new Block(Date.now(), this.pendingTransactions);
+
       this.pendingTransactions = {};
       block.previousHash = this.getLatestBlock().hash;
       block.mineBlock(this.difficulty);
@@ -183,13 +189,15 @@ class Blockchain{
       console.log("The Blockchain is " + this.chain.length + " blocks long.");
       console.log(miningRewardAddress.address + ' has mined ' + miningRewardAddress.blocksMined + ' blocks.');
       this.createTransaction(new Transaction(null, miningRewardAddress.address, this.miningReward, "", Date.now()))
+      callback(false, true);
       return true;
     }else{
-      console.log('Waiting for other transactions...');
+
       return false;
     }
 
   }
+
 
   createTransaction(transaction){
     // this.pendingTransactions.push(transaction);
@@ -402,7 +410,6 @@ class Blockchain{
        Only sends block(s) if the hash sent is not the same as the current
        latest block on the chain, thus avoiding too much useless exchange
     */
-    // if(latestBlock.hash != hash){
 
       if(index > -1){
 
@@ -414,9 +421,7 @@ class Blockchain{
     		console.log('ERROR: Hash not found');
         return false;
     	}
-    // }else{
-    //   return false;
-    // }
+
 
 
   }
@@ -500,107 +505,33 @@ class BlockbaseRecord{
 
 }
 
-// class BlockbaseTable{
-//   constructor(records=[]){
-//     this.name;
-//     this.records = records;
-//     this.fingerPrint = '';
-//   }
-//
-//   getRecordByName(name){
-//     /*Verify if has been tempered with*/
-//     for(var record of this.records){
-//       if(record.name === name){
-//         return record;
-//       }else{
-//         console.log('Record name '+name+' not found.');
-//         return false;
-//       }
-//     }
-//   }
-//
-//   recalculateMerkleRoot(record){
-//     if(record){
-//
-//     }
-//     record.uniqueKey = this.createMerkleRoot(record)
-//   }
-//
-//   addRecord(record){
-//     if(record != undefined){
-//       this.records[record.uniqueKey] = record;
-//       recalculateMerkleRoot();
-//     }
-//   }
-//
-//   modifyRecord(name, value, createBlockchainTransaction){
-//
-//     if(name != undefined){
-//       var record = this.getRecordByName(name);
-//       if(record !== false){
-//         var isValid = (record.uniqueKey === regenerateUniqueKey(record.data, record.address, record.createdAt))
-//         if(value != undefined){
-//           var oldUniqueKey = record.uniqueKey;
-//           record.data = value;
-//           record.nbTimesModified++;
-//           record.modifiedAt = Date.now();
-//           recalculateMerkleRoot();
-//           this.records[oldUniqueKey] = record;
-//
-//           createBlockchainTransaction();
-//
-//         }else{
-//           console.log('Value is undefined');
-//           return false;
-//         }
-//       }else{
-//         false
-//       }
-//
-//     }else{
-//       console.log('Record name is undefined');
-//       return false;
-//     }
-//
-//   }
-//
-//   deleteRecord(record){
-//
-//   }
-//
-//
-// }
 
 class Blockbase{
   constructor(ownerAddress){
     this.ownerAddress = ownerAddress
     this.tables = [];
+
   }
 
-  buildTables(chain){
+  buildTables(chain, callback){
     var tables = [];
     var records;
-
+    var block;
     if(chain !== undefined){
       if(Array.isArray(chain)){ //
         for(var i=0; i<chain.length; i++){ //var block of chain
-          var block = chain[i]
+          block = chain[i]
 
           if(block.transactions !== 'Genesis block'){
             records = this.findRecords(block.transactions);
 
             if(records){
-
-
                 tables.push(records);
-
-
             }
           }
 
         }
-        // console.log(tables)
-        return tables;
+        callback(tables);
 
       }
     }
@@ -614,8 +545,8 @@ class Blockbase{
       if(typeof transactions === 'object'){
         transactionHashes = Object.keys(transactions);
         // console.log(transactionHashes);
-        for(var hash of transactionHashes){
-          console.log(hash);
+        transactionHashes.forEach((hash)=>{///
+          // console.log(hash);
           if(transactions[hash].toAddress === 'blockbase'){
 
             recordsOfBlock[hash] = transactions[hash].data;
@@ -624,14 +555,15 @@ class Blockbase{
             }catch(err){
               // console.log(err);
             }
-            // console.log(transactions[hash].data);
-            return recordsOfBlock;
+
+
+
 
           }else{
 
           }
-        }
-
+        })
+        return recordsOfBlock;
 
       }
     }
@@ -643,6 +575,7 @@ class Blockbase{
 
   }
 }
+
 
 
 
