@@ -453,7 +453,7 @@ const startMining = (miningAddrToken) => {
 
 		miningSuccess = blockchain.minePendingTransactions(miningAddr, (isMiningBlock, finishedBlock)=>{
       if(isMiningBlock && !finishedBlock){
-        
+
         sendEventToAllPeers('peerBuildingBlock', thisNode);
       }else if(!isMiningBlock && finishedBlock){
 
@@ -844,7 +844,7 @@ const attemptMining = (miningAddrToken, alreadyMining=false) =>{
       }
     }, 1000)
   }else{
-    clearInerval(miner);
+    clearInterval(miner);
     thisNode.isMining = false;
   }
 
