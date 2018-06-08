@@ -141,7 +141,7 @@ const startServer = () =>{
 		});
 
     socket.on('peerBuildingBlock', (token) =>{
-      if(token != undefined && currentMiners[token.hash] === token){
+      if(token != undefined){
         console.log('helo');
         cancelMining();
       }else{
@@ -150,10 +150,8 @@ const startServer = () =>{
     })
 
     socket.on('peerFinishedBlock', (token) =>{
-      if(token != undefined && currentMiners[token.hash] === token){
+      if(token != undefined){
         console.log('Peer finished block+++++++++++++++++++++++++=')
-      }else{
-        
       }
 
 
