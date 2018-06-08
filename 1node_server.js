@@ -22,6 +22,8 @@ const { getIPAddress } = require('./backend/ipFinder.js');
     'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082'*/
 const ipList = [
       'http://'+getIPAddress()+':'+port,
+      'http://127.0.0.1:8080', 'http://127.0.0.1:8081', 'http://127.0.0.1:8082',
+      'http://192.168.56.1:8080', 'http://192.168.56.1:8081', 'http://192.168.56.1:8082',
       'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
       'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop
       'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082', //rasbpi at home
@@ -559,7 +561,7 @@ const distributeTransaction = (socket, transaction, fromNodeToken) =>{
       console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
       console.log(transaction);
       var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
-
+      var transactIsValid = validateTransaction(transactionObj, fromNodeToken);
       blockchain.createTransaction(transactionObj);
     }
   }

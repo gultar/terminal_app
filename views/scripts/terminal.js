@@ -280,11 +280,21 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           backgroundUrl = args[0];
           $('body').css("background-image", "url("+backgroundUrl+")")
           break;
-
+        case 'w':
         case 'weather':
+          if(args.length == 0){
+            args = ['Quebec', 'Canada'];
+          }
           runWeather(args, cmd);
           break;
 
+        case 'f':
+        case 'forecast':
+          if(args.length == 0){
+            args = ['Quebec', 'Canada'];
+          }
+          runForecast(args, cmd);
+          break;
         case 'mine':
           startMining(localAddress);
 
@@ -409,9 +419,10 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       }
 
       function runWeather(args, cmd){
+
         var weatherOptions= args.join(' ');
         if (!weatherOptions) {
-          output('Usage: ' + cmd + ' City Country');
+          output('Usage: ' + cmd + ' city country');
           output('Example: ' + cmd + ' Quebec Canada');
           return;
         }
@@ -420,6 +431,16 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           return;
         }
         fetchWeatherData(args[0], args[1]);
+      }
+
+      function runForecast(args, cmd){
+        var weatherOptions= args.join(' ');
+        if (!weatherOptions) {
+          output('Usage: ' + cmd + ' city country');
+          output('Example: ' + cmd + ' Quebec Canada');
+          return;
+        }
+        fetchWeatherData(args[0], args[1], true);
       }
 
     function runShowBlocks(args=false, cmd=false){
