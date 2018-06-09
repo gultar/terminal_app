@@ -132,7 +132,7 @@ const startServer = () =>{
       if(!thisNode.isMining){
         attemptMining(thisNode);
       }else{
-        attemptMining(thisNode, true);
+        cancelMining(true);
       }
 
 	  });
@@ -144,18 +144,16 @@ const startServer = () =>{
 
     socket.on('peerBuildingBlock', (token) =>{
       if(token != undefined){
-        console.log('helo');
-        cancelMining();
-      }else{
-        console.log('Not building')
+        cancelMining(false);
       }
     })
 
     socket.on('peerFinishedBlock', (token) =>{
       if(token != undefined){
-        console.log('Peer finished block+++++++++++++++++++++++++=')
+        if(thisNode.isMining){
+          attemptMining(thisNode);
+        }
       }
-
 
     })
 
@@ -817,10 +815,13 @@ const chainUpdater = () =>{
   Not too useful, could be put into socket listener directly
 */
 
-const cancelMining = () =>{
+const cancelMining = (disableMiner=false) =>{
   if(miner){
     clearInterval(miner)
-    thisNode.isMining = false;
+    if(disableMiner){
+      thisNode.isMining = false;
+    }
+
     miner = false;
   }else{
     console.log('Miner is not active');

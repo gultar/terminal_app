@@ -160,7 +160,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
   }
 
 
-  function doCORSRequest(options, printResult, noJSON=false) {
+  function doCORSRequest(options, printResult, noJSON=false, callback=false) {
     var cors_api_url = 'https://cors-anywhere.herokuapp.com/';
     var x = new XMLHttpRequest();
     x.open(options.method, cors_api_url + options.url);
@@ -172,6 +172,9 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     }
     x.send(options.data);
+    if(callback){
+      callback(x.responseText)
+    }
   }
 
 
@@ -259,6 +262,12 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           socket.emit('syncBlockchain', blockchain);
           break;
 
+        case 'l':
+        case 'linguee':
+          var argsJoined = args.join(' ');
+          console.log(typeof argsJoined);
+          doLingueeTranslationEngToFra(argsJoined, cmd);
+          break;
 
         case 'iching':
           runIching(args, cmd);
@@ -472,6 +481,20 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         transIndex++;
       }
 
+
+    }
+
+    function doLingueeTranslationEngToFra(text, cmd){
+
+      // 'https://linguee-api.herokuapp.com/api?q='+args[0]+'&src=en&dst=fr'
+      doCORSRequest({
+        method: 'GET',
+        url: 'https://linguee-api.herokuapp.com/api?q='+text+'&src=en&dst=fr',
+        data: ''
+      }, function printResult(result) {
+        console.log(result);
+
+      });
 
     }
 
