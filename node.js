@@ -228,14 +228,13 @@ class Node{
 					rstream.on('close', () =>{  // done
 
 						if(data !== undefined && data != null && data != 'undefined:1'){
-              // console.log(data);
+              
 								blockchainDataFromFile = JSON.parse(data);
 
 								dataBuffer = that.createBlockchainInstance(blockchainDataFromFile);
 
 								//validateBlockchain(dataBuffer); --- To be created
 								console.log('Blockchain successfully loaded from file and validated')
-								// blockchain = compareBlockchains(blockchain, dataBuffer);
 
 								return dataBuffer;
 

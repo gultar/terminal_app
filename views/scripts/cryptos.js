@@ -157,32 +157,48 @@ function loopThroughBlockTransactions(keys, data){
 }
 
 function loopTransaction(transaction){
-  var output = '';
-  for (var property in transaction) {
-    output += property + ': ' + transaction[property]+'; ';
+  if(transaction != undefined){
+    var output = '';
+    for (var property in transaction) {
+      if(typeof transaction[property] != "object"){
+        output += "    "+property + ': ' + transaction[property]+'<br>';
+      }else{
+        output += "    "+property + ': ' + JSON.stringify(transaction[property])+'<br>';
+      }
+
+    }
+    return output;
   }
-  return output;
+
 }
 
 
 
-function loopThroughBlockchain(keys, data, expand=false){
+function loopThroughBlockchain(keys, blockData, expand=false){
   let blocks = '';
   let blockTransactions = '';
   for(let i=0;i<keys.length;i++){
-    if(typeof data[keys[i]] !='object'){
-      blocks += '<span class="block-info">'+ keys[i] + ': ' + data[keys[i]]+'</span><br/>';
+    if(typeof blockData[keys[i]] !='object'){
+      blocks += '<span class="block-info">'+ keys[i] + ': ' + blockData[keys[i]]+'</span><br/>';
     }
     else if(keys[i] == "transactions"){
       if(expand){
-        transactArray = data[keys[i]];
+        blockTransacts = blockData[keys[i]];
 
-        for(let ii=0; ii < transactArray.length; ii++){
-          childKeys = Object.keys(transactArray[ii]);
-          childData = transactArray[ii];
-          console.log(childData);
-          blockTransactions += "Transaction " + ii + " - " + loopThroughBlockTransactions(childKeys, childData)+"<br>";
+        var transactHashes = Object.keys(blockTransacts);
+        var transactIndex = 0;
+        var currentTransact;
+
+
+        for(hash in blockTransacts){
+          transactIndex++;
+          currentTransact = blockTransacts[hash];
+
+          blockTransactions += "--------------------Transaction "+transactIndex+ "--------------------<br>"+loopTransaction(currentTransact) + "<br>";
+
+
         }
+
 
       }
 

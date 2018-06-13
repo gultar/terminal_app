@@ -18,13 +18,14 @@ var url = document.URL;
 //port of client connection
 var port = 8080;
 
-var localAddress = document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
+var localAddress = 'http://localhost:8080/'//document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 
 var currentTime = Date.now();
 //This is a counter to limit the number of attempts to try to fetch blockchain from file if unreadable or else
 var fetchTrials = 0;
 var sendingTrials = 0;
 var fallbackCounter = -1;
+var isConnected = false;
 var outputBuffer;
 
 //Initiating the client token for connecting to network
@@ -89,13 +90,17 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
     "<span class'help-line'><b class='help-cmd'>help</b> ----------- Displays this message</span>",
     "<span class'help-line'><b class='help-cmd'>uname</b> ---------- Displays information about the browser</span>",
     "<span class'help-line'><b class='help-cmd'>iching</b> --------- Casts a random hexagram and text. Usage: iching HxNb. Ex: iching 40</span>",
+    "<span class'help-line'><b class='help-cmd'>connect</b> -------- Connects to local blockchain node. Required for all blockchain related commands</span>",
     "<span class'help-line'><b class='help-cmd'>crypto</b> --------- Outputs selected crypto currencies compared to major real-world currencies.Is updated every five seconds. Usage: crypto SYM1 SYM2 SYM3... SYM10. EX: crypto ETH DASH BTC</span>",
-    "<span class'help-line'><b class='help-cmd'>list-cryptos</b> ---- Displays a list of all known cryptocurrencies</span>",
+    "<span class'help-line'><b class='help-cmd'>list-cryptos</b> --- Displays a list of all known cryptocurrencies</span>",
     "<span class'help-line'><b class='help-cmd'>describe</b> ------- Outputs all related information about a cryptocurrency compared to a real-world currency.Usage: describe SYM CUR <b>-d Data</b>.Ex: describe BTC USD -d Data</span>",
     "<span class'help-line'><b class='help-cmd'>background</b> ----- Changes the background image. Usage: background URL. Ex: background http://www.nafpaktia.com/data/wallpapers/40/860159.jpg</span>",
     "<span class'help-line'><b class='help-cmd'>weather</b> -------- Outputs current weather data from a specific location. Usage: weather City Country. Ex: weather Quebec Canada.</span>",
     "<span class'help-line'><b class='help-cmd'>show-blocks</b> ---- Displays all current blocks on the blockchain. Options: <b>-e or expand</b></span>",
-    "<span class'help-line'><b class='help-cmd'>mine</b> ----------- Mines the current transactions</span>"
+    "<span class'help-line'><b class='help-cmd'>show-pending</b> --- Displays all pending transactions on blockchain. </span>",
+    "<span class'help-line'><b class='help-cmd'>show-chain</b> ----- Displays a complete view of the blockchain object in the side panel. </span>",
+    "<span class'help-line'><b class='help-cmd'>mine</b> ----------- Mines the current transactions</span>",
+    "<span class'help-line'><b class='help-cmd'>stop-mine</b> ------ Halts the mining process</span>"
 
   ];
 
@@ -225,107 +230,93 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       }
 
       switch (cmd) {
-        case 'cat':
-          runCat(args, cmd);
+        case 'connect': initSocketConnection();
           break;
-
-        case 'goto':
-          openInNewTab(args[0]);
+        case 'cat': runCat(args, cmd);
           break;
-
-        case 'clear':
-          runClear(args, cmd);
+        case 'goto': openInNewTab(args[0]);
           break;
-
-        case 'date':
-          output( new Date() );
+        case 'clear': runClear(args, cmd);
           break;
-
-        case 'echo':
-          output( args.join(' ') );
+        case 'date': output( new Date() );
           break;
-
-        case 'debug':
-          ConsoleLogHTML.connect(ulContainer); // Redirect log messages
-          if(args[0] == 's' || args[0] == 'stop')
-            ConsoleLogHTML.disconnect(); // Stop redirecting
+        case 'echo': output( args.join(' ') );
           break;
         case 'ls':
-        case 'help':
-          output('<div class="ls-files">' + '<p>' +CMDS_.join('<br>')+ '</p>'+ '</div>');
+        case 'help': output('<div class="ls-files">' + '<p>' +CMDS_.join('<br>')+ '</p>'+ '</div>');
           break;
-
         case 'uname':
+
           output(navigator.appVersion);
-          // connection.send(JSON.stringify(new Transaction(localAddress, 'ws://192.168.0.154:8080', 10, clientConnectionToken)));
-          // socket.emit('seedBlockchain', 'Hello world');
-          socket.emit('syncBlockchain', blockchain);
+          output('Initiating transaction generator...');
+          var cpt=0;
+          setInterval(function(){
+          	sendTransaction(clientConnectionToken, 'http://192.168.0.154:8082', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
+            outputDebug("Transact - From: " + clientConnectionToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
+          	cpt++;
+          }, 5000);
           break;
-
+        /* ENG - FR Translation Tool */
         case 'l':
-        case 'linguee':
-          var argsJoined = args.join(' ');
-          console.log(typeof argsJoined);
-          doLingueeTranslationEngToFra(argsJoined, cmd);
+        case 'linguee': doLingueeTranslationEngToFra(args.join(' '), cmd);
           break;
-
-        case 'iching':
-          runIching(args, cmd);
+        /*  Iching Reader and Hexagram Chart   */
+        case 'iching': runIching(args, cmd);
           break;
-
-        case 'crypto':
-          runCrypto(args, cmd, this.value);
+        case 'background': $('body').css("background-image", "url("+args[0]+")")
           break;
-
-        case 'list-cryptos':
-          getListOfCryptos();
-          break;
-
-        case 'describe':
-          runDescribe(args, cmd);
-          break;
-
-        case 'background':
-          backgroundUrl = args[0];
-          $('body').css("background-image", "url("+backgroundUrl+")")
-          break;
+        /* Weather and Forecast Commands */
         case 'w':
         case 'weather':
-          if(args.length == 0){
-            args = ['Quebec', 'Canada'];
-          }
+          args = (args.length == 0? ['Quebec', 'Canada'] : args);
           runWeather(args, cmd);
           break;
-
         case 'f':
         case 'forecast':
-          if(args.length == 0){
-            args = ['Quebec', 'Canada'];
-          }
+          args = (args.length == 0? ['Quebec', 'Canada'] : args);
           runForecast(args, cmd);
           break;
-        case 'mine':
-          startMining(localAddress);
 
+        /* Blockchain and Cryptocurrency Related Commands */
+        case 'crypto': runCrypto(args, cmd, this.value);
           break;
-
+        case 'list-cryptos': getListOfCryptos();
+          break;
+        case 'describe': runDescribe(args, cmd);
+          break;
+        case 'mine':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+          (!clientConnectionToken.isMining? startMining(false) : output('Node already mining...'))
+          break;
+        case 'stop-mine':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+          (clientConnectionToken.isMining? startMining(true) : output('Node is not mining'));
+          break;
         case 'show-blocks':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
           runShowBlocks(args, cmd);
           break;
-
         case 'show-chain':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
           $('#element').jsonView(blockchain);
           break;
-        case 'valid-blocks':
-          if(blockchain.isChainValid()){
-            output('Blockchain still valid');
+        case 'show-pending':
+          if(!isConnected){
+            connectError(cmd);
+            break;
           }
-          else{
-            output('Blockchain not valid - Check console for info');
-          }
-          break;
-
-        case 'show-transact':
           runShowTransact();
           break;
 
@@ -502,6 +493,12 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
   }
 
 
+  function connectError(cmd){
+    output('Client is not connected to node. Cannot run command <b>'+ cmd+'</b>');
+    output('Try starting the node first, then if the error persists');
+    output('Try fetching the blockchain from the node again ');
+  }
+
   function output(html) {
     output_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
     cmdLine_.focus();
@@ -583,9 +580,11 @@ function startMining(mining=false){
 
   if(!mining){
     output('Starting the miner...');
+    clientConnectionToken.isMining = true;
     socket.emit('miningRequest');
   }else{
     output('Stopping the miner...');
+    clientConnectionToken.isMining = false;
     socket.emit('miningRequest');
   }
 
@@ -637,6 +636,7 @@ setTimeout(function(){
 
       socket.on('disconnect', function(){
         console.log('You have disconnected from node server');
+        isConnected = false;
         clearAll();
         socket.emit('close', clientConnectionToken);
 
@@ -654,6 +654,7 @@ setTimeout(function(){
         console.log('Connected to node ', nodeAddress);
         socket.emit('client-connect', clientConnectionToken);
         socket.emit('getBlockchain', clientConnectionToken);
+        isConnected = true;
         fallbackCounter = 1;
       })
 
@@ -756,7 +757,7 @@ window.onbeforeunload = function() {
 window.onload = function() {
 
 
-    initSocketConnection();
+
 
 
 
@@ -795,7 +796,8 @@ function issueClientToken(address=localAddress){
   clientConnectionToken = {
     'type' : 'endpoint',
     'address' : address,
-    'hashSignature' : sha256(address, currentTime)
+    'hashSignature' : sha256(address, currentTime),
+    'isMining':false
   }
 
 

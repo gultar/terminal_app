@@ -22,7 +22,8 @@ class Transaction{
 
 //////////////////Block/////////////////////
 class Block{
-  constructor(timestamp, transactions, previousHash=''){
+  constructor(timestamp, transactions, previousHash='', blockNumber=0){
+    this.blockNumber = blockNumber;
     this.timestamp = timestamp;
     this.transactions = transactions;
     this.previousHash = previousHash;
@@ -81,10 +82,9 @@ class Blockchain{
 
   createGenesisBlock(){
     return new Block("01/01/2018", "Genesis block", "0");
-    this.createTransaction(new Transaction('Genesis','http://192.168.0.154:8080',100, {}, Date.now()));
-    this.createTransaction(new Transaction('Genesis','http://192.168.0.154:8081',100, {}, Date.now()));
-    this.createTransaction(new Transaction('Genesis','http://192.168.0.153:8080',100, {}, Date.now()))
   }
+
+
 
   getLatestBlock(){
     return this.chain[this.chain.length - 1];
@@ -112,7 +112,7 @@ class Blockchain{
     this.chain.push(newBlock);
   }
 
-  syncBlock(newBlock){
+  syncBlock(newBlock, callback){
 
       var blockStatus;
       var pending = this.pendingTransactions;
@@ -165,7 +165,7 @@ class Blockchain{
     if(isMining){
 
       let block = new Block(Date.now(), this.pendingTransactions);
-
+      block.blockNumber = this.chain.length;
       this.pendingTransactions = {};
       block.previousHash = this.getLatestBlock().hash;
       block.mineBlock(this.difficulty);
@@ -178,17 +178,14 @@ class Blockchain{
 
       if(this.validateBlock(block)){
         this.chain.push(block);
+        console.log("The Blockchain is " + this.chain.length + " blocks long.");
+        console.log(miningRewardAddress.address + ' has mined ' + miningRewardAddress.blocksMined + ' blocks.');
+        this.createTransaction(new Transaction(null, miningRewardAddress.address, this.miningReward, "", Date.now()))
       }else{
         console.log('Block is not valid');
-        this.orphanedBlocks.push(block);
+
       }
 
-
-
-
-      console.log("The Blockchain is " + this.chain.length + " blocks long.");
-      console.log(miningRewardAddress.address + ' has mined ' + miningRewardAddress.blocksMined + ' blocks.');
-      this.createTransaction(new Transaction(null, miningRewardAddress.address, this.miningReward, "", Date.now()))
       callback(false, true);
       return true;
     }else{
@@ -200,7 +197,6 @@ class Blockchain{
 
 
   createTransaction(transaction){
-    // this.pendingTransactions.push(transaction);
     this.pendingTransactions[transaction.hash] = transaction;
   }
 
@@ -331,10 +327,6 @@ class Blockchain{
 
 
 
-  addBlockbaseRecord(address){
-
-  }
-
   isChainValid(){
     for(let i=1;i < this.chain.length; i++){
 
@@ -429,19 +421,25 @@ class Blockchain{
   validateTransaction(transaction, token){
     if(transaction != undefined && token != undefined){
 
-      //To be worked on!
+      var isPartOfNetwork = this.validateAddressToken(token);
+      console.log(isPartOfNetwork);
 
   			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
+        console.log(balanceOfSendingAddr);
+
   			if(!balanceOfSendingAddr){
   					console.log('Cannot verify balance of undefined address token');
   			}else{
+
   				if(balanceOfSendingAddr >= transaction.amount){
+
   					console.log('Transaction validated successfully');
   				}else if(transaction.type === 'query'){
   					//handle blockbase queries
   				}else{
   					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
   				}
+
   			}
 
 
@@ -454,6 +452,30 @@ class Blockchain{
 
 
   }
+
+  validateAddressToken(token){
+    var exists = false;
+    var isValid = false;
+    if(token != undefined){
+      if(this.nodeTokens[token.address] === token){
+        exists = true;
+        console.log(this.nodeTokens[token.address].hashSignature);
+
+        if( this.nodeTokens[token.address].hashSignature === sha256(token.address, token.status)
+                &&
+            token.hashSignature === sha256(this.nodeTokens[token.address].address, this.nodeTokens[token.address].status
+          )){
+
+            isValid = true;
+        }
+      }
+
+
+    }
+
+    return { exists, isValid };
+  }
+
 }
 
 class BlockchainAddress{

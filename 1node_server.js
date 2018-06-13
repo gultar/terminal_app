@@ -19,11 +19,11 @@ const { compareBlockchains } = require('./backend/validation.js');
 */
 const { getIPAddress } = require('./backend/ipFinder.js');
 /*		'http://10.112.106.71:8080', 'http://10.112.106.71:8081', 'http://10.112.106.71:8082', //odesn't work - rasbpi at maria's
-    'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082'*/
+    'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082',
+    'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop*/
 const ipList = [
       'http://'+getIPAddress()+':'+port,
       'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
-      'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop
       'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082', //rasbpi at home
       'http://192.168.0.154:8080', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', //laptop at home
 			'http://192.168.1.72:8080', 'http://192.168.1.72:8081', 'http://192.168.1.72:8082', //rasbpi at mom's
@@ -43,7 +43,8 @@ let dataBuffer;
 let thisNode = {
   'type' : 'node',
   'address' : ipList[0], //
-  'hashSignature' : sha256(ipList[0], Date.now()),
+  'status':'active',
+  'hashSignature' : sha256(ipList[0]+ Date.now()+ this.status),
   'isMining': false //ipList[0]
 }
 
@@ -64,10 +65,10 @@ let sendTrials = 0;
 
 */
 const startServer = () =>{
-	console.log('Starting server at '+thisNode.address+'/');
+	console.log('Starting node at '+thisNode.address+'/');
 	console.log('Node address:',thisNode.address);
 	console.log('Node Hash:', thisNode.hashSignature);
-	app.use(express.static(__dirname+'/views'));
+  app.use(express.static(__dirname+'/views'));
 
 	app.on('/', () => {
 	  res.send(getIPAddress());
@@ -102,8 +103,10 @@ const startServer = () =>{
     })
 
 		socket.on('validateChain', (token) =>{
-			if(blockchain != undefined){
+			if(blockchain != undefined && blockchain instanceof Blockchain){
 				console.log('Blockchain valid?',blockchain.isChainValid());
+        var validStatus = blockchain.validateAddressToken(thisNode);
+        console.log(validStatus);
 			}
 		})
 
@@ -142,7 +145,10 @@ const startServer = () =>{
 
     socket.on('peerBuildingBlock', (token) =>{
       if(token != undefined){
-        cancelMining(false);
+        if(currentMiners[token.hash] == token){
+          console.log('TOKEN HASH ' + token.hash.substr(0, 10)+ ' has started mining');
+        }
+        // cancelMining(false);
       }
     })
 
@@ -444,11 +450,11 @@ const startMining = (miningAddrToken) => {
 
 		miningSuccess = blockchain.minePendingTransactions(miningAddr, (isMiningBlock, finishedBlock)=>{
       if(isMiningBlock && !finishedBlock){
-
+        console.log('===============STARTED MINING!!!!!')
         sendEventToAllPeers('peerBuildingBlock', thisNode);
       }else if(!isMiningBlock && finishedBlock){
-
-        sendEventToAllPeers('peerFinishedBlock', thisNode);
+        console.log('+++++++++++++++FINISHED MINING!!!!!');
+        // sendEventToAllPeers('peerFinishedBlock', thisNode);
       }
 
     });
@@ -464,7 +470,7 @@ const startMining = (miningAddrToken) => {
 			sendEventToAllPeers('message', message);
 			console.log(message);
 			setTimeout(()=>{
-				console.log('Sending:', newBlock)
+				// console.log('Sending:', newBlock)
 				sendEventToAllPeers('newBlock', newBlock);
 			}, 3000)
 
@@ -483,12 +489,6 @@ const startMining = (miningAddrToken) => {
 
 }
 
-/*
-  Used to revalidate block hashes
-*/
-const calculateBlockHash = (block) =>{
-	return sha256(block.previousHash + block.timestamp + JSON.stringify(block.transactions) + block.nonce).toString();
-}
 
 /*
   This is the socket listener function for when a peer
@@ -574,9 +574,17 @@ const receiveTransactionFromClient = (socket, transaction, fromNodeToken) =>{
   if(blockchain != undefined){
     if(transaction != undefined && fromNodeToken != undefined){
       if(fromNodeToken.address != thisNode.address){
+
+
+        var fromAddress = blockchain.nodeTokens[transaction.fromAddress];
+        var toAddress = blockchain.nodeTokens[transaction.toAddress];
+
+        console.log('From:', fromAddress);
+        console.log('To:', toAddress);
+
         var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
         //Need to validate transact before broadcasting it
-        var transactIsValid = validateTransaction(transactionObj, fromNodeToken);
+        var transactIsValid = validateTransaction(transactionObj, transaction.fromAddress);
 
         blockchain.createTransaction(transactionObj);
         sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
@@ -698,6 +706,7 @@ const recalculateMerkleRoot = (transactions) =>{
   }
 
 }
+
 
 /*
   Listener function that sends blockchain if it's valid
@@ -853,6 +862,8 @@ const attemptMining = (miningAddrToken) =>{
 }
 
 
+
+
 startServer()
 initBlockchain();
 setTimeout(()=>{
@@ -894,7 +905,7 @@ setTimeout(()=>{
   var blockBase = new Blockbase(thisNode.address);
   var bTables = [];
   blockBase.buildTables(blockchain.chain, (tables)=>{
-    // console.log(tables)
+    console.log(tables)
     blockBase.tables = tables;
     // console.log(blockBase.tables);
     blockchain.blockbase = blockBase;
