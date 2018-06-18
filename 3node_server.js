@@ -446,8 +446,7 @@ const startMining = (miningAddrToken) => {
   miningAddr = blockchain.getMiningAddress(miningAddrToken);
 
 	if(miningAddr){
-    console.log(miningAddr);
-
+    
 		miningSuccess = blockchain.minePendingTransactions(miningAddr, (isMiningBlock, finishedBlock)=>{
       if(isMiningBlock && !finishedBlock){
         console.log('===============STARTED MINING!!!!!')
