@@ -17,11 +17,11 @@ var url = document.URL;
 //port of client connection
 var port = 8080;
 //http://localhost:8080
-var localAddress//document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
-getUserIP(function(ip){
-    localAddress = 'http://'+ip +':'+ port;
-    console.log('IP:', localAddress);
-});
+var localAddress = document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
+// getUserIP(function(ip){
+//     localAddress = 'http://'+ip +':'+ port;
+//     console.log('IP:', localAddress);
+// });
 console.log(port);
 var currentTime = Date.now();
 //This is a counter to limit the number of attempts to try to fetch blockchain from file if unreadable or else
@@ -45,6 +45,9 @@ var debugOutput_ = document.getElementById('second-container');
 
 //Server connection
 var socket;
+
+//Transaction Generator setInterval
+var txGen;
 
 function fireKey(el,key)
 {
@@ -234,23 +237,26 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
       switch (cmd) {
         case 'connect':
-        console.log(args);
-        if(args.length > 0){
-          try{
 
-            localAddress = args[0]
-            output('Connecting to node '+localAddress)
-            output(localAddress);
+          if(args.length > 0){
+            try{
+
+              localAddress = args[0]
+              output('Connecting to node '+localAddress)
+              output(localAddress);
+              initSocketConnection();
+            }catch(err){
+              output(err);
+            }
+
+          }else{
+            output('Connecting to local node at address '+localAddress)
             initSocketConnection();
-          }catch(err){
-            output(err);
           }
 
-        }else{
-          output('Connecting to local node at address '+localAddress)
-          initSocketConnection();
-        }
-
+          break;
+        case 'disconnect':
+          disconnect(args, cmd);
           break;
         case 'cat': runCat(args, cmd);
           break;
@@ -266,11 +272,14 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         case 'help': output('<div class="ls-files">' + '<p>' +CMDS_.join('<br>')+ '</p>'+ '</div>');
           break;
         case 'uname':
-
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
           output(navigator.appVersion);
           output('Initiating transaction generator...');
           var cpt=0;
-          setInterval(function(){
+          txGen = setInterval(function(){
           	sendTransaction('e42259a16d919f71997b9621f05f0047', 'http://192.168.0.154:8082', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
             // outputDebug("Transact - From: " + clientConnectionToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
           	cpt++;
@@ -390,17 +399,22 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           $('#myCanvas').css('visibility', 'hidden');
           initTerminalMsg();
 
+      }
 
-
-          if(socket){
-            isConnected = false;
-            socket.emit('close', clientConnectionToken);
-            setTimeout(function(){
-              socket.destroy();
-            }, 2000)
-            console.log("Cleared active connection");
+      function disconnect(args, cmd){
+        if(socket){
+          isConnected = false;
+          socket.emit('close', clientConnectionToken);
+          setTimeout(function(){
+            socket.destroy();
+          }, 2000)
+          if(txGen){
+            window.clearInterval(txGen);
+            txGen = null;
           }
-
+          outputDebug('Disconnected from node');
+          console.log("Cleared active connection");
+        }
       }
 
 
