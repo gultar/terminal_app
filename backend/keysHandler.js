@@ -113,22 +113,7 @@ const getPublicKeyAndRsaKey = (callback) =>{
   var publicKey;
   fs.exists('.key', (exists)=>{
 
-    if(!exists){
-      /*
-      * Could be so much better. I should not have to repeat myself
-      *
-      */
-      generatePrivateKey((keyObj)=>{
-        if(keyObj){
-          rsakey = cryptico.generateRSAKey(keyObj.password, 1024);
-          publicKey = cryptico.publicKeyString(rsakey);
-          publicID = cryptico.publicKeyID(publicKey);
-          callback(publicKey, rsakey, publicID);
-        }
-      });
-
-    }else{
-
+    if(exists){
       loadprivateKey((keyObj)=>{
         if(keyObj){
           rsakey = cryptico.generateRSAKey(keyObj.password, 1024);
@@ -137,15 +122,15 @@ const getPublicKeyAndRsaKey = (callback) =>{
           callback(publicKey, rsakey, publicID);
         }
       });
+
     }
+
 
   })
 
 }
 
-const handleKeyChain = (keyObj, callback) =>{
 
-}
 
 const generateCheckAddress = (timestamp='',  message='') =>{
   if(password){
@@ -210,9 +195,11 @@ const rsaDecrypt = (encryptedObject, rsaKey) =>{
 
 }
 
-getPublicKeyAndRsaKey((keyChain)=>{
-  console.log(keyChain);
-});
+fs.exists('.key', (exists)=>{
+  if(!exists){
+    generatePrivateKey();
+  }
+})
 
 
 

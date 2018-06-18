@@ -17,7 +17,7 @@ class Transaction{
     this.amount = amount;
     this.data = data;
     this.timestamp = (timestamp != undefined? timestamp : Date.now());
-    this.hash = (hash != undefined ? hash : sha256(this.fromAddress+ this.toAddress+ this.amount+ this.data+ this.timestamp));
+    this.hash = (hash? hash : sha256(this.fromAddress+ this.toAddress+ this.amount+ this.data+ this.timestamp));
     this.type = type;
     this.signature;
     this.check;
@@ -60,7 +60,7 @@ class Transaction{
       decryptResult = rsaDecrypt(this.check, rsa);
       openedCheck = JSON.parse(decryptResult.plaintext);
       this.signature = openedCheck.signature;
-      
+
     }catch(err){
       console.log(err);
       return false;
@@ -152,8 +152,8 @@ class Blockchain{
 
   getMiningAddress(addressToken){
     if(addressToken != undefined){
-      if(this.miningAddresses[addressToken.hashSignature] && this.miningAddresses[addressToken.hashSignature] instanceof BlockchainAddress){
-  			return this.miningAddresses[addressToken.hashSignature];
+      if(this.miningAddresses[addressToken.publicAddressKey] && this.miningAddresses[addressToken.publicAddressKey] instanceof BlockchainAddress){
+  			return this.miningAddresses[addressToken.publicAddressKey];
   		}else{
   			this.addMiningAddress(addressToken);
   		}
@@ -226,7 +226,6 @@ class Blockchain{
       block.minedBy = miningRewardAddress.hashSignature;
 
       miningRewardAddress.minedOneBlock();
-      miningRewardAddress.setBalance(this.miningReward);
 
       console.log("Block successfully mined!");
 
@@ -234,7 +233,7 @@ class Blockchain{
         this.chain.push(block);
         console.log("The Blockchain is " + this.chain.length + " blocks long.");
         console.log(miningRewardAddress.address + ' has mined ' + miningRewardAddress.blocksMined + ' blocks.');
-        this.createTransaction(new Transaction(null, miningRewardAddress.address, this.miningReward, "", Date.now()))
+        this.createTransaction(new Transaction(null, miningRewardAddress.address, this.miningReward, "", Date.now(), false, 'coinbase'))
       }else{
         console.log('Block is not valid');
 
@@ -561,6 +560,11 @@ class BlockchainAddress{
     this.blocksMined = blocksMined;
     this.publicAddress = token.publicAddressKey;
   }
+
+  minedOneBlock(){
+    this.blocksMined++;
+  }
+
 
 }
 

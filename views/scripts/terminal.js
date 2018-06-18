@@ -363,12 +363,20 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         }
         if(args[0] == 'debug' || args[0] =='-d'){
           $('#myULContainer').html('');
+
         }
           $('output').html('');
           clearAll();
           $('#myCanvas').css('visibility', 'hidden');
           initTerminalMsg();
 
+
+          isConnected = false;
+          socket.emit('close', clientConnectionToken);
+          setTimeout(function(){
+            socket.destroy();
+          }, 2000)
+          console.log("Cleared active connection");
       }
 
 
@@ -632,7 +640,7 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
   }
 
   socket.emit('transaction', transactToSend, clientConnectionToken)
-  output(loopTransaction(transactToSend))
+  outputDebug(loopTransaction(transactToSend))
 
 
 }

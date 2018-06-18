@@ -69,7 +69,7 @@ let sendTrials = 0;
 */
 const startServer = () =>{
 	console.log('\nStarting node at '+thisNode.address+"\n");
-	console.log('Node Public Address:',thisNode.publicAddressKey);
+	console.log('Node Public Address: '+thisNode.publicAddressKey + "\n");
   app.use(express.static(__dirname+'/views'));
 
 	app.on('/', () => {
@@ -446,7 +446,7 @@ const startMining = (miningAddrToken) => {
   miningAddr = blockchain.getMiningAddress(miningAddrToken);
 
 	if(miningAddr){
-
+    console.log(miningAddr);
 
 		miningSuccess = blockchain.minePendingTransactions(miningAddr, (isMiningBlock, finishedBlock)=>{
       if(isMiningBlock && !finishedBlock){
@@ -461,7 +461,7 @@ const startMining = (miningAddrToken) => {
 
 		if(miningSuccess){
 
-			console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
+			console.log('\nBalance of '+miningAddr.address+' is '+ blockchain.getBalanceOfAddress(miningAddr));
 
 			var message =  'A new block has been mined by ' + miningAddr.publicAddressKey + '. Sending new block';
 			var newBlock = blockchain.getLatestBlock();
@@ -880,43 +880,30 @@ setTimeout(()=>{
 
 }, 2500)
 
-setTimeout(()=>{
-
-
-
-  var secondRsa = cryptico.generateRSAKey('hey bitach', 512);
-  var checkTimestamp = Date.now()
-  var pubKeySecond = cryptico.publicKeyString(secondRsa);
-
-
-  var thirdRsa = cryptico.generateRSAKey('awidohawoidhwaoih', 512);
-  var pubthird = cryptico.publicKeyString(thirdRsa);
-  var thirdId = cryptico.publicKeyID(pubthird)
-  var id = cryptico.publicKeyID(pubKeySecond);
-  var newTx = new Transaction(thisNode.publicKeyFull, pubKeySecond, 90, null, Date.now(), null, 'transaction')
-  newTx.closeEnvelope(rsaKey);
-  // console.log(newTx);
-  newTx.openEnvelope(secondRsa);
-  // console.log(newTx)
-  var decoded = rsaDecrypt(newTx.check, secondRsa);
-  var chk = JSON.parse(decoded.plaintext);
-  console.log(thisNode.publicKeyFull);
-  console.log(decoded)
-
-  //
-  // var myCheck = new BlockchainCheck(thisNode.publicKeyFull, 10, pubKeySecond, checkTimestamp);
-  //
-  // myCheck = rsaEncrypt(JSON.stringify(myCheck), pubKeySecond);
-  //
-  //
-  // var myTrans = new Transaction(thisNode.publicKeyFull, pubKeySecond, 10, myCheck, checkTimestamp, null, 'transaction');
-  //
-  //
-  // var result = rsaDecrypt(myTrans.data, secondRsa);
-  // console.log(result);
-  // var retreivedCheck = JSON.parse(result.plaintext);
-  // console.log(retreivedCheck.signature == sha256(retreivedCheck.checkAddress + retreivedCheck.amount + retreivedCheck.toAddress + retreivedCheck.timestamp))
-}, 8000)
+// setTimeout(()=>{
+//
+//
+//
+//   var secondRsa = cryptico.generateRSAKey('hey bitach', 512);
+//   var checkTimestamp = Date.now()
+//   var pubKeySecond = cryptico.publicKeyString(secondRsa);
+//
+//
+//   var thirdRsa = cryptico.generateRSAKey('awidohawoidhwaoih', 512);
+//   var pubthird = cryptico.publicKeyString(thirdRsa);
+//   var thirdId = cryptico.publicKeyID(pubthird)
+//   var id = cryptico.publicKeyID(pubKeySecond);
+//   var newTx = new Transaction(thisNode.publicKeyFull, pubKeySecond, 90, null, Date.now(), null, 'transaction')
+//   newTx.closeEnvelope(rsaKey);
+//   // console.log(newTx);
+//   newTx.openEnvelope(secondRsa);
+//   // console.log(newTx)
+//   var decoded = rsaDecrypt(newTx.check, secondRsa);
+//   var chk = JSON.parse(decoded.plaintext);
+//   console.log(thisNode.publicKeyFull);
+//   console.log(decoded)
+//
+// }, 8000)
 
 
 
