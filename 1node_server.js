@@ -607,20 +607,20 @@ const receiveTransactionFromClient = (socket, transaction, fromNodeToken) =>{
   Creates an chain of block signatures, that is, the hash of the block and the previous hash only.
 */
 const buildChainHashes = () =>{
-	var hashSignaturesOnChain = []
+	var publicAddressKeysOnChain = []
 
 	var chain = blockchain.chain;
 
 
 	for(var i=0; i<chain.length; i++){
-		hashSignaturesOnChain.push({
+		publicAddressKeysOnChain.push({
 			hash:chain[i].hash,
 			previousHash:chain[i].previousHash,
 			timestamp:chain[i].timestamp
 		})
 	}
 
-	return hashSignaturesOnChain;
+	return publicAddressKeysOnChain;
 }
 
 /*
