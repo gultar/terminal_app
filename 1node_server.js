@@ -32,19 +32,22 @@ const ipList = [
 /*
   Blockchain classes and tools
 */
-const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase } = require('./backend/blockchain');
+const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase, BlockchainCheck } = require('./backend/blockchain');
+const {  encrypt, decrypt, generateCheckAddress, getPublicKeyAndRsaKey, rsaEncrypt, rsaDecrypt  } = require('./backend/keysHandler');
+const cryptico = require('cryptico');
 const merkle = require('merkle');
 const sha256 = require('./backend/sha256');
-const { encrypt, decrypt } = require('./backend/encryption.js')
 
 let blockchain;
 let dataBuffer;
+let rsaKey;
 
 let thisNode = {
   'type' : 'node',
   'address' : ipList[0], //
   'status':'active',
-  'hashSignature' : sha256(ipList[0]+ Date.now()+ this.status),
+  'publicAddressKey' : '',
+  'publicKeyFull' : '',
   'isMining': false //ipList[0]
 }
 
@@ -65,15 +68,13 @@ let sendTrials = 0;
 
 */
 const startServer = () =>{
-	console.log('Starting node at '+thisNode.address+'/');
-	console.log('Node address:',thisNode.address);
-	console.log('Node Hash:', thisNode.hashSignature);
+	console.log('\nStarting node at '+thisNode.address+"\n");
+	console.log('Node Public Address:',thisNode.publicAddressKey);
   app.use(express.static(__dirname+'/views'));
 
 	app.on('/', () => {
 	  res.send(getIPAddress());
 	})
-
 
 
 	ioServer.on('connection', (socket) => {
@@ -128,6 +129,11 @@ const startServer = () =>{
 	  socket.on('transaction', (transaction, fromNodeToken) => {
       receiveTransactionFromClient(socket, transaction, fromNodeToken);
 	  });
+
+    socket.on('transactionCheckOpened', (transaction, fromNodeToken) =>{
+
+    })
+
 
 	  socket.on('miningRequest', () =>{
       if(!thisNode.isMining){
@@ -241,7 +247,7 @@ const initBlockchain = (tryOnceAgain=true) => {
     }else{
       blockchain = instanciateBlockchain(dataBuffer);
 			blockchain.addMiningAddress(thisNode);
-			blockchain.nodeTokens[thisNode.address] = thisNode;
+			blockchain.nodeTokens[thisNode.publicAddressKey] = thisNode;
     }
 
 
@@ -302,8 +308,8 @@ const connectToPeerNetwork = () => {
 */
 const getMiningAddress = (addressToken) => {
   if(blockchain !== undefined){
-		if(blockchain.miningAddresses[addressToken.hashSignature] && blockchain.miningAddresses[addressToken.hashSignature] instanceof BlockchainAddress){
-			return blockchain.miningAddresses[addressToken.hashSignature];
+		if(blockchain.miningAddresses[addressToken.publicAddressKey] && blockchain.miningAddresses[addressToken.publicAddressKey] instanceof BlockchainAddress){
+			return blockchain.miningAddresses[addressToken.publicAddressKey];
 		}else{
 			blockchain.addMiningAddress(addressToken);
 		}
@@ -392,13 +398,7 @@ const saveBlockchain = (blockchainReceived) => {
 				if(blockchainReceived != undefined){
 
 					if(!(blockchainReceived instanceof Blockchain)){
-						blockchainReceived = new Blockchain(
-							blockchainReceived.chain,
-							blockchainReceived.pendingTransactions,
-							blockchainReceived.nodeAddresses,
-							blockchainReceived.ipAddress,
-							blockchainReceived.orphanedBlocks
-						)
+						blockchainReceived = instanciateBlockchain(blockchainReceived);
 					}
 
 					if(blockchain != undefined){
@@ -463,7 +463,7 @@ const startMining = (miningAddrToken) => {
 
 			console.log('\nBalance of '+miningAddr.address+' is '+ miningAddr.getBalance());
 
-			var message =  'A new block has been mined by ' + miningAddr.hashSignature + '. Sending new block';
+			var message =  'A new block has been mined by ' + miningAddr.publicAddressKey + '. Sending new block';
 			var newBlock = blockchain.getLatestBlock();
 			ioServer.emit('miningApproved', blockchain);
 			ioServer.emit('message', message);
@@ -498,7 +498,7 @@ const clientConnect = (socket, token) =>{
   if(token != undefined){
     clients[token.address] = token;
 
-    console.log('Connected client hash: '+ token.hashSignature.substr(0, 15) + '...');
+    console.log('Connected client hash: '+ token.publicAddressKey.substr(0, 15) + '...');
     console.log('At address:', token.address);
 
     socket.emit('message', 'You are now connected to ' + thisNode.address);
@@ -539,7 +539,7 @@ const sync = (hash, token) =>{
 const storeToken = (token) =>{
   if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
     console.log('Received a node token from ', token.address);
-    blockchain.nodeTokens[token.address] = token;
+    blockchain.nodeTokens[token.publicAddressKey] = token;
     blockchain.addMiningAddress(token);
   }
 }
@@ -557,8 +557,11 @@ const distributeTransaction = (socket, transaction, fromNodeToken) =>{
       console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
       console.log(transaction);
       var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+
       var transactIsValid = validateTransaction(transactionObj, fromNodeToken);
+
       blockchain.createTransaction(transactionObj);
+
     }
   }
 }
@@ -573,18 +576,18 @@ const receiveTransactionFromClient = (socket, transaction, fromNodeToken) =>{
   ///////////////////////////////////////////////////////////
   if(blockchain != undefined){
     if(transaction != undefined && fromNodeToken != undefined){
-      if(fromNodeToken.address != thisNode.address){
+      if(fromNodeToken.address != thisNode.address || fromNodeToken.type == 'endpoint'){
 
 
         var fromAddress = blockchain.nodeTokens[transaction.fromAddress];
         var toAddress = blockchain.nodeTokens[transaction.toAddress];
 
-        console.log('From:', fromAddress);
-        console.log('To:', toAddress);
+        // console.log('From:', fromAddress);
+        // console.log('To:', toAddress);
 
         var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
         //Need to validate transact before broadcasting it
-        var transactIsValid = validateTransaction(transactionObj, transaction.fromAddress);
+        var transactIsValid = blockchain.validateTransaction(transactionObj, fromAddress);
 
         blockchain.createTransaction(transactionObj);
         sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
@@ -648,7 +651,7 @@ const sendToTargetPeer = (eventType, data, address) =>{
 
 //self describing
 const instanciateBlockchain = (blockchain) =>{
-	return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeTokens, blockchain.ipAddresses, blockchain.orphanedBlocks);
+	return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeTokens, blockchain.ipAddresses, blockchain.orphanedBlocks, blockchain.publicKeys);
 }
 
 /*
@@ -863,56 +866,100 @@ const attemptMining = (miningAddrToken) =>{
 
 
 
+getPublicKeyAndRsaKey((pubKey, rsaK, pubID)=>{
+  thisNode.publicAddressKey = pubID;
+  rsaKey = rsaK;
+  thisNode.publicKeyFull = pubKey;
+});
 
-startServer()
 initBlockchain();
 setTimeout(()=>{
+  startServer()
 	connectToPeerNetwork();
 	chainUpdater();
-
 
 }, 2500)
 
 setTimeout(()=>{
-  var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))
-
-    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myRecord), Date.now(), myRecord.uniqueKey));
 
 
-  var mySecondRecord = new BlockbaseRecord('test2', 'testTable',thisNode.address,  JSON.stringify({  test: "permission to read this file can connect to Tor. If you're going to run" }))
 
-    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(mySecondRecord), Date.now(), mySecondRecord.uniqueKey));
+  var secondRsa = cryptico.generateRSAKey('hey bitach', 512);
+  var checkTimestamp = Date.now()
+  var pubKeySecond = cryptico.publicKeyString(secondRsa);
+
+
+  var thirdRsa = cryptico.generateRSAKey('awidohawoidhwaoih', 512);
+  var pubthird = cryptico.publicKeyString(thirdRsa);
+  var thirdId = cryptico.publicKeyID(pubthird)
+  var id = cryptico.publicKeyID(pubKeySecond);
+  var newTx = new Transaction(thisNode.publicKeyFull, pubKeySecond, 90, null, Date.now(), null, 'transaction')
+  newTx.closeEnvelope(rsaKey);
+  // console.log(newTx);
+  newTx.openEnvelope(secondRsa);
+  // console.log(newTx)
+  var decoded = rsaDecrypt(newTx.check, secondRsa);
+  var chk = JSON.parse(decoded.plaintext);
+  console.log(thisNode.publicKeyFull);
+  console.log(decoded)
 
   //
-  var myThirdRecord = new BlockbaseRecord('test3', 'testTable',thisNode.address,  JSON.stringify({  test: "your script with the same user or permission group as Tor then this is the" }))
-
-    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myThirdRecord), Date.now(), myThirdRecord.uniqueKey));
-
-
-  var myFourthRecord = new BlockbaseRecord('test4', 'testTable',thisNode.address,  JSON.stringify({  test: "easiest method of authentication to use." }))
-
-    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, encrypt(JSON.stringify(myFourthRecord)), Date.now(), myFourthRecord.uniqueKey));
-
-
-  var myFifthRecord = new BlockbaseRecord('test5', 'testTable',thisNode.address,  JSON.stringify({  test: "Alternatively we can authenticate with a password. To set a password first" }))
-
-    blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myFifthRecord), Date.now(), myFifthRecord.uniqueKey));
-
-  // console.log(encrypt(JSON.stringify(myRecord.data)));
-
-  // console.log(blockchain.pendingTransactions);
-
-  var blockBase = new Blockbase(thisNode.address);
-  var bTables = [];
-  blockBase.buildTables(blockchain.chain, (tables)=>{
-    console.log(tables)
-    blockBase.tables = tables;
-    // console.log(blockBase.tables);
-    blockchain.blockbase = blockBase;
-
-  })
-    ioServer.emit('testJSON', blockchain);
+  // var myCheck = new BlockchainCheck(thisNode.publicKeyFull, 10, pubKeySecond, checkTimestamp);
+  //
+  // myCheck = rsaEncrypt(JSON.stringify(myCheck), pubKeySecond);
+  //
+  //
+  // var myTrans = new Transaction(thisNode.publicKeyFull, pubKeySecond, 10, myCheck, checkTimestamp, null, 'transaction');
+  //
+  //
+  // var result = rsaDecrypt(myTrans.data, secondRsa);
+  // console.log(result);
+  // var retreivedCheck = JSON.parse(result.plaintext);
+  // console.log(retreivedCheck.signature == sha256(retreivedCheck.checkAddress + retreivedCheck.amount + retreivedCheck.toAddress + retreivedCheck.timestamp))
+}, 8000)
 
 
 
-}, 6000)
+// setTimeout(()=>{
+//   var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))
+//
+//     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myRecord), Date.now(), myRecord.uniqueKey));
+//
+//
+//   var mySecondRecord = new BlockbaseRecord('test2', 'testTable',thisNode.address,  JSON.stringify({  test: "permission to read this file can connect to Tor. If you're going to run" }))
+//
+//     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(mySecondRecord), Date.now(), mySecondRecord.uniqueKey));
+//
+//   //
+//   var myThirdRecord = new BlockbaseRecord('test3', 'testTable',thisNode.address,  JSON.stringify({  test: "your script with the same user or permission group as Tor then this is the" }))
+//
+//     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myThirdRecord), Date.now(), myThirdRecord.uniqueKey));
+//
+//
+//   var myFourthRecord = new BlockbaseRecord('test4', 'testTable',thisNode.address,  JSON.stringify({  test: "easiest method of authentication to use." }))
+//
+//     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, encrypt(JSON.stringify(myFourthRecord)), Date.now(), myFourthRecord.uniqueKey));
+//
+//
+//   var myFifthRecord = new BlockbaseRecord('test5', 'testTable',thisNode.address,  JSON.stringify({  test: "Alternatively we can authenticate with a password. To set a password first" }))
+//
+//     blockchain.createTransaction(new Transaction(thisNode.address, 'blockbase', 0, JSON.stringify(myFifthRecord), Date.now(), myFifthRecord.uniqueKey));
+//
+//   // console.log(encrypt(JSON.stringify(myRecord.data)));
+//
+//   // console.log(blockchain.pendingTransactions);
+//
+//   var blockBase = new Blockbase(thisNode.address);
+//   var bTables = [];
+//   blockBase.buildTables(blockchain.chain, (tables)=>{
+//     console.log(tables)
+//     blockBase.tables = tables;
+//     // console.log(blockBase.tables);
+//     blockchain.blockbase = blockBase;
+//
+//   })
+//     ioServer.emit('testJSON', blockchain);
+//
+//
+//
+// }, 6000)

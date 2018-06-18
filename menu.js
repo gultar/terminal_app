@@ -1,4 +1,5 @@
 var childProcess = require('child_process');
+const { getPublicKeyAndRsaKey } = require('./backend/keysHandler');
 
 function runScript(scriptPath, callback) {
 
@@ -31,9 +32,9 @@ const nodeMenu = () =>{
 	console.log('*********************************************');
 	console.log('*...........BLOCKCHAIN SIMULATOR............*');
 	console.log('*********************************************');
-	console.log('1. node: Start Blockchain Node');
-	console.log('2. light: Start a light node');
-	console.log('3. miner: Start a miner node');
+	console.log('node: Start Blockchain Node');
+	console.log('light: Start a light node');
+	console.log('miner: Start a miner node');
 	stdin.resume();
 	stdin.setEncoding('utf8');
 
@@ -47,17 +48,19 @@ const nodeMenu = () =>{
 				startFullNode('1');
         stdin.end();
 				break;
+      case '2':
       case 'node 2':
         startFullNode('2');
         break;
+      case '3':
       case 'node 3':
         startFullNode('3');
         break;
-			case '2':
+
 			case 'light':
 				startLightNode();
 				break;
-			case '3':
+
 			case 'miner':
       case 'miner 1':
 				startFullNode('1');
@@ -98,6 +101,9 @@ const startMinerNode = (num) =>{
 	})
 }
 
-nodeMenu();
+
+getPublicKeyAndRsaKey(()=>{
+  nodeMenu();
+})
 
 // module.exports = { nodeMenu }

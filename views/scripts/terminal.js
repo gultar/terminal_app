@@ -10,16 +10,19 @@ var blockchain;
   'http://192.168.0.112:8080', 'http://192.168.0.112:8080', 'http://192.168.1.68:8080', 'http://192.168.0.154:8080', 'http://192.168.1.75:8080']
 
 //List of IP addresses for fallback connections if current connectionfails
-var ipList;
 
 //speaks for itself. Used to output which connection we're using
 var url = document.URL;
 
 //port of client connection
-var port = 8080;
-
-var localAddress = 'http://localhost:8080/'//document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
-
+var port = url.substr(url.indexOf('t:')+2, 4);
+//http://localhost:8080
+var localAddress//document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
+getUserIP(function(ip){
+    localAddress = 'http://'+ip +':'+ port;
+    console.log('IP:', localAddress);
+});
+console.log(port);
 var currentTime = Date.now();
 //This is a counter to limit the number of attempts to try to fetch blockchain from file if unreadable or else
 var fetchTrials = 0;
@@ -251,8 +254,8 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           output('Initiating transaction generator...');
           var cpt=0;
           setInterval(function(){
-          	sendTransaction(clientConnectionToken, 'http://192.168.0.154:8082', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
-            outputDebug("Transact - From: " + clientConnectionToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
+          	sendTransaction('e42259a16d919f71997b9621f05f0047', 'http://192.168.0.154:8082', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
+            // outputDebug("Transact - From: " + clientConnectionToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
           	cpt++;
           }, 5000);
           break;
@@ -318,6 +321,13 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
             break;
           }
           runShowTransact();
+          break;
+        case 'show-public-keys':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+          runShowPublicKeys();
           break;
 
         default:
@@ -475,6 +485,13 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
     }
 
+    function runShowPublicKeys(){
+      var allTokens = blockchain.nodeTokens;
+      for(var token of allTokens){
+        
+      }
+    }
+
     function doLingueeTranslationEngToFra(text, cmd){
 
       // 'https://linguee-api.herokuapp.com/api?q='+args[0]+'&src=en&dst=fr'
@@ -615,7 +632,7 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
   }
 
   socket.emit('transaction', transactToSend, clientConnectionToken)
-
+  output(loopTransaction(transactToSend))
 
 
 }
@@ -796,9 +813,17 @@ function issueClientToken(address=localAddress){
   clientConnectionToken = {
     'type' : 'endpoint',
     'address' : address,
-    'hashSignature' : sha256(address, currentTime),
+    'publicAddressKey' : sha256(address, currentTime),
     'isMining':false
   }
 
 
+}
+
+function createSecondTerminalInput(){
+  // $('.prompt').html('[user@shell] # ');
+
+  // Initialize a new terminal object
+  var term = new Terminal('#input-line .cmdline', '#container output');
+  term.init();
 }

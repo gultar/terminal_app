@@ -1,6 +1,8 @@
 //Modules
 const sha256 = require('./sha256');
 const merkle = require('merkle');
+const cryptico = require('cryptico');
+const { rsaEncrypt, rsaDecrypt, generateCheckAddress } = require('./keysHandler');
 /******************************************/
 /***********Blockchain classes*************/
 /******************************************/
@@ -9,15 +11,66 @@ const merkle = require('merkle');
 //A transaction is done if there is a
 //change of data on the blockchain
 class Transaction{
-  constructor(fromAddress, toAddress, amount, data='', timestamp, hash, type=''){
+  constructor(fromAddress, toAddress, amount, data='', timestamp='', hash='', type=''){
     this.fromAddress = fromAddress;
     this.toAddress = toAddress;
     this.amount = amount;
     this.data = data;
-    this.timestamp = timestamp;
+    this.timestamp = (timestamp != undefined? timestamp : Date.now());
     this.hash = (hash != undefined ? hash : sha256(this.fromAddress+ this.toAddress+ this.amount+ this.data+ this.timestamp));
     this.type = type;
+    this.signature;
+    this.check;
   }
+
+  isFullPublicAddress(address){
+    if(address){
+      if(address.length == 32){
+
+      }
+    }
+  }
+
+  closeEnvelope(rsa){
+    if(rsa){
+      if(typeof rsa == 'object'){
+        var newCheckAddress = generateCheckAddress(this.timestamp, JSON.stringify(this));
+
+        var check = new BlockchainCheck(newCheckAddress, this.amount, this.toAddress, this.timestamp);
+        try{
+          check = rsaEncrypt(JSON.stringify(check), this.toAddress, rsa);
+          this.check = check;
+          return true;
+        }catch(err){
+          console.log(err);
+          return false;
+        }
+      }
+
+    }
+
+    console.log('ERROR: Check could not be written. RSA key not valid')
+  }
+
+  openEnvelope(rsa){
+    var decryptResult;
+    var openedCheck;
+    try{
+
+      decryptResult = rsaDecrypt(this.check, rsa);
+      openedCheck = JSON.parse(decryptResult.plaintext);
+      this.signature = openedCheck.signature;
+      
+    }catch(err){
+      console.log(err);
+      return false;
+    }
+  }
+
+  byteCount(s) {
+    return encodeURI(s).split(/%..|./).length - 1;
+  }
+
 }
 
 //////////////////Block/////////////////////
@@ -66,7 +119,7 @@ class Block{
 /////////////////////Blockchain///////////////////////
 class Blockchain{
 
-  constructor(chain=false, pendingTransactions=false, nodeTokens={}, ipAddresses=[], orphanedBlocks=[]){
+  constructor(chain=false, pendingTransactions=false, nodeTokens={}, ipAddresses=[], orphanedBlocks=[], publicKeys=[], unvalidatedTransactions=[]){
     this.chain = (chain? chain: [this.createGenesisBlock()]);
     this.difficulty = 4;
     this.pendingTransactions = (pendingTransactions? pendingTransactions: {});
@@ -77,6 +130,7 @@ class Blockchain{
     this.blockSize = 10; //Minimum Number of transactions per block
     this.orphanedBlocks = orphanedBlocks;
     this.blockbase = '';
+    this.unvalidatedTransactions = unvalidatedTransactions;
 
   }
 
@@ -91,8 +145,8 @@ class Blockchain{
   }
 
   addMiningAddress(token){
-    if(!this.miningAddresses[token.hashSignature]){
-      this.miningAddresses[token.hashSignature] = new BlockchainAddress(token.address, token.hashSignature);
+    if(!this.miningAddresses[token.publicAddressKey]){
+      this.miningAddresses[token.publicAddressKey] = new BlockchainAddress(token);
     }
   }
 
@@ -203,8 +257,9 @@ class Blockchain{
   checkFundsThroughPendingTransactions(token){
     var balance = 0;
     var trans;
-    var address;
+
     if(token != undefined){
+      var address = token.publicAddressKey;
       /*****************************/
       if(!(typeof token == 'object')){  ///To be removed. For test purposes only
         console.log('Token not object');
@@ -221,10 +276,10 @@ class Blockchain{
           balance = balance - trans.amount;
         }
 
-        if(trans.toAddress == address){
-
-          balance = balance + trans.amount;
-        }
+        // if(trans.toAddress == address){
+        //
+        //   balance = balance + trans.amount;
+        // }
       }
 
       return balance;
@@ -265,50 +320,50 @@ class Blockchain{
 
 
   getBalanceOfAddress(token){
-    var address;
+    if(token != undefined && typeof token == 'object'){
+      var address = token.publicAddressKey;
+      let balance = 0;
+      var trans;
+      if(token != undefined){
 
-    let balance = 0;
-    var trans;
-    if(token != undefined){
-      /**********************/
-      if(!(typeof token == 'object')){  ///To be removed. For test purposes only
-        console.log('Token not object');
-        address = token;
-      }else{
-        address = token.address
-      }
-      /************************/
-      for(var block of this.chain){
-        // console.log(block);
-        for(var transHash of Object.keys(block.transactions)){
-          trans = block.transactions[transHash]
-            if(trans.fromAddress == address){
+        for(var block of this.chain){
+          // console.log(block);
+          for(var transHash of Object.keys(block.transactions)){
+            trans = block.transactions[transHash]
+              if(trans.fromAddress == address){
 
-              balance = balance - trans.amount;
-            }
+                balance = balance - trans.amount;
+              }
 
-            if(trans.toAddress == address){
+              if(trans.toAddress == address){
 
-              balance = balance + trans.amount;
-            }
+                balance = balance + trans.amount;
+              }
 
 
+          }
         }
-      }
-    }else{
+      }else{
 
-      return false;
+        return false;
+      }
+
+      return balance;
     }
 
-    return balance;
   }
 
-  getBalanceFromBlockIndex(index){
+
+
+  getBalanceFromBlockIndex(index, token){
+    var address = token.publicAddressKey;
 
     console.log('INDEX:', index);
     for(var i=0; i < index; i++){
       for(var transHash of Object.keys(this.chain[i].transactions)){
         trans = this.chain[i].transactions[transHash]
+
+
           if(trans.fromAddress == address){
 
             balance = balance - trans.amount;
@@ -419,28 +474,35 @@ class Blockchain{
   }
 
   validateTransaction(transaction, token){
+
     if(transaction != undefined && token != undefined){
 
       var isPartOfNetwork = this.validateAddressToken(token);
       console.log(isPartOfNetwork);
 
+      var isChecksumValid = this.validateChecksum(transaction);
+
+      var isSignatureValid = this.validateSignature(transaction);
+
   			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
         console.log(balanceOfSendingAddr);
 
-  			if(!balanceOfSendingAddr){
+  			if(!balanceOfSendingAddr && balanceOfSendingAddr !== 0){
   					console.log('Cannot verify balance of undefined address token');
-  			}else{
-
-  				if(balanceOfSendingAddr >= transaction.amount){
-
-  					console.log('Transaction validated successfully');
-  				}else if(transaction.type === 'query'){
-  					//handle blockbase queries
-  				}else{
-  					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
-  				}
-
+            return false;
   			}
+
+				if(balanceOfSendingAddr >= transaction.amount){
+
+          // console.log('TK:',token);
+					console.log('Transaction validated successfully');
+				}else if(transaction.type === 'query'){
+					//handle blockbase queries
+				}else{
+					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
+				}
+
+
 
 
 
@@ -457,16 +519,11 @@ class Blockchain{
     var exists = false;
     var isValid = false;
     if(token != undefined){
-      if(this.nodeTokens[token.address] === token){
+      if(this.nodeTokens[token.publicAddressKey] === token){
         exists = true;
-        console.log(this.nodeTokens[token.address].hashSignature);
 
-        if( this.nodeTokens[token.address].hashSignature === sha256(token.address, token.status)
-                &&
-            token.hashSignature === sha256(this.nodeTokens[token.address].address, this.nodeTokens[token.address].status
-          )){
-
-            isValid = true;
+        if(this.nodeTokens[token.publicAddressKey].publicAddressKey === cryptico.publicKeyID(this.nodeTokens[token.publicAddressKey].publicKeyFull)){
+          isValid = true;
         }
       }
 
@@ -476,35 +533,35 @@ class Blockchain{
     return { exists, isValid };
   }
 
+  validateChecksum(transaction){
+    if(sha256(transaction.fromAddress+ transaction.toAddress+ transaction.amount+ transaction.data+ transaction.timestamp) !== transaction.hash){
+
+    }
+  }
+
+  validateSignature(transaction){
+
+  }
+
+}
+
+class BlockchainCheck{
+  constructor(checkAddress, amount, toAddress, timestamp){
+    this.checkAddress = checkAddress;
+    this.amount = amount;
+    this.toAddress = toAddress;
+    this.timestamp = timestamp;
+    this.signature = sha256(this.checkAddress + this.amount + this.toAddress + this.timestamp);
+  }
 }
 
 class BlockchainAddress{
-  constructor(address, hashSignature, blocksMined=0,   balance=0){
-    this.address = address;
+  constructor(token, blocksMined=0){
+    this.address = token.address;
     this.blocksMined = blocksMined;
-    this.balance = balance;
-    this.hashSignature = hashSignature
+    this.publicAddress = token.publicAddressKey;
   }
 
-  getBalance(){
-    return this.balance;
-  }
-
-  getBlocksMined(){
-    return this.blocksMined;
-  }
-
-  getAddress(){
-    return this.address;
-  }
-
-  setBalance(value){
-    this.balance += value;
-  }
-
-  minedOneBlock(){
-    this.blocksMined++;
-  }
 }
 
 
@@ -634,4 +691,4 @@ function merkleRoot(dataSets){
 
 
 
-module.exports = { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase};
+module.exports = { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase, BlockchainCheck};
