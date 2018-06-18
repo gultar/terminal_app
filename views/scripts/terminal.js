@@ -258,25 +258,20 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         case 'disconnect':
           disconnect(args, cmd);
           break;
-        case 'cat': runCat(args, cmd);
-          break;
         case 'goto': openInNewTab(args[0]);
           break;
         case 'clear': runClear(args, cmd);
           break;
         case 'date': output( new Date() );
           break;
-        case 'echo': output( args.join(' ') );
-          break;
         case 'ls':
         case 'help': output('<div class="ls-files">' + '<p>' +CMDS_.join('<br>')+ '</p>'+ '</div>');
           break;
-        case 'uname':
+        case 'txgen':
           if(!isConnected){
             connectError(cmd);
             break;
           }
-          output(navigator.appVersion);
           output('Initiating transaction generator...');
           var cpt=0;
           txGen = setInterval(function(){
@@ -284,10 +279,6 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
             // outputDebug("Transact - From: " + clientConnectionToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
           	cpt++;
           }, 5000);
-          break;
-        /* ENG - FR Translation Tool */
-        case 'l':
-        case 'linguee': doLingueeTranslationEngToFra(args.join(' '), cmd);
           break;
         /*  Iching Reader and Hexagram Chart   */
         case 'iching': runIching(args, cmd);
@@ -359,6 +350,15 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           runShowPublicKeys();
           break;
 
+        case 'b-msg':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+          var message = args.join(' ');
+          socket.emit('broadcastMessage', message);
+          break
+
         default:
           if (cmd) {
             output(cmd + ': command not found');
@@ -367,24 +367,6 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
       window.scrollTo(0, getDocHeight_());
       this.value = ''; // Clear/setup line for next input.
-
-      function runCat(args, cmd){
-        var url = args.join(' ');
-        if (!url) {
-          output('Usage: ' + cmd + ' https://s.codepen.io/...');
-          output('Example: ' + cmd + ' https://s.codepen.io/AndrewBarfield/pen/LEbPJx.js');
-          return;
-        }
-          console.log(url);
-          doCORSRequest({
-            method:'GET',
-            url: url,
-            data:'',
-          }, function(data){
-
-             output(data);
-           }, true);
-      }
 
       function runClear(args, cmd){
         if(args[0] == '-h' || args[0] == 'hard'){
@@ -538,19 +520,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       }
     }
 
-    function doLingueeTranslationEngToFra(text, cmd){
 
-      // 'https://linguee-api.herokuapp.com/api?q='+args[0]+'&src=en&dst=fr'
-      doCORSRequest({
-        method: 'GET',
-        url: 'https://linguee-api.herokuapp.com/api?q='+text+'&src=en&dst=fr',
-        data: ''
-      }, function printResult(result) {
-        console.log(result);
-
-      });
-
-    }
 
     }
   }

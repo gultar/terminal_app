@@ -111,19 +111,17 @@ const loadprivateKey = (cb) =>{
 const getPublicKeyAndRsaKey = (callback) =>{
   var rsakey;
   var publicKey;
-  fs.exists('.key', (exists)=>{
 
-    if(exists){
-      loadprivateKey((keyObj)=>{
-        if(keyObj){
-          rsakey = cryptico.generateRSAKey(keyObj.password, 1024);
-          publicKey = cryptico.publicKeyString(rsakey);
-          publicID = cryptico.publicKeyID(publicKey);
-          callback(publicKey, rsakey, publicID);
-        }
-      });
+    loadprivateKey((keyObj)=>{
+      if(keyObj){
+        rsakey = cryptico.generateRSAKey(keyObj.password, 1024);
+        publicKey = cryptico.publicKeyString(rsakey);
+        publicID = cryptico.publicKeyID(publicKey);
+        callback(publicKey, rsakey, publicID);
+      }
+    });
+  
 
-    }
 
 
   })
