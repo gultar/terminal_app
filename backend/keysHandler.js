@@ -120,11 +120,8 @@ const getPublicKeyAndRsaKey = (callback) =>{
         callback(publicKey, rsakey, publicID);
       }
     });
-  
 
 
-
-  })
 
 }
 
