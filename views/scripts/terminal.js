@@ -15,7 +15,7 @@ var blockchain;
 var url = document.URL;
 
 //port of client connection
-var port = url.substr(url.indexOf('t:')+2, 4);
+var port = 8080;
 //http://localhost:8080
 var localAddress//document.URL;//"http://192.168.0.154:"+port;   //Crashes when there is no value. Need to reissue token //'192.168.0.154';// = new BlockchainAddress((ip?ip:"127.0.0.1"), 0, 0);
 getUserIP(function(ip){
@@ -488,7 +488,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
     function runShowPublicKeys(){
       var allTokens = blockchain.nodeTokens;
       for(var token of allTokens){
-        
+
       }
     }
 

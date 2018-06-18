@@ -49,6 +49,7 @@ const generatePrivateKey = (callback) =>{
 
             wstreamKey.end();
             callback(keyChain);
+            stdin.end();
           }
 
         })
@@ -208,6 +209,10 @@ const rsaDecrypt = (encryptedObject, rsaKey) =>{
   }
 
 }
+
+getPublicKeyAndRsaKey((keyChain)=>{
+  console.log(keyChain);
+});
 
 
 
