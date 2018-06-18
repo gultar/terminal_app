@@ -197,7 +197,10 @@ const rsaDecrypt = (encryptedObject, rsaKey) =>{
 
 fs.exists('.key', (exists)=>{
   if(!exists){
-    generatePrivateKey();
+    generatePrivateKey((keychain)=>{
+      console.log("Keychain:\n\n");
+      console.log(keychain);
+    });
   }
 })
 

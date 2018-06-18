@@ -234,10 +234,12 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
       switch (cmd) {
         case 'connect':
-        if(args[0] == ''){
+        console.log(args);
+        if(args.length > 0){
           try{
-            output('Connecting to node '+localAddress)
+
             localAddress = args[0]
+            output('Connecting to node '+localAddress)
             output(localAddress);
             initSocketConnection();
           }catch(err){
@@ -389,12 +391,16 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           initTerminalMsg();
 
 
-          isConnected = false;
-          socket.emit('close', clientConnectionToken);
-          setTimeout(function(){
-            socket.destroy();
-          }, 2000)
-          console.log("Cleared active connection");
+
+          if(socket){
+            isConnected = false;
+            socket.emit('close', clientConnectionToken);
+            setTimeout(function(){
+              socket.destroy();
+            }, 2000)
+            console.log("Cleared active connection");
+          }
+
       }
 
 
