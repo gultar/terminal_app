@@ -233,7 +233,22 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       }
 
       switch (cmd) {
-        case 'connect': initSocketConnection();
+        case 'connect':
+        if(args[0] == ''){
+          try{
+            output('Connecting to node '+localAddress)
+            localAddress = args[0]
+            output(localAddress);
+            initSocketConnection();
+          }catch(err){
+            output(err);
+          }
+
+        }else{
+          output('Connecting to local node at address '+localAddress)
+          initSocketConnection();
+        }
+
           break;
         case 'cat': runCat(args, cmd);
           break;
@@ -284,6 +299,9 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         case 'crypto': runCrypto(args, cmd, this.value);
           break;
         case 'list-cryptos': getListOfCryptos();
+          break;
+        case 'list-seed-nodes':
+          for(var ip of nodeAddresses) { output(ip) }
           break;
         case 'describe': runDescribe(args, cmd);
           break;
@@ -362,7 +380,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           window.location.reload(true);
         }
         if(args[0] == 'debug' || args[0] =='-d'){
-          $('#myULContainer').html('');
+          $('#myULContainer').html('<div id="element"></div>');
 
         }
           $('output').html('');
@@ -646,10 +664,10 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
 }
 
 
-function initSocketConnection(nodeAddress=localAddress){
+function initSocketConnection(nodeAddress){
 setTimeout(function(){
 
-  if(nodeAddress != undefined){
+  if(!nodeAddress){
     nodeAddress = localAddress;
   }
 
