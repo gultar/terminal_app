@@ -25,10 +25,9 @@ const ipList = [
       'http://'+getIPAddress()+':'+port,
       'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
       'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082', //rasbpi at home
-      'http://192.168.0.154:8080', 'http://192.168.0.154:8081', '', //laptop at home http://192.168.0.154:8082
+      'http://192.168.0.154:8080', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', //laptop at home
 			'http://192.168.1.72:8080', 'http://192.168.1.72:8081', 'http://192.168.1.72:8082', //rasbpi at mom's
       'http://192.168.1.74:8080', 'http://192.168.1.74:8081', 'http://192.168.1.74:8082', //laptop at mom's
-      'http://24.201.224.97:8080', 'http://172.20.10.3:8080'
       ]; //desn't work - laptop at maria's
 /*
   Blockchain classes and tools
@@ -117,7 +116,6 @@ const startServer = () =>{
 		})
 
     socket.on('tokenRequest', (peerToken)=>{
-      handleToken(peerToken);
       storeToken(peerToken);
       sendToTargetPeer('storeToken', thisNode, peerToken.address);
     })
@@ -250,7 +248,6 @@ const initBlockchain = (tryOnceAgain=true) => {
       blockchain = instanciateBlockchain(dataBuffer);
 			blockchain.addMiningAddress(thisNode);
 			blockchain.nodeTokens[thisNode.publicAddressKey] = thisNode;
-      blockchain.ipAddresses = ipList;
     }
 
 
@@ -320,8 +317,6 @@ const getMiningAddress = (addressToken) => {
   }
 
 }
-
-
 
 /*
   Loads the blockchain from the json file and instanciates it
@@ -546,17 +541,6 @@ const storeToken = (token) =>{
     blockchain.nodeTokens[token.publicAddressKey] = token;
     blockchain.addMiningAddress(token);
   }
-}
-
-const handleToken = (token) =>{
-  if(token){
-    if(ipList.indexOf(token) == -1){
-      console.log('Adding '+token.address+' as new peer in node list');
-      ipList.push(token.address);
-      initClientSocket(token.address);
-    }
-  }
-
 }
 
 /*
