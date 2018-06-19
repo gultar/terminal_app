@@ -22,16 +22,16 @@ const { getIPAddress } = require('./backend/ipFinder.js');
     'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082',
     'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop*/
 let thisAddress = 'http://'+getIPAddress()+':'+port;
-let ipList = [thisAddress];
-// const ipList = [
-//       'http://'+getIPAddress()+':'+port,
-//       'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
-//       'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082', //rasbpi at home
-//       'http://192.168.0.154:8080', 'http://192.168.0.154:8081', '', //laptop at home http://192.168.0.154:8082
-// 			'http://192.168.1.72:8080', 'http://192.168.1.72:8081', 'http://192.168.1.72:8082', //rasbpi at mom's
-//       'http://192.168.1.74:8080', 'http://192.168.1.74:8081', 'http://192.168.1.74:8082', //laptop at mom's
-//       'http://24.201.224.97:8080', 'http://172.20.10.3:8080'
-//       ]; //desn't work - laptop at maria's
+// let ipList = [thisAddress];
+const ipList = [
+      'http://'+getIPAddress()+':'+port,
+      'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
+      'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082', //rasbpi at home
+      'http://192.168.0.154:8080', 'http://192.168.0.154:8081', '', //laptop at home http://192.168.0.154:8082
+			'http://192.168.1.72:8080', 'http://192.168.1.72:8081', 'http://192.168.1.72:8082', //rasbpi at mom's
+      'http://192.168.1.74:8080', 'http://192.168.1.74:8081', 'http://192.168.1.74:8082', //laptop at mom's
+      'http://24.201.224.97:8080', 'http://172.20.10.3:8080'
+      ]; //desn't work - laptop at maria's
 /*
   Blockchain classes and tools
 */
@@ -87,7 +87,7 @@ const startServer = () =>{
 
 	ioServer.on('connection', (socket) => {
 
-    socket.emit('client-connect', thisNode);
+    // socket.emit('client-connect', thisNode);
 
 	  socket.on('message', (msg) => {
 	    console.log('Client:', msg);
