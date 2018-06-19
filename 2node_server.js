@@ -96,12 +96,12 @@ const startServer = () =>{
     });
 
 
-		socket.on('findNode', (address, fromEndpointToken)=>{
-      if(fromEndpointToken.type == 'endpoint'){
-        if(address){
+		socket.on('findNode', (address)=>{
+      console.log(address);
+
           initClientSocket(address);
-        }
-      }
+
+
 
 		})
 
@@ -122,8 +122,9 @@ const startServer = () =>{
 		})
 
     socket.on('tokenRequest', (peerToken)=>{
-      handleToken(peerToken);
+
       storeToken(peerToken);
+      handleToken(peerToken);
       sendToTargetPeer('storeToken', thisNode, peerToken.address);
     })
 
