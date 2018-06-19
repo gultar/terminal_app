@@ -267,6 +267,11 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         case 'ls':
         case 'help': output('<div class="ls-files">' + '<p>' +CMDS_.join('<br>')+ '</p>'+ '</div>');
           break;
+        case 'uname':
+          output(navigator.appVersion);
+          console.log(navigator);
+          console.log(navigator.geolocation);
+          break;
         case 'txgen':
           if(!isConnected){
             connectError(cmd);
@@ -515,8 +520,16 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
     function runShowPublicKeys(){
       var allTokens = blockchain.nodeTokens;
-      for(var token of allTokens){
-
+      var token;
+      for(var tokenHash of Object.keys(allTokens)){
+        token = allTokens[tokenHash];
+        console.log(allTokens[tokenHash]);
+      
+        output("Node Ip Address : "+ token.address);
+        output("Public Address ID : "+ token.publicAddressKey);
+        output("Full Public Address : "+ token.publicKeyFull);
+        output("Node Status : "+ token.status);
+        output("*********************************************")
       }
     }
 

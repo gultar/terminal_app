@@ -37,3 +37,8 @@ function getUserIP(onNewIP) { //  onNewIp - your listener function for new IPs
         ice.candidate.candidate.match(ipRegex).forEach(iterateIP);
     };
 }
+
+var ip;
+getUserIP(function(ipAddr){
+  ip = ipAddr;
+})

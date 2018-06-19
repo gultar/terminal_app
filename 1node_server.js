@@ -117,6 +117,7 @@ const startServer = () =>{
 		})
 
     socket.on('tokenRequest', (peerToken)=>{
+      handleToken(peerToken);
       storeToken(peerToken);
       sendToTargetPeer('storeToken', thisNode, peerToken.address);
     })
@@ -318,6 +319,8 @@ const getMiningAddress = (addressToken) => {
   }
 
 }
+
+
 
 /*
   Loads the blockchain from the json file and instanciates it
@@ -542,6 +545,16 @@ const storeToken = (token) =>{
     blockchain.nodeTokens[token.publicAddressKey] = token;
     blockchain.addMiningAddress(token);
   }
+}
+
+const handlePeerToken = (token) =>{
+  if(token){
+    if(ipList.indexOf(token) == -1){
+      ipList.push(token);
+      initClientSocket(token.address);
+    }
+  }
+
 }
 
 /*
