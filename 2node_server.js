@@ -103,6 +103,7 @@ const startServer = () =>{
         tempSocket.emit('discoverPeer', thisNode);
         setTimeout(()=>{
           tempSocket = null;
+          initClientSocket(address);
         }, 3000)
       }catch(err){
         console.log(err);
