@@ -128,8 +128,13 @@ const startServer = () =>{
 		socket.on('storeToken', (token) =>{ storeToken(token)	})
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
-      sendEventToAllPeers('client-connect', thisNode);
-      sendEventToAllPeers('tokenRequest', thisNode);
+      console.log(peers);
+      setTimeout(()=>{
+        sendEventToAllPeers('message','Sending my token to all peers');
+        sendEventToAllPeers('client-connect', thisNode);
+        sendEventToAllPeers('storeToken', thisNode);
+      }, 5000)
+
     })
 
 		socket.on('distributedTransaction', (transaction, fromNodeToken) => {
@@ -284,11 +289,28 @@ const initClientSocket = (address) =>{
 
 		// peerSocket.emit('getBlockchain', thisNode);
 		// peerSocket.emit('blockchain', blockchain);
+    console.log(clients);
 		console.log('Connected to ', address);
-    peerSocket.emit('getTokenFromClient', thisNode);
-    peerSocket.emit('message','Sending this fucking event to you...')
+
+    peerSocket.emit('message','Sending this fucking event to you...');
+    setTimeout(()=>{
+      peerSocket.emit('getTokenFromClient', thisNode);
+    }, 2000)
 		peers.push(peerSocket);
 	});
+
+  peerSocket.on('client-connect', (token) => {
+    clientConnect(peerSocket, token);
+  });
+
+  peerSocket.on('message', (message)=>{
+    console.log('Server: ' + message);
+  })
+
+  peerSocket.on('tokenRequest', (token)=>{
+
+  })
+  peerSocket.on('storeToken', (token) =>{ storeToken(token)	})
 
 	peerSocket.on('disconnect', () =>{
 		console.log('connection with peer dropped');
@@ -550,10 +572,13 @@ const sync = (hash, token) =>{
 */
 const storeToken = (token) =>{
   if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
-    console.log('Received a node token from ', token.address);
-    blockchain.nodeTokens[token.publicAddressKey] = token;
-    console.log()
-    blockchain.addMiningAddress(token);
+
+      console.log('Received a node token from ', token.address);
+      blockchain.nodeTokens[token.publicAddressKey] = token;
+
+      blockchain.addMiningAddress(token);
+
+
   }
 }
 
