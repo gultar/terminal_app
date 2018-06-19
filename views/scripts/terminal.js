@@ -237,23 +237,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
       switch (cmd) {
         case 'connect':
-
-          if(args.length > 0){
-            try{
-
-              localAddress = args[0]
-              output('Connecting to node '+localAddress)
-              output(localAddress);
-              initSocketConnection();
-            }catch(err){
-              output(err);
-            }
-
-          }else{
-            output('Connecting to local node at address '+localAddress)
-            initSocketConnection();
-          }
-
+          connect(args, cmd);
           break;
         case 'disconnect':
           disconnect(args, cmd);
@@ -385,6 +369,24 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           clearAll();
           $('#myCanvas').css('visibility', 'hidden');
           initTerminalMsg();
+
+      }
+
+      function connect(args, cmd){
+        if(args.length > 0){
+          try{
+
+            localAddress = args[0]
+            output('Connecting to node '+localAddress)
+            initSocketConnection();
+          }catch(err){
+            output(err);
+          }
+
+        }else{
+          output('Connecting to local node at address '+localAddress)
+          initSocketConnection();
+        }
 
       }
 
@@ -524,7 +526,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       for(var tokenHash of Object.keys(allTokens)){
         token = allTokens[tokenHash];
         console.log(allTokens[tokenHash]);
-      
+
         output("Node Ip Address : "+ token.address);
         output("Public Address ID : "+ token.publicAddressKey);
         output("Full Public Address : "+ token.publicKeyFull);
@@ -678,30 +680,27 @@ setTimeout(function(){
 
     socket  = io(nodeAddress);
 
-    // if(socket.connected){
 
       socket.on('disconnect', function(){
         console.log('You have disconnected from node server');
         isConnected = false;
         clearAll();
-        socket.emit('close', clientConnectionToken);
 
-        fallbackCounter++;
         socket.removeAllListeners('message');
         socket.removeAllListeners('disconnect');
+        socket.removeAllListeners('serverMessage');
+        socket.removeAllListeners('miningApproved');
+        socket.removeAllListeners('blockchain');
 
-        //
-
-
-        // fallBackOntoOtherNode(fallbackCounter);
       })
 
       socket.on('connect', function(){
         console.log('Connected to node ', nodeAddress);
-        socket.emit('client-connect', clientConnectionToken);
-        socket.emit('getBlockchain', clientConnectionToken);
-        isConnected = true;
-        fallbackCounter = 1;
+        setTimeout(()=>{
+          socket.emit('client-connect', clientConnectionToken);
+          fetchBlockchainFromServer();
+          isConnected = true;
+        }, 2000)
       })
 
       socket.on('message', function(message){
@@ -714,11 +713,6 @@ setTimeout(function(){
         outputDebug('Server: '+message);
       })
 
-      // socket.on('seedingNodes', function(node){
-      //   blockchain.nodeAddresses.push(node);
-      //   console.log('Seeding the blockchain with this address:', node);
-      // })
-
       socket.on('miningApproved', function(updatedBlockchain){
         var latestBlock = getLatestBlock(updatedBlockchain);
         console.log('Latest Block Hash:', latestBlock.hash);
@@ -727,12 +721,8 @@ setTimeout(function(){
         output('Block mined: ' + latestBlock.hash + " by " + latestBlock.minedBy);
       });
 
-      socket.on('needMoreTransact', function(message){
-        output(message);
-        console.log(message);
-      });
 
-      fetchBlockchainFromServer();
+
 
     // }
 
@@ -741,18 +731,6 @@ setTimeout(function(){
 
 }
 
-//Have to work on this one to avoid infinite loop
-function fallBackOntoOtherNode(fallbackCounter){
-  if(fallbackCounter < ipList.length){
-    socket = null;
-    if(ipList[fallbackCounter] == localAddress){
-      fallbackCounter++;
-    }
-    console.log('Falling back onto node ', ipList[fallbackCounter])
-    initSocketConnection(ipList[fallbackCounter]);
-    fallbackCounter++;
-  }
-}
 
 
 function fetchBlockchainFromServer(){
@@ -795,7 +773,7 @@ window.onbeforeunload = function() {
     clearAll();
     localStorage.setItem('savedBackground', $('body').css("background-image"));
     //saving the blockchain to server, then to file
-
+    socket.close();
     // saveBlockchainToServer();
 
 }

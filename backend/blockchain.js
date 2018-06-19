@@ -472,10 +472,21 @@ class Blockchain{
 
   }
 
+  /**
+  *  To run a proper transaction validation, one must look back at all the previous transactions that have been made by
+  *  emitting peer every time this is checked, to avoid double spending. An initial coin distribution is made once the genesis
+  *  block has been made. This needs some work since it is easy to send a false transaction and accumulate credits
+  *
+  * @param {Object, Object} A transaction object and an identity token
+  * @return {boolean} If transaction is valid or not
+  */
+
   validateTransaction(transaction, token){
 
     if(transaction != undefined && token != undefined){
 
+      var isSendingNodeTheTxSender = (transaction.fromAddress == token.publicKeyFull);
+      console.log(isSendingNodeTheTxSender);
       var isPartOfNetwork = this.validateAddressToken(token);
       console.log(isPartOfNetwork);
 
