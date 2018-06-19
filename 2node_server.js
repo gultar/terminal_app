@@ -317,7 +317,7 @@ const initClientSocket = (address) =>{
 	peerSocket.on('connect', () =>{
     peerSocket.emit('client-connect', thisNode);
   	peerSocket.emit('tokenRequest', thisNode);
-    peerSocket.emit('discoverPeer', thisNode);
+    peerSocket.emit('findNode', thisNode);
 		console.log('Connected to ', address);
 		peers.push(peerSocket);
 	});
