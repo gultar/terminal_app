@@ -128,7 +128,7 @@ const startServer = () =>{
 		socket.on('storeToken', (token) =>{ storeToken(token)	})
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
-      console.log(peers);
+      
       setTimeout(()=>{
         sendEventToAllPeers('message','Sending my token to all peers');
         sendEventToAllPeers('client-connect', thisNode);
