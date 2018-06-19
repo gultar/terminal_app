@@ -22,7 +22,7 @@ const { getIPAddress } = require('./backend/ipFinder.js');
     'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082',
     'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop*/
 let thisAddress = 'http://'+getIPAddress()+':'+port;
-let ipList = [thisAddress, 'http://169.254.139.53:8080', 'http://169.254.139.53:8081'];
+let ipList = [thisAddress];
 // const ipList = [
 //       'http://'+getIPAddress()+':'+port,
 //       'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
@@ -43,6 +43,10 @@ const sha256 = require('./backend/sha256');
 
 let blockchain;
 let dataBuffer;
+
+/**
+* It is absolutely necessary to find a way to hide this variable's value
+*/
 let rsaKey;
 
 let thisNode = {
@@ -60,6 +64,7 @@ let clients = [];
 
 //Container for all peer socket connections
 let peers = [];
+
 let miner = false;
 
 let currentMiners = [];
@@ -98,16 +103,8 @@ const startServer = () =>{
 
 
 		socket.on('findNode', (address)=>{
-      try{
-        var tempSocket = io(address);
-        tempSocket.emit('discoverPeer', thisNode);
-        setTimeout(()=>{
-          tempSocket = null;
-          initClientSocket(address);
-        }, 3000)
-      }catch(err){
-        console.log(err);
-      }
+      var clientIsConnected = clients[address];
+      findNodeOnce(address, clientIsConnected);
 
 		})
 
@@ -317,7 +314,7 @@ const initClientSocket = (address) =>{
 	peerSocket.on('connect', () =>{
     peerSocket.emit('client-connect', thisNode);
   	peerSocket.emit('tokenRequest', thisNode);
-    peerSocket.emit('findNode', thisNode.address);
+
 		console.log('Connected to ', address);
 		peers.push(peerSocket);
 	});
@@ -330,11 +327,27 @@ const initClientSocket = (address) =>{
 
 }
 
+const findNodeOnce = (address, once=false) =>{
+  if(!once){
+    try{
+      var tempSocket = io(address);
+      tempSocket.emit('discoverPeer', thisNode);
+      setTimeout(()=>{
+        tempSocket = null;
+        initClientSocket(address);
+      }, 3000)
+    }catch(err){
+      console.log(err);
+    }
+  }
+
+}
+
 /*
   Open all client socket connection to peers
 */
 const connectToPeerNetwork = () => {
-  loadIpList();
+
   let peerConnections = [];
 
   for(var i=0; i < ipList.length; i++){
@@ -347,7 +360,9 @@ const connectToPeerNetwork = () => {
     }
   }
 
-};
+}
+
+
 
 /*
   Searches for instanciated miningAddress in blockchain, if not, creates it
