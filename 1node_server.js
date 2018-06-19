@@ -21,14 +21,16 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 /*		'http://10.112.106.71:8080', 'http://10.112.106.71:8081', 'http://10.112.106.71:8082', //odesn't work - rasbpi at maria's
     'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082',
     'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop*/
-const ipList = [
-      'http://'+getIPAddress()+':'+port,
-      'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
-      'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082', //rasbpi at home
-      'http://192.168.0.154:8080', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', //laptop at home
-			'http://192.168.1.72:8080', 'http://192.168.1.72:8081', 'http://192.168.1.72:8082', //rasbpi at mom's
-      'http://192.168.1.74:8080', 'http://192.168.1.74:8081', 'http://192.168.1.74:8082', //laptop at mom's
-      ]; //desn't work - laptop at maria's
+let thisAddress = 'http://'+getIPAddress()+':'+port;
+let ipList = [thisAddress];
+  // = [
+  //     'http://'+getIPAddress()+':'+port,
+  //     'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
+  //     'http://192.168.0.153:8080', 'http://192.168.0.153:8081', 'http://192.168.0.153:8082', //rasbpi at home
+  //     'http://192.168.0.154:8080', 'http://192.168.0.154:8081', 'http://192.168.0.154:8082', //laptop at home
+	// 		'http://192.168.1.72:8080', 'http://192.168.1.72:8081', 'http://192.168.1.72:8082', //rasbpi at mom's
+  //     'http://192.168.1.74:8080', 'http://192.168.1.74:8081', 'http://192.168.1.74:8082', //laptop at mom's
+  //     ]; //desn't work - laptop at maria's
 /*
   Blockchain classes and tools
 */
@@ -94,27 +96,40 @@ const startServer = () =>{
       clientConnect(socket, token);
     });
 
+    socket.on('getIpList', (fromSocket) =>{
+      socket.emit('ipList', ipList);
+    })
 
-		socket.on('test', (hash)=>{
-      // var derp = blockchain.blockbase.jsonDB(blockchain);
-      // console.log(derp);
-		})
+    socket.on('ipList', (ipAddresses)=>{
+      if(ipAddresses){
+        if(ipAddresses.length > ipList.length){
+          ipList = ipAddresses;
+        }
+      }
+    })
+
+    socket.on('sendYourAddress', (token)=>{
+
+      socket.emit('addressReceived', thisNode);
+
+      if(!clients[token.address]){
+        try{
+          blockchain.addNewToken(peerToken);
+          initClientSocket(token.address);
+        }catch(err){
+          console.log(err);
+        }
+
+      }
+
+    })
+
 
 		socket.on('sync', (hash, token)=>{
       sync(hash, token)
     })
 
-		socket.on('validateChain', (token) =>{
-			if(blockchain != undefined && blockchain instanceof Blockchain){
-				console.log('Blockchain valid?',blockchain.isChainValid());
-        var validStatus = blockchain.validateAddressToken(thisNode);
-        console.log(validStatus);
-			}
-		})
 
-		socket.on('getWholeCopy', (token)=>{
-			sendEventToAllPeers('getBlockchain', thisNode);
-		})
 
     socket.on('tokenRequest', (peerToken)=>{
       storeToken(peerToken);
@@ -128,8 +143,6 @@ const startServer = () =>{
 		socket.on('storeToken', (token) =>{ storeToken(token)	})
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
-
-      socket.emit('message','Sending my token to all peers');
       socket.emit('client-connect', thisNode);
       socket.emit('storeToken', thisNode);
     })
@@ -163,10 +176,9 @@ const startServer = () =>{
 
     socket.on('peerBuildingBlock', (token) =>{
       if(token != undefined){
-        if(currentMiners[token.hash] == token){
+        if(currentMiners[token.address] == token){
           console.log('TOKEN HASH ' + token.hash.substr(0, 10)+ ' has started mining');
         }
-        // cancelMining(false);
       }
     })
 
@@ -179,13 +191,39 @@ const startServer = () =>{
 
     })
 
+    /*
+    * Endpoint Client listeners
+    * Could add a small validation to limit to endpoints only
+    *
+    *
+    */
+
 	  socket.on('getBlockchain', (token) =>{
       getBlockchain(socket, token);
 	  });
 
 	  socket.on('blockchain', (blockchainReceived) => {
 	    blockchain = compareBlockchains(blockchain, blockchainReceived);
-	  })
+	  });
+
+    socket.on('broadcastMessage', (msg) =>{
+      sendEventToAllPeers('message', msg);
+    })
+
+
+    socket.on('validateChain', (token) =>{
+      if(blockchain != undefined && blockchain instanceof Blockchain){
+        console.log('Blockchain valid?',blockchain.isChainValid());
+        var validStatus = blockchain.validateAddressToken(thisNode);
+        console.log(validStatus);
+      }
+    })
+
+    socket.on('firstContact', (address)=>{
+      if(address){
+        firstContact(address);
+      }
+    })
 
 		socket.on('minerStarted', (miningAddress) =>{
 			if(miningAddress != undefined){
@@ -193,13 +231,6 @@ const startServer = () =>{
 			}
 		})
 
-		socket.on('disconnect', () =>{
-
-		})
-
-		socket.on('broadcastMessage', (msg) =>{
-			sendEventToAllPeers('message', msg);
-		})
 
 
 	  socket.on('close', (token) => {
@@ -214,8 +245,11 @@ const startServer = () =>{
 
 }
 
-/*
+/**
   Broadcasts a defined event, need to find a way to handle more than two parameters
+  @param {string} Event type/name
+  @param {Object} May be an object or any kind of data
+  @param {Object} Optional: any kind of data also
 
 */
 const sendEventToAllPeers = (eventType, data, moreData=false ) => {
@@ -297,9 +331,6 @@ const initClientSocket = (address) =>{
     console.log('Server: ' + message);
   })
 
-  peerSocket.on('tokenRequest', (token)=>{
-
-  })
   peerSocket.on('storeToken', (token) =>{ storeToken(token)	})
 
 	peerSocket.on('disconnect', () =>{
@@ -326,7 +357,56 @@ const connectToPeerNetwork = () => {
     }
   }
 
-};
+}
+
+/*
+  This is the socket listener function for when a peer
+  Connects to this node as a client
+*/
+const clientConnect = (socket, token) =>{
+  if(token != undefined){
+    clients[token.address] = token;
+
+    console.log('Connected client hash: '+ token.publicAddressKey.substr(0, 15) + '...');
+    console.log('At address:', token.address);
+
+    socket.emit('message', 'You are now connected to ' + thisNode.address);
+
+    getNumPeers();
+  }
+}
+
+const firstContact = (address) =>{
+  if(address){
+    try{
+      var tempSocket = io(address);
+      tempSocket.emit('sendYourAddress', thisNode);
+
+      tempSocket.on('addressReceived', (peerToken)=>{
+        if(ipList.indexOf(peerToken.address) == -1){
+          ipList.push(peerToken.address);
+          blockchain.addNewToken(peerToken);
+        }else{
+          initClientSocket(peerToken.address);
+          tempSocket.destroy();
+        }
+
+      })
+    }catch(err){
+      console.log(err);
+    }
+  }
+}
+
+const updateIpList = () =>{
+  if(blockchain.ipAddresses.length < ipList){
+    blockchain.ipAddresses = ipList;
+    saveBlockchain(blockchain);
+  }else{
+    ipList = blockchain.ipAddresses;
+  }
+
+}
 
 /*
   Searches for instanciated miningAddress in blockchain, if not, creates it
@@ -514,22 +594,7 @@ const startMining = (miningAddrToken) => {
 }
 
 
-/*
-  This is the socket listener function for when a peer
-  Connects to this node as a client
-*/
-const clientConnect = (socket, token) =>{
-  if(token != undefined){
-    clients[token.address] = token;
 
-    console.log('Connected client hash: '+ token.publicAddressKey.substr(0, 15) + '...');
-    console.log('At address:', token.address);
-
-    socket.emit('message', 'You are now connected to ' + thisNode.address);
-
-    getNumPeers();
-  }
-}
 
 /*
   This the listener function that fetches missing blocks

@@ -144,6 +144,11 @@ class Blockchain{
     return this.chain[this.chain.length - 1];
   }
 
+  addNewToken(token){
+    this.nodeTokens[token.address] = token;
+    this.addMiningAddress(token);
+  }
+
   addMiningAddress(token){
     if(!this.miningAddresses[token.publicAddressKey]){
       this.miningAddresses[token.publicAddressKey] = new BlockchainAddress(token);
