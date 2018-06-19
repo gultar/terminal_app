@@ -114,7 +114,7 @@ const startServer = () =>{
 
       if(!clients[token.address]){
         try{
-          blockchain.addNewToken(peerToken);
+          blockchain.addNewToken(token);
           initClientSocket(token.address);
         }catch(err){
           console.log(err);
@@ -366,9 +366,14 @@ const connectToPeerNetwork = () => {
 const clientConnect = (socket, token) =>{
   if(token != undefined){
     clients[token.address] = token;
-
-    console.log('Connected client hash: '+ token.publicAddressKey.substr(0, 15) + '...');
-    console.log('At address:', token.address);
+    if(token.type == 'endpoint'){
+      console.log('Endpoint client connected to this node');
+      console.log('Hash: '+ token.publicAddressKey);
+    }else{
+      console.log('Connected node at address : ', token.address);
+      console.log('Public ID : ', token.publicAddressKey);
+      console.log('Connected at : ', Date.now());
+    }
 
     socket.emit('message', 'You are now connected to ' + thisNode.address);
 
