@@ -96,9 +96,13 @@ const startServer = () =>{
     });
 
 
-		socket.on('test', (hash)=>{
-      // var derp = blockchain.blockbase.jsonDB(blockchain);
-      // console.log(derp);
+		socket.on('findNode', (address, fromEndpointToken)=>{
+      if(fromEndpointToken.type == 'endpoint'){
+        if(address){
+          initClientSocket(address);
+        }
+      }
+
 		})
 
 		socket.on('sync', (hash, token)=>{

@@ -7,7 +7,7 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-const port = 8082
+const port = 8080
 const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
@@ -96,9 +96,13 @@ const startServer = () =>{
     });
 
 
-		socket.on('test', (hash)=>{
-      // var derp = blockchain.blockbase.jsonDB(blockchain);
-      // console.log(derp);
+		socket.on('findNode', (address, fromEndpointToken)=>{
+      if(fromEndpointToken.type == 'endpoint'){
+        if(address){
+          initClientSocket(address);
+        }
+      }
+
 		})
 
 		socket.on('sync', (hash, token)=>{
