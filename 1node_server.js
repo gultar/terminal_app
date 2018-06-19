@@ -128,13 +128,10 @@ const startServer = () =>{
 		socket.on('storeToken', (token) =>{ storeToken(token)	})
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
-      
-      setTimeout(()=>{
-        sendEventToAllPeers('message','Sending my token to all peers');
-        sendEventToAllPeers('client-connect', thisNode);
-        sendEventToAllPeers('storeToken', thisNode);
-      }, 5000)
 
+      socket.emit('message','Sending my token to all peers');
+      socket.emit('client-connect', thisNode);
+      socket.emit('storeToken', thisNode);
     })
 
 		socket.on('distributedTransaction', (transaction, fromNodeToken) => {
@@ -282,17 +279,10 @@ const initClientSocket = (address) =>{
 	peerSocket.emit('client-connect', thisNode);
 	peerSocket.emit('tokenRequest', thisNode);
 
-	peerSocket.emit('message', 'You are connected to '+thisNode.address);
-
-
 	peerSocket.on('connect', () =>{
 
-		// peerSocket.emit('getBlockchain', thisNode);
-		// peerSocket.emit('blockchain', blockchain);
-    console.log(clients);
 		console.log('Connected to ', address);
 
-    peerSocket.emit('message','Sending this fucking event to you...');
     setTimeout(()=>{
       peerSocket.emit('getTokenFromClient', thisNode);
     }, 2000)
