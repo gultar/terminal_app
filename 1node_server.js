@@ -100,7 +100,7 @@ const startServer = () =>{
 		socket.on('findNode', (address)=>{
       try{
         var tempSocket = io(address);
-        socket.emit('discoverPeer', thisNode);
+        tempSocket.emit('discoverPeer', thisNode);
         setTimeout(()=>{
           tempSocket = null;
         }, 3000)

@@ -7,7 +7,7 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-const port = 8082
+const port = 8080
 const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
@@ -100,7 +100,7 @@ const startServer = () =>{
 		socket.on('findNode', (address)=>{
       try{
         var tempSocket = io(address);
-        socket.emit('discoverPeer', thisNode);
+        tempSocket.emit('discoverPeer', thisNode);
         setTimeout(()=>{
           tempSocket = null;
         }, 3000)
