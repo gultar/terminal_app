@@ -98,11 +98,26 @@ const startServer = () =>{
 
 
 		socket.on('findNode', (address)=>{
-      var __tempSocket = io(address);
-      console.log(__tempSocket);
-      __tempSocket.emit('tokenRequest', thisNode);
-      __tempSocket.emit('getIPList', thisNode);
+      try{
+        var tempSocket = io(address);
+        socket.emit('discoverPeer', thisNode);
+        setTimeout(()=>{
+          tempSocket = null;
+        }, 3000)
+      }catch(err){
+        console.log(err);
+      }
+
 		})
+
+    socket.on('discoverPeer', (token)=>{
+      if(token){
+        if(clients[token.hash] != token){
+          clients[token.hash] = token;
+          initClientSocket(token.address);
+        }
+      }
+    })
 
     socket.on('getIPList', (fromNodeToken)=>{
       socket.emit('IPList', ipList);
