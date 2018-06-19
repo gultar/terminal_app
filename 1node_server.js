@@ -99,17 +99,21 @@ const startServer = () =>{
 
 		socket.on('findNode', (address)=>{
       var __tempSocket = io(address);
+      console.log(__tempSocket);
       __tempSocket.emit('tokenRequest', thisNode);
-
+      __tempSocket.emit('getIPList', thisNode);
 		})
 
     socket.on('getIPList', (fromNodeToken)=>{
+      socket.emit('IPList', ipList);
       if(fromNodeToken){
-        socket.emit('IPList', ipList);
+
+
       }
     })
 
     socket.on('IPList', (ipAddresses)=>{
+      console.log(ipAddresses);
       if(ipAddresses){
         if(Array.isArray(ipAddresses)){
           console.log(ipAddresses);
