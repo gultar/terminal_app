@@ -7,7 +7,7 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-const port = 8082
+const port = 8080
 const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
@@ -21,7 +21,8 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 /*		'http://10.112.106.71:8080', 'http://10.112.106.71:8081', 'http://10.112.106.71:8082', //odesn't work - rasbpi at maria's
     'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082',
     'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop*/
-let ipList = ['http://'+getIPAddress()+':'+port];
+let thisAddress = 'http://'+getIPAddress()+':'+port;
+let ipList = [thisAddress, 'http://169.254.139.53:8080', 'http://169.254.139.53:8081'];
 // const ipList = [
 //       'http://'+getIPAddress()+':'+port,
 //       'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
@@ -97,13 +98,24 @@ const startServer = () =>{
 
 
 		socket.on('findNode', (address)=>{
-      console.log(address);
-
-          initClientSocket(address);
-
-
+      var __tempSocket = io(address);
+      __tempSocket.emit('tokenRequest', thisNode);
 
 		})
+
+    socket.on('getIPList', (fromNodeToken)=>{
+      if(fromNodeToken){
+        socket.emit('IPList', ipList);
+      }
+    })
+
+    socket.on('IPList', (ipAddresses)=>{
+      if(ipAddresses){
+        if(Array.isArray(ipAddresses)){
+          console.log(ipAddresses);
+        }
+      }
+    })
 
 		socket.on('sync', (hash, token)=>{
       sync(hash, token)
@@ -124,7 +136,7 @@ const startServer = () =>{
     socket.on('tokenRequest', (peerToken)=>{
 
       storeToken(peerToken);
-      handleToken(peerToken);
+
       sendToTargetPeer('storeToken', thisNode, peerToken.address);
     })
 
@@ -567,7 +579,7 @@ const handleToken = (token) =>{
     if(ipList.indexOf(token) == -1){
       console.log('Adding '+token.address+' as new peer in node list');
       ipList.push(token.address);
-      initClientSocket(token.address);
+
       saveBlockchain(blockchain);
     }
   }
