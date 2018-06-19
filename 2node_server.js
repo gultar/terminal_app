@@ -113,8 +113,8 @@ const startServer = () =>{
 
     socket.on('discoverPeer', (token)=>{
       if(token){
-        if(clients[token.hash] != token){
-          clients[token.hash] = token;
+        if(clients[token.address] != token){
+          clients[token.address] = token;
           initClientSocket(token.address);
         }
       }
@@ -156,8 +156,11 @@ const startServer = () =>{
     socket.on('tokenRequest', (peerToken)=>{
 
       storeToken(peerToken);
+      setTimeout( ()=>{
+        sendToTargetPeer('storeToken', thisNode, peerToken.address)
+      } ,2000)
 
-      sendToTargetPeer('storeToken', thisNode, peerToken.address);
+
     })
 
 		socket.on('storeToken', (token) =>{ storeToken(token)	})
@@ -288,7 +291,8 @@ const initBlockchain = (tryOnceAgain=true) => {
       blockchain = instanciateBlockchain(dataBuffer);
 			blockchain.addMiningAddress(thisNode);
 			blockchain.nodeTokens[thisNode.publicAddressKey] = thisNode;
-      blockchain.ipAddresses = ipList;
+
+      loadIpList();
     }
 
 
@@ -312,8 +316,8 @@ const initClientSocket = (address) =>{
 
 	peerSocket.on('connect', () =>{
 
-		// peerSocket.emit('getBlockchain', thisNode);
-		// peerSocket.emit('blockchain', blockchain);
+    peerSocket.emit('client-connect', thisNode);
+  	peerSocket.emit('tokenRequest', thisNode);
 		console.log('Connected to ', address);
 		peers.push(peerSocket);
 	});
@@ -362,8 +366,12 @@ const getMiningAddress = (addressToken) => {
 
 const loadIpList = () =>{
   if(blockchain){
-    ipList = blockchain.ipAddresses;
-
+    if(ipList.length < blockchain.ipAddresses.length){
+      ipList = blockchain.ipAddresses;
+    }else{
+      blockchain.ipAddresses = ipList;
+    }
+    console.log(ipList);
   }
 }
 
@@ -550,7 +558,6 @@ const clientConnect = (socket, token) =>{
 
     console.log('Connected client hash: '+ token.publicAddressKey.substr(0, 15) + '...');
     console.log('At address:', token.address);
-
     socket.emit('message', 'You are now connected to ' + thisNode.address);
 
     getNumPeers();
@@ -591,6 +598,11 @@ const storeToken = (token) =>{
     console.log('Received a node token from ', token.address);
     blockchain.nodeTokens[token.publicAddressKey] = token;
     blockchain.addMiningAddress(token);
+    if(ipList.indexOf(token.address) < 0){
+      ipList.push(token.address);
+    }
+    blockchain.ipAddresses = ipList;
+    saveBlockchain(blockchain);
   }
 }
 
@@ -716,47 +728,43 @@ const instanciateBlockchain = (blockchain) =>{
 	return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeTokens, blockchain.ipAddresses, blockchain.orphanedBlocks, blockchain.publicKeys);
 }
 
-/*
-  To run a proper transaction validation, one must look back at all the previous transactions that have been made by
-  emitting peer every time this is checked, to avoid double spending. An initial coin distribution is made once the genesis
-  block has been made. This needs some work since it is easy to send a false transaction and accumulate credits
-*/
-const validateTransaction = (transaction, token) =>{
-	if(transaction != undefined && token != undefined){
 
-		if(blockchain != undefined && blockchain instanceof Blockchain){
-
-			var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
-
-			if(!balanceOfSendingAddr){
-					console.log('Cannot verify balance of undefined address token');
-			}else{
-
-				if(balanceOfSendingAddr >= transaction.amount){
-					console.log('Transaction validated successfully');
-          return true;
-
-				}else if(transaction.type === 'query'){
-					//handle blockbase queries
-				}else{
-					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
-          return false
-				}
-
-			}
-
-
-		}else{
-			console.log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
-      return false
-		}
-
-	}else{
-		console.log('ERROR: Either the transaction or the token sent is undefined');
-		return false;
-	}
-
-}
+// const validateTransaction = (transaction, token) =>{
+// 	if(transaction != undefined && token != undefined){
+//
+// 		if(blockchain != undefined && blockchain instanceof Blockchain){
+//
+// 			var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
+//
+// 			if(!balanceOfSendingAddr){
+// 					console.log('Cannot verify balance of undefined address token');
+// 			}else{
+//
+// 				if(balanceOfSendingAddr >= transaction.amount){
+// 					console.log('Transaction validated successfully');
+//           return true;
+//
+// 				}else if(transaction.type === 'query'){
+// 					//handle blockbase queries
+// 				}else{
+// 					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
+//           return false
+// 				}
+//
+// 			}
+//
+//
+// 		}else{
+// 			console.log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
+//       return false
+// 		}
+//
+// 	}else{
+// 		console.log('ERROR: Either the transaction or the token sent is undefined');
+// 		return false;
+// 	}
+//
+// }
 
 /*
   Need to find a way to use this in transaction validation
@@ -937,10 +945,12 @@ getPublicKeyAndRsaKey((pubKey, rsaK, pubID)=>{
 initBlockchain();
 setTimeout(()=>{
   startServer()
-	connectToPeerNetwork();
 	chainUpdater();
-
 }, 2500)
+
+setTimeout(()=>{
+  connectToPeerNetwork();
+}, 5000)
 
 // setTimeout(()=>{
 //
