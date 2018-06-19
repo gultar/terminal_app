@@ -79,6 +79,7 @@ const startServer = () =>{
 
 	ioServer.on('connection', (socket) => {
 
+
 	  socket.on('message', (msg) => {
 	    console.log('Client:', msg);
 	  });
@@ -117,10 +118,19 @@ const startServer = () =>{
 
     socket.on('tokenRequest', (peerToken)=>{
       storeToken(peerToken);
-      sendToTargetPeer('storeToken', thisNode, peerToken.address);
+      setTimeout(()=>{
+        sendToTargetPeer('storeToken', thisNode, peerToken.address);
+
+      }, 2000)
+
     })
 
 		socket.on('storeToken', (token) =>{ storeToken(token)	})
+
+    socket.on('getTokenFromClient', (fromNodeToken)=>{
+      socket.emit('client-connect', thisNode);
+      socket.emit('tokenRequest', thisNode);
+    })
 
 		socket.on('distributedTransaction', (transaction, fromNodeToken) => {
       distributeTransaction(socket, transaction, fromNodeToken);
@@ -195,6 +205,7 @@ const startServer = () =>{
 	    console.log('Disconnected clients: ', token.address);
 			getNumPeers();
 	  });
+
 
 
 	});
@@ -274,6 +285,7 @@ const initClientSocket = (address) =>{
 		// peerSocket.emit('getBlockchain', thisNode);
 		// peerSocket.emit('blockchain', blockchain);
 		console.log('Connected to ', address);
+    peerSocket.emit('getTokenFromClient', thisNode);
 		peers.push(peerSocket);
 	});
 
@@ -539,6 +551,7 @@ const storeToken = (token) =>{
   if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
     console.log('Received a node token from ', token.address);
     blockchain.nodeTokens[token.publicAddressKey] = token;
+    console.log()
     blockchain.addMiningAddress(token);
   }
 }
