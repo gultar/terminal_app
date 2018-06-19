@@ -87,6 +87,8 @@ const startServer = () =>{
 
 	ioServer.on('connection', (socket) => {
 
+    socket.emit('client-connect', thisNode);
+
 	  socket.on('message', (msg) => {
 	    console.log('Client:', msg);
 	  });
@@ -237,6 +239,9 @@ const startServer = () =>{
 	  });
 
 
+
+
+
 	});
 
 }
@@ -312,11 +317,14 @@ const initClientSocket = (address) =>{
 
 
 	peerSocket.on('connect', () =>{
-    peerSocket.emit('client-connect', thisNode);
-  	peerSocket.emit('tokenRequest', thisNode);
 
 		console.log('Connected to ', address);
 		peers.push(peerSocket);
+    console.log(peers);
+
+    peerSocket.emit('client-connect', thisNode);
+    peerSocket.emit('tokenRequest', thisNode);
+
 	});
 
 	peerSocket.on('disconnect', () =>{
@@ -568,7 +576,8 @@ const startMining = (miningAddrToken) => {
   Connects to this node as a client
 */
 const clientConnect = (socket, token) =>{
-  if(token != undefined){
+  var isAlreadyClient = clients[token.address];
+  if(token != undefined && !isAlreadyClient){
     clients[token.address] = token;
 
     console.log('Connected client hash: '+ token.publicAddressKey.substr(0, 15) + '...');
@@ -965,7 +974,7 @@ setTimeout(()=>{
 
 setTimeout(()=>{
   connectToPeerNetwork();
-}, 5000)
+}, 6000)
 
 // setTimeout(()=>{
 //
