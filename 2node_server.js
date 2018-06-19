@@ -308,16 +308,16 @@ const initClientSocket = (address) =>{
 
 	var peerSocket = io(address, {'forceNew': true});
 
-	peerSocket.emit('client-connect', thisNode);
-	peerSocket.emit('tokenRequest', thisNode);
+	// peerSocket.emit('client-connect', thisNode);
+	// peerSocket.emit('tokenRequest', thisNode);
 
 	peerSocket.emit('message', 'You are connected to '+thisNode.address);
 
 
 	peerSocket.on('connect', () =>{
-
     peerSocket.emit('client-connect', thisNode);
   	peerSocket.emit('tokenRequest', thisNode);
+    peerSocket.emit('discoverPeer', thisNode);
 		console.log('Connected to ', address);
 		peers.push(peerSocket);
 	});
