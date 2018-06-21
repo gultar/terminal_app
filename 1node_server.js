@@ -56,7 +56,7 @@ let thisNode = {
 
 //Container for all connected client tokens
 let clients = [];
-
+let endpoints = [];
 //Container for all peer socket connections
 let peers = [];
 let miner = false;
@@ -198,8 +198,19 @@ const startServer = () =>{
     *
     */
 
+    socket.on('registerEndpoint', (token)=>{
+      if(token){
+        if(token.type == 'endpoint'){
+          endpoints[token.publicAddressKey] = socket;
+        }
+      }
+    })
+
 	  socket.on('getBlockchain', (token) =>{
-      getBlockchain(socket, token);
+      if(token){
+        getBlockchain(socket, token);
+      }
+
 	  });
 
 	  socket.on('blockchain', (blockchainReceived) => {
@@ -266,6 +277,24 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
 
 }
 
+
+/*
+  Sends event to target socket client
+*/
+const sendToTargetPeer = (eventType, data, address) =>{
+	for(peer of peers){
+		var peerAddress = 'http://'+peer.io.opts.hostname +':'+ peer.io.opts.port
+
+		if(peerAddress === address){
+			peer.emit(eventType, data);
+		}
+	}
+}
+
+const sendMessageToAllEndpoints = (message) =>{
+
+}
+
 /*
   Init blockchain starting from local file
 */
@@ -293,8 +322,9 @@ const initBlockchain = (tryOnceAgain=true) => {
 
     }else{
       blockchain = instanciateBlockchain(dataBuffer);
-			blockchain.addMiningAddress(thisNode);
-			blockchain.nodeTokens[thisNode.publicAddressKey] = thisNode;
+      blockchain.addNewToken(thisNode);
+      updateIpList();
+
     }
 
 
@@ -345,6 +375,7 @@ const initClientSocket = (address) =>{
   Open all client socket connection to peers
 */
 const connectToPeerNetwork = () => {
+  console.log('Connecting to all known peers...');
   let peerConnections = [];
 
   for(var i=0; i < ipList.length; i++){
@@ -364,6 +395,7 @@ const connectToPeerNetwork = () => {
   Connects to this node as a client
 */
 const clientConnect = (socket, token) =>{
+
   if(token != undefined){
     clients[token.address] = token;
     if(token.type == 'endpoint'){
@@ -372,9 +404,9 @@ const clientConnect = (socket, token) =>{
     }else{
       console.log('Connected node at address : ', token.address);
       console.log('Public ID : ', token.publicAddressKey);
-      console.log('Connected at : ', Date.now());
-    }
 
+    }
+    console.log('Connected at : '+ displayTime() +"\n");
     socket.emit('message', 'You are now connected to ' + thisNode.address);
 
     getNumPeers();
@@ -391,6 +423,7 @@ const firstContact = (address) =>{
         if(ipList.indexOf(peerToken.address) == -1){
           ipList.push(peerToken.address);
           blockchain.addNewToken(peerToken);
+          saveBlockchain(blockchain);
         }else{
           initClientSocket(peerToken.address);
           tempSocket.destroy();
@@ -403,14 +436,19 @@ const firstContact = (address) =>{
   }
 }
 
+
 const updateIpList = () =>{
-  if(blockchain.ipAddresses.length < ipList){
-    blockchain.ipAddresses = ipList;
-    saveBlockchain(blockchain);
-  }else{
-    ipList = blockchain.ipAddresses;
+  var token;
+  if(blockchain){
+    for(var id of Object.keys(blockchain.nodeTokens)){
+      token = blockchain.nodeTokens[id];
+      if(ipList.indexOf(token.address) == -1){
+        ipList.push(token.address);
+      }
+    }
   }
 
+  console.log(ipList);
 }
 
 /*
@@ -634,11 +672,8 @@ const storeToken = (token) =>{
   if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
 
       console.log('Received a node token from ', token.address);
-      blockchain.nodeTokens[token.publicAddressKey] = token;
-
-      blockchain.addMiningAddress(token);
-
-
+      blockchain.addNewToken(token);
+      saveBlockchain(blockchain);
   }
 }
 
@@ -734,18 +769,6 @@ const getNumPeers = () =>{
 	}
 }
 
-/*
-  Sends event to target socket client
-*/
-const sendToTargetPeer = (eventType, data, address) =>{
-	for(peer of peers){
-		var peerAddress = 'http://'+peer.io.opts.hostname +':'+ peer.io.opts.port
-
-		if(peerAddress === address){
-			peer.emit(eventType, data);
-		}
-	}
-}
 
 //self describing
 const instanciateBlockchain = (blockchain) =>{
@@ -962,6 +985,19 @@ const attemptMining = (miningAddrToken) =>{
 
 }
 
+const displayTime = () =>{
+  var d = new Date(),	// Convert the passed timestamp to milliseconds
+    year = d.getFullYear(),
+    mnth = d.getMonth(),	// Months are zero based. Add leading 0.
+    day = d.getDay(),			// Add leading 0.
+    hrs = d.getHours(),
+    min = d.getMinutes(),
+    sec = d.getSeconds(),		// Add leading 0.
+    ampm = 'AM';
+
+    return hrs+":"+min+":"+sec;
+}
+
 
 
 getPublicKeyAndRsaKey((pubKey, rsaK, pubID)=>{
@@ -975,9 +1011,16 @@ setTimeout(()=>{
   startServer()
 	connectToPeerNetwork();
 	chainUpdater();
+}, 5000)
 
-}, 2500)
 
+
+// setTimeout(()=>{
+//   var newTx = new Transaction(thisNode.publicKeyFull, thisNode.publicAddressKey, 90, null, Date.now(), null, 'transaction')
+//    newTx.sign(thisNode.publicKeyFull,rsaKey);
+//    newTx.verify(rsaKey);
+//    console.log('MUPPPPPETTTT',sha256(thisNode.publicKeyFull))
+// }, 8000)
 // setTimeout(()=>{
 //
 //

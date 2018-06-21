@@ -32,7 +32,7 @@ var isConnected = false;
 var outputBuffer;
 
 //Initiating the client token for connecting to network
-var clientConnectionToken;
+var endpointToken;
 
 //Container for hexagrams to be sent to screen
 var hexagrams = [{}];
@@ -265,7 +265,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           var cpt=0;
           txGen = setInterval(function(){
           	sendTransaction('e42259a16d919f71997b9621f05f0047', 'http://192.168.0.154:8082', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
-            // outputDebug("Transact - From: " + clientConnectionToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
+            // outputDebug("Transact - From: " + endpointToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
           	cpt++;
           }, 5000);
           break;
@@ -301,14 +301,14 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
             connectError(cmd);
             break;
           }
-          (!clientConnectionToken.isMining? startMining(false) : output('Node already mining...'))
+          (!endpointToken.isMining? startMining(false) : output('Node already mining...'))
           break;
         case 'stop-mine':
           if(!isConnected){
             connectError(cmd);
             break;
           }
-          (clientConnectionToken.isMining? startMining(true) : output('Node is not mining'));
+          (endpointToken.isMining? startMining(true) : output('Node is not mining'));
           break;
         case 'show-blocks':
           if(!isConnected){
@@ -393,7 +393,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       function disconnect(args, cmd){
         if(socket){
           isConnected = false;
-          socket.emit('close', clientConnectionToken);
+          socket.emit('close', endpointToken);
           setTimeout(function(){
             socket.destroy();
           }, 2000)
@@ -628,11 +628,11 @@ function startMining(mining=false){
 
   if(!mining){
     output('Starting the miner...');
-    clientConnectionToken.isMining = true;
+    endpointToken.isMining = true;
     socket.emit('miningRequest');
   }else{
     output('Stopping the miner...');
-    clientConnectionToken.isMining = false;
+    endpointToken.isMining = false;
     socket.emit('miningRequest');
   }
 
@@ -652,7 +652,7 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
 
 
     issueClientToken();
-    // console.log('Client token issued', clientConnectionToken);
+    // console.log('Client token issued', endpointToken);
 
 
   var transactToSend = {
@@ -662,7 +662,7 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
     data : data
   }
 
-  socket.emit('transaction', transactToSend, clientConnectionToken)
+  socket.emit('transaction', transactToSend, endpointToken)
   outputDebug(loopTransaction(transactToSend))
 
 
@@ -680,6 +680,7 @@ setTimeout(function(){
 
     socket  = io(nodeAddress);
 
+    socket.emit('registerEndpoint', endpointToken)
 
       socket.on('disconnect', function(){
         console.log('You have disconnected from node server');
@@ -697,7 +698,7 @@ setTimeout(function(){
       socket.on('connect', function(){
         console.log('Connected to node ', nodeAddress);
         setTimeout(()=>{
-          socket.emit('client-connect', clientConnectionToken);
+          socket.emit('client-connect', endpointToken);
           fetchBlockchainFromServer();
           isConnected = true;
         }, 2000)
@@ -735,7 +736,7 @@ setTimeout(function(){
 
 function fetchBlockchainFromServer(){
 
-      socket.emit('getBlockchain', clientConnectionToken);
+      socket.emit('getBlockchain', endpointToken);
       console.log('Fetching blockchain from server node...');
       socket.on('blockchain', function(data){
         if(fetchTrials <= 5){
@@ -817,7 +818,7 @@ function getLatestBlock(blockchain){
 }
 
 function issueClientToken(address=localAddress){
-  clientConnectionToken = {
+  endpointToken = {
     'type' : 'endpoint',
     'address' : address,
     'publicAddressKey' : sha256(address, currentTime),

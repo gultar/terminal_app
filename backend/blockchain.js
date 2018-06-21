@@ -21,15 +21,59 @@ class Transaction{
     this.type = type;
     this.signature;
     this.check;
+
   }
+
+  /*
+    Need to find way to validate if is public key
+  */
 
   isFullPublicAddress(address){
     if(address){
-      if(address.length == 32){
-
+      if(address.length <= 32){
+        return false;
+      }else{
+        return true;
       }
     }
   }
+
+  sign(publicKey,rsa){
+    if(rsa){
+      if(typeof rsa == 'object'){
+        // var newCheckAddress = generateCheckAddress(this.timestamp, JSON.stringify(this));
+
+        // var check = new BlockchainCheck(newCheckAddress, this.amount, this.toAddress, this.timestamp);
+        try{
+          // this.signature = rsaEncrypt(this, this.toAddress, )
+          return true;
+        }catch(err){
+          console.log(err);
+          return false;
+        }
+      }
+
+    }
+
+    console.log('ERROR: Check could not be written. RSA key not valid')
+  }
+
+  verify(rsa){
+    var decryptResult;
+    var openedCheck;
+    try{
+
+      decryptResult = rsaDecrypt(this.check, rsa);
+      console.log('Decrypted:',decryptResult);
+      openedCheck = JSON.parse(decryptResult.plaintext);
+      this.signature = openedCheck.signature;
+
+    }catch(err){
+      console.log(err);
+      return false;
+    }
+  }
+
 
   closeEnvelope(rsa){
     if(rsa){
@@ -145,8 +189,10 @@ class Blockchain{
   }
 
   addNewToken(token){
-    this.nodeTokens[token.address] = token;
-    this.addMiningAddress(token);
+    if(token){
+      this.nodeTokens[token.publicAddressKey] = token;
+      this.addMiningAddress(token);
+    }
   }
 
   addMiningAddress(token){
@@ -169,6 +215,21 @@ class Blockchain{
     newBlock.previousHash = this.getLatestBlock().hash;
     newBlock.mineBlock(this.difficulty); //Proof of work in action
     this.chain.push(newBlock);
+  }
+
+  getTokenByPublicKey(key){
+    if(key){
+      var token;
+      for(var tokenID of Object.keys(this.nodeTokens)){
+        token = this.nodeTokens[tokenID];
+        if(token.publicKeyFull == key){
+          return token;
+        }
+      }
+
+      return false;
+    }
+
   }
 
   syncBlock(newBlock, callback){
@@ -488,12 +549,15 @@ class Blockchain{
 
   validateTransaction(transaction, token){
 
-    if(transaction != undefined && token != undefined){
+    if(transaction && token){
 
       var isSendingNodeTheTxSender = (transaction.fromAddress == token.publicKeyFull);
-      console.log(isSendingNodeTheTxSender);
+
       var isPartOfNetwork = this.validateAddressToken(token);
-      console.log(isPartOfNetwork);
+
+      var fromAddr = this.getTokenByPublicKey(transaction.fromAddress);
+
+      var toAddr = this.getTokenByPublicKey(transaction.toAddress);
 
       var isChecksumValid = this.validateChecksum(transaction);
 
@@ -516,11 +580,6 @@ class Blockchain{
 				}else{
 					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
 				}
-
-
-
-
-
 
   	}else{
   		console.log('ERROR: Either the transaction or the token sent is undefined');
@@ -549,9 +608,12 @@ class Blockchain{
   }
 
   validateChecksum(transaction){
-    if(sha256(transaction.fromAddress+ transaction.toAddress+ transaction.amount+ transaction.data+ transaction.timestamp) !== transaction.hash){
-
+    if(transaction){
+      if(sha256(transaction.fromAddress+ transaction.toAddress+ transaction.amount+ transaction.data+ transaction.timestamp) === transaction.hash){
+        return true;
+      }
     }
+    return false;
   }
 
   validateSignature(transaction){
@@ -561,14 +623,18 @@ class Blockchain{
 }
 
 class BlockchainCheck{
-  constructor(checkAddress, amount, toAddress, timestamp){
+  constructor(checkAddress, amount, toAddress, timestamp, unspentOutputs){
     this.checkAddress = checkAddress;
     this.amount = amount;
     this.toAddress = toAddress;
     this.timestamp = timestamp;
     this.signature = sha256(this.checkAddress + this.amount + this.toAddress + this.timestamp);
+    this.unspentOutputs = unspentOutputs;
   }
+
 }
+
+
 
 class BlockchainAddress{
   constructor(token, blocksMined=0){

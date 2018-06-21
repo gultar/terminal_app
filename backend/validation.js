@@ -18,7 +18,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
 		 //Does it exist and is it an instance of Blockchain or an object?
     if(receivedBlockchain.isChainValid()){ //Is the chain valid?
 			//Try sending a notice or command to node with invalid blockchain
-			console.log('Received chain validated!');
+			console.log('Blockchain has been validated');
       if(storedBlockchain.chain.length > receivedBlockchain.chain.length){ //Which chain is the longest?
 					console.log('Local chain is the longest. Choosing this one');
           longestBlockchain = storedBlockchain;
@@ -49,7 +49,7 @@ const compareBlockchains = (storedBlockchain, receivedBlockchain=false) => {
       return longestBlockchain;
     }
     else if(storedBlockchain.isChainValid()){
-      console.log('Local chain validated!');
+      console.log('Blockchain has been validated!');
 			console.log('Received blockchain not valid. Reverting to local chain');
       return storedBlockchain;
     }else{
