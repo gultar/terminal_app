@@ -1058,38 +1058,6 @@ getKeyPair((keys)=>{
 
 })
 
-// 
-// var newTx = new Transaction(thisNode.publicKeyFull, thisNode.publicAddressKey, 90, null, Date.now(), null, 'transaction')
-// newTx.sign();
-// setTimeout(()=>{
-//
-//   var isVerified = newTx.verify(thisNode.publicKeyFull);
-//   console.log(isVerified);
-// }, 8000)
-
-//
-//
-//
-//   var secondRsa = cryptico.generateprivKey('hey bitach', 512);
-//   var checkTimestamp = Date.now()
-//   var pubKeySecond = cryptico.publicKeyString(secondRsa);
-//
-//
-//   var thirdRsa = cryptico.generateprivKey('awidohawoidhwaoih', 512);
-//   var pubthird = cryptico.publicKeyString(thirdRsa);
-//   var thirdId = cryptico.publicKeyID(pubthird)
-//   var id = cryptico.publicKeyID(pubKeySecond);
-//   var newTx = new Transaction(thisNode.publicKeyFull, pubKeySecond, 90, null, Date.now(), null, 'transaction')
-//   newTx.closeEnvelope(privKey);
-//   // console.log(newTx);
-//   newTx.openEnvelope(secondRsa);
-//   // console.log(newTx)
-//   var decoded = rsaDecrypt(newTx.check, secondRsa);
-//   var chk = JSON.parse(decoded.plaintext);
-//   console.log(thisNode.publicKeyFull);
-//   console.log(decoded)
-//
-// }, 8000)
 
 
 
