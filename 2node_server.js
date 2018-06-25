@@ -722,13 +722,21 @@ const distributeTransaction = (socket, transaction, fromNodeToken) =>{
   ///////////////////////////////////////////////////////////
   //Need to validate transaction everytime it is received
   ///////////////////////////////////////////////////////////
-  if(blockchain != undefined){
-    if(transaction != undefined && fromNodeToken != undefined){
+  if(blockchain){
+    if(transaction && fromNodeToken){
       console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
       console.log(transaction);
-      var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
+      var transactionObj = new Transaction(
+        transaction.fromAddress,
+        transaction.toAddress,
+        transaction.amount,
+        transaction.data,
+        transaction.timestamp,
+        transaction.hash,
+        transaction.type
+      );
 
-      var transactIsValid = validateTransaction(transactionObj, fromNodeToken);
+      var transactIsValid = blockchain.validateTransaction(transactionObj, fromNodeToken);
 
       blockchain.createTransaction(transactionObj);
 
@@ -744,18 +752,24 @@ const receiveTransactionFromClient = (socket, transaction, fromNodeToken) =>{
   ///////////////////////////////////////////////////////////
   //Need to validate transaction before adding to blockchain
   ///////////////////////////////////////////////////////////
-  if(blockchain != undefined){
-    if(transaction != undefined && fromNodeToken != undefined){
-      if(fromNodeToken.address != thisNode.address || fromNodeToken.type == 'endpoint'){
+  if(blockchain){
+    if(transaction && fromNodeToken){
+      if(fromNodeToken.type == 'endpoint'){
 
 
         var fromAddress = blockchain.nodeTokens[transaction.fromAddress];
         var toAddress = blockchain.nodeTokens[transaction.toAddress];
 
-        // console.log('From:', fromAddress);
-        // console.log('To:', toAddress);
+        var transactionObj = new Transaction(
+          transaction.fromAddress,
+          transaction.toAddress,
+          transaction.amount,
+          transaction.data,
+          transaction.timestamp,
+          transaction.hash,
+          transaction.type
+        );
 
-        var transactionObj = new Transaction(transaction.fromAddress, transaction.toAddress, transaction.amount, transaction.data);
         //Need to validate transact before broadcasting it
         var transactIsValid = blockchain.validateTransaction(transactionObj, fromAddress);
 
