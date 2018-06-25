@@ -7,7 +7,7 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-const port = 8080
+const port = process.env.PORT || 8080
 const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
@@ -22,7 +22,7 @@ const { getIPAddress } = require('./backend/ipFinder.js');
     'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082',
     'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop*/
 let thisAddress = 'http://'+getIPAddress()+':'+port;
-let ipList = [thisAddress];
+let ipList = [ thisAddress ];
   // = [
   //     'http://'+getIPAddress()+':'+port,
   //     'http://169.254.139.53:8080', 'http://169.254.139.53:8081', 'http://169.254.139.53:8082', //Ad hoc rasbpi
@@ -34,15 +34,15 @@ let ipList = [thisAddress];
 /*
   Blockchain classes and tools
 */
-const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase, BlockchainCheck } = require('./backend/blockchain');
-const {  encrypt, decrypt, generateCheckAddress, getPublicKeyAndRsaKey, rsaEncrypt, rsaDecrypt  } = require('./backend/keysHandler');
+const { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase } = require('./backend/blockchain');
+const {  encrypt, decrypt, getKeyPair } = require('./backend/keysHandler');
 const cryptico = require('cryptico');
 const merkle = require('merkle');
 const sha256 = require('./backend/sha256');
 
 let blockchain;
 let dataBuffer;
-let rsaKey;
+let privKey;
 
 let thisNode = {
   'type' : 'node',
@@ -65,10 +65,11 @@ let currentMiners = [];
 let peerBuildsNextBlock = false;
 let sendTrials = 0;
 
+
 /*
   Starts the websocket server, listens for inbound connections
-
 */
+
 const startServer = () =>{
 	console.log('\nStarting node at '+thisNode.address+"\n");
 	console.log('Node Public Address: '+thisNode.publicAddressKey + "\n");
@@ -80,7 +81,6 @@ const startServer = () =>{
 
 
 	ioServer.on('connection', (socket) => {
-
 
 	  socket.on('message', (msg) => {
 	    console.log('Client:', msg);
@@ -102,7 +102,7 @@ const startServer = () =>{
 
     socket.on('ipList', (ipAddresses)=>{
       if(ipAddresses){
-        if(ipAddresses.length > ipList.length){
+        if(ipAddresses.length >= ipList.length){
           ipList = ipAddresses;
         }
       }
@@ -276,6 +276,43 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
   }
 
 }
+
+// const loadprivateKey = () =>{
+//   fs.exists('./backend/file.pem', (exists)=>{
+//     if(exists){
+//       var data = '';
+//       var rstream = fs.createReadStream('./backend/file.pem');
+//       var keyObj = {};
+//       rstream.on('error', (err) =>{
+// 				console.log(err);
+// 				return false;
+//       })
+//
+// 			rstream.on('data', (chunk) => {
+// 				data += chunk;
+// 			});
+//
+//
+// 			rstream.on('close', () =>{  // done
+//
+// 				if(data != undefined){
+//           try{
+//             privKey = data;
+//             console.log(privKey);
+//           }catch(err){
+//             console.error(err);
+//             return false
+//           }
+//
+//
+// 				}else{
+// 					return false;
+// 				}
+//
+// 			});
+//     }
+//   })
+// }
 
 
 /*
@@ -932,6 +969,7 @@ const chainUpdater = () =>{
       var latestBlock = blockchain.getLatestBlock();
 
     	sendEventToAllPeers('sync', latestBlock.hash, thisNode);
+      sendEventToAllPeers('ipList', ipList);
 
 		}else{
 			console.log('blockchain is not loaded yet. Trying again');
@@ -1000,12 +1038,6 @@ const displayTime = () =>{
 
 
 
-getPublicKeyAndRsaKey((pubKey, rsaK, pubID)=>{
-  thisNode.publicAddressKey = pubID;
-  rsaKey = rsaK;
-  thisNode.publicKeyFull = pubKey;
-});
-
 initBlockchain();
 setTimeout(()=>{
   startServer()
@@ -1013,29 +1045,42 @@ setTimeout(()=>{
 	chainUpdater();
 }, 5000)
 
+getKeyPair((keys)=>{
+  if(keys){
 
+    /*
+    Skipping privateKey. Only used when signing transactions
+    */
+    thisNode.publicKeyFull = keys.publicKey;
+    thisNode.publicAddressKey = sha256(keys.publicKey);
 
+  }
+
+})
+
+// 
+// var newTx = new Transaction(thisNode.publicKeyFull, thisNode.publicAddressKey, 90, null, Date.now(), null, 'transaction')
+// newTx.sign();
 // setTimeout(()=>{
-//   var newTx = new Transaction(thisNode.publicKeyFull, thisNode.publicAddressKey, 90, null, Date.now(), null, 'transaction')
-//    newTx.sign(thisNode.publicKeyFull,rsaKey);
-//    newTx.verify(rsaKey);
-//    console.log('MUPPPPPETTTT',sha256(thisNode.publicKeyFull))
+//
+//   var isVerified = newTx.verify(thisNode.publicKeyFull);
+//   console.log(isVerified);
 // }, 8000)
-// setTimeout(()=>{
+
 //
 //
 //
-//   var secondRsa = cryptico.generateRSAKey('hey bitach', 512);
+//   var secondRsa = cryptico.generateprivKey('hey bitach', 512);
 //   var checkTimestamp = Date.now()
 //   var pubKeySecond = cryptico.publicKeyString(secondRsa);
 //
 //
-//   var thirdRsa = cryptico.generateRSAKey('awidohawoidhwaoih', 512);
+//   var thirdRsa = cryptico.generateprivKey('awidohawoidhwaoih', 512);
 //   var pubthird = cryptico.publicKeyString(thirdRsa);
 //   var thirdId = cryptico.publicKeyID(pubthird)
 //   var id = cryptico.publicKeyID(pubKeySecond);
 //   var newTx = new Transaction(thisNode.publicKeyFull, pubKeySecond, 90, null, Date.now(), null, 'transaction')
-//   newTx.closeEnvelope(rsaKey);
+//   newTx.closeEnvelope(privKey);
 //   // console.log(newTx);
 //   newTx.openEnvelope(secondRsa);
 //   // console.log(newTx)

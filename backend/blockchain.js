@@ -2,7 +2,12 @@
 const sha256 = require('./sha256');
 const merkle = require('merkle');
 const cryptico = require('cryptico');
-const { rsaEncrypt, rsaDecrypt, generateCheckAddress } = require('./keysHandler');
+var crypto = require('crypto');
+var fs = require('fs');
+const { exec } = require('child_process');
+
+
+
 /******************************************/
 /***********Blockchain classes*************/
 /******************************************/
@@ -10,6 +15,8 @@ const { rsaEncrypt, rsaDecrypt, generateCheckAddress } = require('./keysHandler'
 ///////////////Transaction//////////////////
 //A transaction is done if there is a
 //change of data on the blockchain
+
+
 class Transaction{
   constructor(fromAddress, toAddress, amount, data='', timestamp='', hash='', type=''){
     this.fromAddress = fromAddress;
@@ -20,95 +27,49 @@ class Transaction{
     this.hash = (hash? hash : sha256(this.fromAddress+ this.toAddress+ this.amount+ this.data+ this.timestamp));
     this.type = type;
     this.signature;
-    this.check;
-
   }
 
-  /*
-    Need to find way to validate if is public key
-  */
+  sign(){
+    fs.exists('private.pem', (exists)=>{
+      if(exists){
+        try{
 
-  isFullPublicAddress(address){
-    if(address){
-      if(address.length <= 32){
-        return false;
+          var pem = fs.readFileSync('private.pem');
+          var key = pem.toString('ascii');
+          var sign = crypto.createSign('RSA-SHA256');
+          sign.update(this.hash);  // data from your file would go here
+          this.signature = sign.sign(key, 'hex');
+          console.log('Signed this:', this.signature)
+
+        }catch(err){
+          console.log(err);
+        }
+
       }else{
-        return true;
+
       }
-    }
+    })
+
   }
 
-  sign(publicKey,rsa){
-    if(rsa){
-      if(typeof rsa == 'object'){
-        // var newCheckAddress = generateCheckAddress(this.timestamp, JSON.stringify(this));
+  verify(publicKey){
+    if(publicKey){
+      try{
 
-        // var check = new BlockchainCheck(newCheckAddress, this.amount, this.toAddress, this.timestamp);
-        try{
-          // this.signature = rsaEncrypt(this, this.toAddress, )
-          return true;
-        }catch(err){
-          console.log(err);
-          return false;
-        }
+        const verify = crypto.createVerify('RSA-SHA256');
+        verify.update(this.hash);
+
+        return verify.verify(publicKey, this.signature, 'hex');
+
+      }catch(err){
+        console.log(err);
+        return false;
       }
-
-    }
-
-    console.log('ERROR: Check could not be written. RSA key not valid')
-  }
-
-  verify(rsa){
-    var decryptResult;
-    var openedCheck;
-    try{
-
-      decryptResult = rsaDecrypt(this.check, rsa);
-      console.log('Decrypted:',decryptResult);
-      openedCheck = JSON.parse(decryptResult.plaintext);
-      this.signature = openedCheck.signature;
-
-    }catch(err){
-      console.log(err);
+    }else{
       return false;
     }
-  }
 
 
-  closeEnvelope(rsa){
-    if(rsa){
-      if(typeof rsa == 'object'){
-        var newCheckAddress = generateCheckAddress(this.timestamp, JSON.stringify(this));
-
-        var check = new BlockchainCheck(newCheckAddress, this.amount, this.toAddress, this.timestamp);
-        try{
-          check = rsaEncrypt(JSON.stringify(check), this.toAddress, rsa);
-          this.check = check;
-          return true;
-        }catch(err){
-          console.log(err);
-          return false;
-        }
-      }
-
-    }
-
-    console.log('ERROR: Check could not be written. RSA key not valid')
-  }
-
-  openEnvelope(rsa){
-    var decryptResult;
-    var openedCheck;
-    try{
-
-      decryptResult = rsaDecrypt(this.check, rsa);
-      openedCheck = JSON.parse(decryptResult.plaintext);
-      this.signature = openedCheck.signature;
-
-    }catch(err){
-      console.log(err);
-      return false;
-    }
   }
 
   byteCount(s) {
@@ -552,19 +513,25 @@ class Blockchain{
     if(transaction && token){
 
       var isSendingNodeTheTxSender = (transaction.fromAddress == token.publicKeyFull);
+      console.log('Is sending node the original sender? :', isSendingNodeTheTxSender);
 
       var isPartOfNetwork = this.validateAddressToken(token);
+      console.log("Is sending node's token part of the network? :", isPartOfNetwork);
 
       var fromAddr = this.getTokenByPublicKey(transaction.fromAddress);
+      console.log("Is from address a valid public key? :", fromAddr==undefined);
 
       var toAddr = this.getTokenByPublicKey(transaction.toAddress);
+      console.log("Is to address a valid public key? :", toAddr==undefined);
 
       var isChecksumValid = this.validateChecksum(transaction);
+      console.log("Is transaction hash valid? :", isChecksumValid);
 
-      var isSignatureValid = this.validateSignature(transaction);
+      var isSignatureValid = transaction.verify(transaction.toAddress);
+      console.log("Is transaction signature valid? :", isSignatureValid);
 
-  			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
-        console.log(balanceOfSendingAddr);
+			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
+      console.log("Balance of sender is : ",balanceOfSendingAddr);
 
   			if(!balanceOfSendingAddr && balanceOfSendingAddr !== 0){
   					console.log('Cannot verify balance of undefined address token');
@@ -618,18 +585,6 @@ class Blockchain{
 
   validateSignature(transaction){
 
-  }
-
-}
-
-class BlockchainCheck{
-  constructor(checkAddress, amount, toAddress, timestamp, unspentOutputs){
-    this.checkAddress = checkAddress;
-    this.amount = amount;
-    this.toAddress = toAddress;
-    this.timestamp = timestamp;
-    this.signature = sha256(this.checkAddress + this.amount + this.toAddress + this.timestamp);
-    this.unspentOutputs = unspentOutputs;
   }
 
 }
@@ -777,4 +732,4 @@ function merkleRoot(dataSets){
 
 
 
-module.exports = { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase, BlockchainCheck};
+module.exports = { Blockchain, Block, BlockchainAddress, Transaction, BlockbaseRecord, Blockbase};

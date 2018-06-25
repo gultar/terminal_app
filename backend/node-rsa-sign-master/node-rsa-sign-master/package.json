@@ -1,0 +1,34 @@
+{
+    "name": "rsa-sign",
+    "version": "0.1.4",
+    "description": "Simple document/payload signing and verifying",
+    "main": "index.js",
+    "bin": {
+        "rsa-sign": "./bin/rsa-sign.js"
+    },
+    "dependencies": {
+        "commander": "2.6.0"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/AaronO/node-rsa-sign.git"
+    },
+    "keywords": [
+        "rsa",
+        "sign",
+        "secure",
+        "document",
+        "asymmetric",
+        "signature",
+        "verify"
+    ],
+    "author": "Aaron O'Mullan <aaron.omullan@gmail.com>",
+    "license": "Apache2",
+    "bugs": {
+        "url": "https://github.com/AaronO/node-rsa-sign/issues"
+    },
+    "homepage": "https://github.com/AaronO/node-rsa-sign"
+}
