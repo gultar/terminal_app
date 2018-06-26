@@ -527,7 +527,7 @@ class Blockchain{
       var isChecksumValid = this.validateChecksum(transaction);
       console.log("Is transaction hash valid? :", isChecksumValid);
 
-      var isSignatureValid = transaction.verify(fromAddr.publicKeyFull);
+      var isSignatureValid = this.validateTransaction(fromAddr.publicKeyFull, transaction);
       console.log("Is transaction signature valid? :", isSignatureValid);
 
 			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
@@ -583,7 +583,25 @@ class Blockchain{
     return false;
   }
 
-  validateSignature(transaction){
+  validateSignature(publicKey, transaction){
+
+    if(publicKey){
+      try{
+
+        var verify = crypto.createVerify('RSA-SHA256');
+        verify.update(transaction.hash);
+
+        return verify.verify(publicKey, transaction.signature, 'hex');
+
+      }catch(err){
+        console.log(err);
+        return false;
+      }
+    }else{
+      return false;
+    }
+
+
 
   }
 
