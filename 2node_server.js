@@ -685,17 +685,8 @@ const distributeTransaction = (transaction, fromNodeToken) =>{
     if(transaction && fromNodeToken){
       console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
       console.log(transaction);
-      var transactionObj = new Transaction(
-        transaction.fromAddress,
-        transaction.toAddress,
-        transaction.amount,
-        transaction.data,
-        transaction.timestamp,
-        transaction.hash,
-        transaction.type
-      );
 
-      var transactIsValid = blockchain.validateTransaction(transactionObj, fromNodeToken);
+      var transactIsValid = blockchain.validateTransaction(transaction, fromNodeToken);
 
       blockchain.createTransaction(transactionObj);
 
