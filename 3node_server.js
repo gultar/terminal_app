@@ -688,7 +688,7 @@ const distributeTransaction = (transaction, fromNodeToken) =>{
 
       var transactIsValid = blockchain.validateTransaction(transaction, fromNodeToken);
 
-      blockchain.createTransaction(transactionObj);
+      blockchain.createTransaction(transaction);
 
     }
   }
