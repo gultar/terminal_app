@@ -527,7 +527,7 @@ class Blockchain{
       var isChecksumValid = this.validateChecksum(transaction);
       console.log("Is transaction hash valid? :", isChecksumValid);
 
-      var isSignatureValid = transaction.verify(transaction.toAddress);
+      var isSignatureValid = transaction.verify(fromAddr.publicKeyFull);
       console.log("Is transaction signature valid? :", isSignatureValid);
 
 			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);

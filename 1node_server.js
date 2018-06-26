@@ -720,26 +720,28 @@ const receiveTransactionFromClient = (transaction, fromEndpointToken) =>{
           var fromAddress = blockchain.nodeTokens[transaction.fromAddress];
           var toAddress = blockchain.nodeTokens[transaction.toAddress];
 
-          console.log('FROM:', fromAddress);
-          console.log('')
-
           var transactionObj = new Transaction(
             transaction.fromAddress,
             transaction.toAddress,
             transaction.amount,
             transaction.data,
             transaction.timestamp,
-            transaction.hash,
+            undefined,
             transaction.type
           );
 
-          //Need to validate transact before broadcasting it
-          var transactIsValid = blockchain.validateTransaction(transactionObj, fromAddress);
+          transactionObj.sign();
 
-          blockchain.createTransaction(transactionObj);
-          sendEventToAllPeers('distributedTransaction', transactionObj, thisNode);
-          console.log('Received new transaction:', transactionObj);
-          transactionObj = null;
+          //Need to validate transact before broadcasting it
+          setTimeout(()=>{
+            var transactIsValid = blockchain.validateTransaction(transactionObj, fromAddress);
+
+            blockchain.createTransaction(transactionObj);
+            sendEventToAllPeers('distributedTransaction', transactionObj, thisNode);
+            console.log('Received new transaction:', transactionObj);
+            transactionObj = null;
+          }, 1500)
+
         }
       }else{
         console.log('ERROR: Endpoint token is undefined')
@@ -1038,8 +1040,11 @@ getKeyPair((keys)=>{
 })
 
 
+setTimeout(()=>{
 
-
+  var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
+  blockchain.createTransaction(godTx);
+}, 8000)
 // setTimeout(()=>{
 //   var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))
 //
