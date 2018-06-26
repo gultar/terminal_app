@@ -48,7 +48,7 @@ let thisNode = {
   'type' : 'node',
   'address' : ipList[0], //
   'status':'active',
-  'publicAddressKey' : '',
+  'publicID' : '',
   'publicKeyFull' : '',
   'isMining': false //ipList[0]
 }
@@ -72,7 +72,7 @@ let sendTrials = 0;
 
 const startServer = () =>{
 	console.log('\nStarting node at '+thisNode.address+"\n");
-	console.log('Node Public Address: '+thisNode.publicAddressKey + "\n");
+	console.log('Node Public Address: '+thisNode.publicID + "\n");
   app.use(express.static(__dirname+'/views'));
 
 	app.on('/', () => {
@@ -148,11 +148,11 @@ const startServer = () =>{
     })
 
 		socket.on('distributedTransaction', (transaction, fromNodeToken) => {
-      distributeTransaction(socket, transaction, fromNodeToken);
+      distributeTransaction(transaction, fromNodeToken);
 		})
 
 	  socket.on('transaction', (transaction, fromNodeToken) => {
-      receiveTransactionFromClient(socket, transaction, fromNodeToken);
+      receiveTransactionFromClient(transaction, fromNodeToken);
 	  });
 
     socket.on('transactionCheckOpened', (transaction, fromNodeToken) =>{
@@ -201,7 +201,7 @@ const startServer = () =>{
     socket.on('registerEndpoint', (token)=>{
       if(token){
         if(token.type == 'endpoint'){
-          endpoints[token.publicAddressKey] = socket;
+          endpoints[token.publicID] = socket;
         }
       }
     })
@@ -276,44 +276,6 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
   }
 
 }
-
-// const loadprivateKey = () =>{
-//   fs.exists('./backend/file.pem', (exists)=>{
-//     if(exists){
-//       var data = '';
-//       var rstream = fs.createReadStream('./backend/file.pem');
-//       var keyObj = {};
-//       rstream.on('error', (err) =>{
-// 				console.log(err);
-// 				return false;
-//       })
-//
-// 			rstream.on('data', (chunk) => {
-// 				data += chunk;
-// 			});
-//
-//
-// 			rstream.on('close', () =>{  // done
-//
-// 				if(data != undefined){
-//           try{
-//             privKey = data;
-//             console.log(privKey);
-//           }catch(err){
-//             console.error(err);
-//             return false
-//           }
-//
-//
-// 				}else{
-// 					return false;
-// 				}
-//
-// 			});
-//     }
-//   })
-// }
-
 
 /*
   Sends event to target socket client
@@ -437,10 +399,10 @@ const clientConnect = (socket, token) =>{
     clients[token.address] = token;
     if(token.type == 'endpoint'){
       console.log('Endpoint client connected to this node');
-      console.log('Hash: '+ token.publicAddressKey);
+      console.log('Hash: '+ token.publicID);
     }else{
       console.log('Connected node at address : ', token.address);
-      console.log('Public ID : ', token.publicAddressKey);
+      console.log('Public ID : ', token.publicID);
 
     }
     console.log('Connected at : '+ displayTime() +"\n");
@@ -493,8 +455,8 @@ const updateIpList = () =>{
 */
 const getMiningAddress = (addressToken) => {
   if(blockchain !== undefined){
-		if(blockchain.miningAddresses[addressToken.publicAddressKey] && blockchain.miningAddresses[addressToken.publicAddressKey] instanceof BlockchainAddress){
-			return blockchain.miningAddresses[addressToken.publicAddressKey];
+		if(blockchain.miningAddresses[addressToken.publicID] && blockchain.miningAddresses[addressToken.publicID] instanceof BlockchainAddress){
+			return blockchain.miningAddresses[addressToken.publicID];
 		}else{
 			blockchain.addMiningAddress(addressToken);
 		}
@@ -647,7 +609,7 @@ const startMining = (miningAddrToken) => {
 
 			console.log('\nBalance of '+miningAddr.address+' is '+ blockchain.getBalanceOfAddress(miningAddr));
 
-			var message =  'A new block has been mined by ' + miningAddr.publicAddressKey + '. Sending new block';
+			var message =  'A new block has been mined by ' + miningAddr.publicID + '. Sending new block';
 			var newBlock = blockchain.getLatestBlock();
 			ioServer.emit('miningApproved', blockchain);
 			ioServer.emit('message', message);
@@ -672,9 +634,6 @@ const startMining = (miningAddrToken) => {
 
 
 }
-
-
-
 
 /*
   This the listener function that fetches missing blocks
@@ -718,7 +677,7 @@ const storeToken = (token) =>{
   This is a listener function that redistributes a transaction once its been received
   from an endpoint client
 */
-const distributeTransaction = (socket, transaction, fromNodeToken) =>{
+const distributeTransaction = (transaction, fromNodeToken) =>{
   ///////////////////////////////////////////////////////////
   //Need to validate transaction everytime it is received
   ///////////////////////////////////////////////////////////
@@ -748,42 +707,48 @@ const distributeTransaction = (socket, transaction, fromNodeToken) =>{
   This is a listener function that catches a transaction emitted from endpoint client,
   validates it and distributes it to all peers
 */
-const receiveTransactionFromClient = (socket, transaction, fromNodeToken) =>{
+const receiveTransactionFromClient = (transaction, fromEndpointToken) =>{
   ///////////////////////////////////////////////////////////
   //Need to validate transaction before adding to blockchain
   ///////////////////////////////////////////////////////////
+
   if(blockchain){
-    if(transaction && fromNodeToken){
-      if(fromNodeToken.type == 'endpoint'){
+    if(transaction){
+      if(fromEndpointToken){
+        if(fromEndpointToken.type == 'endpoint'){
 
+          var fromAddress = blockchain.nodeTokens[transaction.fromAddress];
+          var toAddress = blockchain.nodeTokens[transaction.toAddress];
 
-        var fromAddress = blockchain.nodeTokens[transaction.fromAddress];
-        var toAddress = blockchain.nodeTokens[transaction.toAddress];
+          console.log('FROM:', fromAddress);
+          console.log('')
 
-        var transactionObj = new Transaction(
-          transaction.fromAddress,
-          transaction.toAddress,
-          transaction.amount,
-          transaction.data,
-          transaction.timestamp,
-          transaction.hash,
-          transaction.type
-        );
+          var transactionObj = new Transaction(
+            transaction.fromAddress,
+            transaction.toAddress,
+            transaction.amount,
+            transaction.data,
+            transaction.timestamp,
+            transaction.hash,
+            transaction.type
+          );
 
-        //Need to validate transact before broadcasting it
-        var transactIsValid = blockchain.validateTransaction(transactionObj, fromAddress);
+          //Need to validate transact before broadcasting it
+          var transactIsValid = blockchain.validateTransaction(transactionObj, fromAddress);
 
-        blockchain.createTransaction(transactionObj);
-        sendEventToAllPeers('distributedTransaction', transactionObj, fromNodeToken);
-        console.log('Received new transaction:', transactionObj);
-        transactionObj = null;
+          blockchain.createTransaction(transactionObj);
+          sendEventToAllPeers('distributedTransaction', transactionObj, thisNode);
+          console.log('Received new transaction:', transactionObj);
+          transactionObj = null;
+        }
+      }else{
+        console.log('ERROR: Endpoint token is undefined')
       }
-
     }else{
-      socket.emit('message', 'ERROR: Either your transaction or your token is unreadable. Try again.')
+      console.log('ERROR: Transaction is undefined')
     }
   }else{
-    socket.emit('message', 'Node is unavailable for receiving the transaction');
+    console.log('Node is unavailable for receiving the transaction');
   }
 }
 
@@ -791,20 +756,20 @@ const receiveTransactionFromClient = (socket, transaction, fromNodeToken) =>{
   Creates an chain of block signatures, that is, the hash of the block and the previous hash only.
 */
 const buildChainHashes = () =>{
-	var publicAddressKeysOnChain = []
+	var publicIDsOnChain = []
 
 	var chain = blockchain.chain;
 
 
 	for(var i=0; i<chain.length; i++){
-		publicAddressKeysOnChain.push({
+		publicIDsOnChain.push({
 			hash:chain[i].hash,
 			previousHash:chain[i].previousHash,
 			timestamp:chain[i].timestamp
 		})
 	}
 
-	return publicAddressKeysOnChain;
+	return publicIDsOnChain;
 }
 
 /*
@@ -1066,7 +1031,7 @@ getKeyPair((keys)=>{
     Skipping privateKey. Only used when signing transactions
     */
     thisNode.publicKeyFull = keys.publicKey;
-    thisNode.publicAddressKey = sha256(keys.publicKey);
+    thisNode.publicID = sha256(keys.publicKey);
 
   }
 

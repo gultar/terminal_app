@@ -236,11 +236,21 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       }
 
       switch (cmd) {
+        case 'c':
+        case 'con':
         case 'connect':
           connect(args, cmd);
           break;
+        case 'd':
+        case 'dec':
         case 'disconnect':
           disconnect(args, cmd);
+          break;
+        case 'r':
+        case 'rec':
+        case 'reconnect':
+          disconnect(args, cmd);
+          connect(args, cmd);
           break;
         case 'goto': openInNewTab(args[0]);
           break;
@@ -661,7 +671,7 @@ function sendTransaction(fromAddress, toAddress, amount, data=''){
     amount : amount,
     data : data
   }
-
+  console.log(endpointToken);
   socket.emit('transaction', transactToSend, endpointToken)
   outputDebug(loopTransaction(transactToSend))
 

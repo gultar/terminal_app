@@ -151,21 +151,21 @@ class Blockchain{
 
   addNewToken(token){
     if(token){
-      this.nodeTokens[token.publicAddressKey] = token;
+      this.nodeTokens[token.publicID] = token;
       this.addMiningAddress(token);
     }
   }
 
   addMiningAddress(token){
-    if(!this.miningAddresses[token.publicAddressKey]){
-      this.miningAddresses[token.publicAddressKey] = new BlockchainAddress(token);
+    if(!this.miningAddresses[token.publicID]){
+      this.miningAddresses[token.publicID] = new BlockchainAddress(token);
     }
   }
 
   getMiningAddress(addressToken){
     if(addressToken != undefined){
-      if(this.miningAddresses[addressToken.publicAddressKey] && this.miningAddresses[addressToken.publicAddressKey] instanceof BlockchainAddress){
-  			return this.miningAddresses[addressToken.publicAddressKey];
+      if(this.miningAddresses[addressToken.publicID] && this.miningAddresses[addressToken.publicID] instanceof BlockchainAddress){
+  			return this.miningAddresses[addressToken.publicID];
   		}else{
   			this.addMiningAddress(addressToken);
   		}
@@ -285,7 +285,7 @@ class Blockchain{
     var trans;
 
     if(token != undefined){
-      var address = token.publicAddressKey;
+      var address = token.publicID;
       /*****************************/
       if(!(typeof token == 'object')){  ///To be removed. For test purposes only
         console.log('Token not object');
@@ -347,7 +347,7 @@ class Blockchain{
 
   getBalanceOfAddress(token){
     if(token != undefined && typeof token == 'object'){
-      var address = token.publicAddressKey;
+      var address = token.publicID;
       let balance = 0;
       var trans;
       if(token != undefined){
@@ -382,7 +382,7 @@ class Blockchain{
 
 
   getBalanceFromBlockIndex(index, token){
-    var address = token.publicAddressKey;
+    var address = token.publicID;
 
     console.log('INDEX:', index);
     for(var i=0; i < index; i++){
@@ -512,16 +512,16 @@ class Blockchain{
 
     if(transaction && token){
 
-      var isSendingNodeTheTxSender = (transaction.fromAddress == token.publicKeyFull);
+      var isSendingNodeTheTxSender = (transaction.fromAddress == token.publicID);
       console.log('Is sending node the original sender? :', isSendingNodeTheTxSender);
 
       var isPartOfNetwork = this.validateAddressToken(token);
       console.log("Is sending node's token part of the network? :", isPartOfNetwork);
 
-      var fromAddr = this.getTokenByPublicKey(transaction.fromAddress);
+      var fromAddr = this.getTokenByID(transaction.fromAddress);
       console.log("Is from address a valid public key? :", fromAddr==undefined);
 
-      var toAddr = this.getTokenByPublicKey(transaction.toAddress);
+      var toAddr = this.getTokenByID(transaction.toAddress);
       console.log("Is to address a valid public key? :", toAddr==undefined);
 
       var isChecksumValid = this.validateChecksum(transaction);
@@ -560,10 +560,10 @@ class Blockchain{
     var exists = false;
     var isValid = false;
     if(token != undefined){
-      if(this.nodeTokens[token.publicAddressKey] === token){
+      if(this.nodeTokens[token.publicID] === token){
         exists = true;
 
-        if(this.nodeTokens[token.publicAddressKey].publicAddressKey === cryptico.publicKeyID(this.nodeTokens[token.publicAddressKey].publicKeyFull)){
+        if(this.nodeTokens[token.publicID].publicID === sha256(this.nodeTokens[token.publicID].publicKeyFull)){
           isValid = true;
         }
       }
@@ -587,6 +587,13 @@ class Blockchain{
 
   }
 
+  getTokenByID(id){
+    if(id){
+      return this.nodeTokens[id];
+    }
+
+  }
+
 }
 
 
@@ -595,7 +602,7 @@ class BlockchainAddress{
   constructor(token, blocksMined=0){
     this.address = token.address;
     this.blocksMined = blocksMined;
-    this.publicAddress = token.publicAddressKey;
+    this.publicAddress = token.publicID;
   }
 
   minedOneBlock(){
