@@ -96,17 +96,17 @@ const startServer = () =>{
       clientConnect(socket, token);
     });
 
-    socket.on('getIpList', (fromSocket) =>{
-      socket.emit('ipList', ipList);
-    })
-
-    socket.on('ipList', (ipAddresses)=>{
-      if(ipAddresses){
-        if(ipAddresses.length >= ipList.length){
-          ipList = ipAddresses;
-        }
-      }
-    })
+    // socket.on('getIpList', (fromSocket) =>{
+    //   socket.emit('ipList', ipList);
+    // })
+    //
+    // socket.on('ipList', (ipAddresses)=>{
+    //   if(ipAddresses){
+    //     if(ipAddresses.length >= ipList.length){
+    //       ipList = ipAddresses;
+    //     }
+    //   }
+    // })
 
     socket.on('sendYourAddress', (token)=>{
 
@@ -240,7 +240,12 @@ const startServer = () =>{
 
     socket.on('firstContact', (address)=>{
       if(address){
-        firstContact(address);
+        if(!clients[address]){
+          initClientSocket(address);
+          // firstContact(address);
+        }
+
+
       }
     })
 
@@ -353,11 +358,10 @@ const initClientSocket = (address) =>{
 	peerSocket.on('connect', () =>{
 
 		console.log('Connected to ', address);
-
+    peerSocket.emit('triggerClientConnect', thisNode);
     setTimeout(()=>{
       peerSocket.emit('tokenRequest', thisNode);
-      peerSocket.emit('triggerClientConnect', thisNode);
-      peerSocket.emit('getTokenFromClient', thisNode);
+      // peerSocket.emit('getTokenFromClient', thisNode);
     }, 2000)
 		peers.push(peerSocket);
 	});
@@ -446,7 +450,10 @@ const firstContact = (address) =>{
           ipList.push(peerToken.address);
           blockchain.addNewToken(peerToken);
           saveBlockchain(blockchain);
+          initClientSocket(peerToken.address);
+
         }else{
+
           initClientSocket(peerToken.address);
           tempSocket.destroy();
         }
