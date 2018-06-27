@@ -266,6 +266,12 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           console.log(navigator);
           console.log(navigator.geolocation);
           break;
+        case 'who':
+          runWho(args, cmd);
+          break;
+        case 'tx':
+          sendTransaction()
+          break;
         case 'txgen':
           if(!isConnected){
             connectError(cmd);
@@ -427,6 +433,24 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         if(args.length > 0){
           if(typeof args[0] == 'string'){
             socket.emit('firstContact', args[0]);
+          }
+        }
+      }
+
+      function runWho(args, cmd){
+        if(args.length >0){
+          var key;
+          key = lookupPartOfKeyOrID(args[0]);
+
+          if(key){
+            output("Address");
+            output(key.address);
+            output("Public key");
+            output(key.publicKeyFull);
+            output("Public ID");
+            output(key.publicID);
+          }else{
+            output("Could not find key containing : "+ args[0]);
           }
         }
       }
@@ -773,6 +797,7 @@ function fetchBlockchainFromServer(){
             },2000)
           }
             blockchain = data;
+
             console.log('Fetched blockchain:',blockchain);
           fetchTrials = 0;
 
@@ -784,6 +809,26 @@ function fetchBlockchainFromServer(){
 
       });
 
+}
+
+function lookupPartOfKeyOrID(keyOrId){
+  if(blockchain){
+    var token;
+    for(var id of Object.keys(blockchain.nodeTokens)){
+      token = blockchain.nodeTokens[id];
+      if(token.publicKeyFull.indexOf(keyOrId) > -1){
+
+        return token;
+      }
+
+      if(token.publicID.indexOf(keyOrId) > -1){
+
+        return token;
+      }
+    }
+
+    return false;
+  }
 }
 
 function clearAll() {

@@ -704,10 +704,10 @@ const storeToken = (token, commandFromServer=false) =>{
       blockchain.addNewToken(token);
       saveBlockchain(blockchain);
 
-      // if(commandFromServer){
-      //   // initClientSocket(token.address);
-      //   console.log('Does it make a difference?')
-      // }
+      if(commandFromServer){
+        // initClientSocket(token.address);
+        console.log('Does it make a difference?')
+      }
 
     }
   }
@@ -1064,6 +1064,7 @@ getKeyPair((keys)=>{
     Skipping privateKey. Only used when signing transactions
     */
     thisNode.publicKeyFull = keys.publicKey;
+    console.log(keys)
     thisNode.publicID = sha256(keys.publicKey);
 
   }

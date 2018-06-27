@@ -100,26 +100,44 @@ const loadPublicKey = (cb) =>{
   })
 }
 
+const generateEntropy = () =>{
+  var randomGen = '';
+  for(var i=0; i<100; i++){
+    var nonce = Math.floor(Date.now()*Math.random()*100*Math.random());
+    nonce = nonce.toString();
+    randomGen = randomGen.concat(nonce);
+
+  }
+  
+  var wstream = fs.createWriteStream('entropy.rand');
+  wstream.write(randomGen);
+  wstream.end();
+}
+
 const createPrivateKey = ()=>{
-  exec('openssl genrsa -out private.pem 1024', (err, stdout, output) => {
-    if (err) {
-      // node couldn't execute the command
-      console.log(err);
-      return;
-    }
+  generateEntropy();
 
-    // the *entire* stdout and stderr (buffered)
-    if(stdout){
-      console.log(`stdout: ${stdout}`);
-    }
-    if(output){
-      console.log(`${output}`);
-    }
+    exec('openssl genrsa -out private.pem -rand entropy.rand 1024', (err, stdout, output) => {
+      if (err) {
+        // node couldn't execute the command
+        console.log(err);
+        return;
+      }
 
-  });
-  setTimeout(()=>{
-    createPublicKey();
-  }, 1500)
+      // the *entire* stdout and stderr (buffered)
+      if(stdout){
+        console.log(`stdout: ${stdout}`);
+      }
+      if(output){
+        console.log(`${output}`);
+      }
+
+    });
+    setTimeout(()=>{
+      createPublicKey();
+    }, 1500)
+
+
 }
 
 const createPublicKey = () =>{
