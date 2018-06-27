@@ -108,7 +108,7 @@ const generateEntropy = () =>{
     randomGen = randomGen.concat(nonce);
 
   }
-  
+
   var wstream = fs.createWriteStream('entropy.rand');
   wstream.write(randomGen);
   wstream.end();
@@ -116,6 +116,7 @@ const generateEntropy = () =>{
 
 const createPrivateKey = ()=>{
   generateEntropy();
+
 
     exec('openssl genrsa -out private.pem -rand entropy.rand 1024', (err, stdout, output) => {
       if (err) {
