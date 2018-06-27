@@ -133,6 +133,7 @@ const startServer = () =>{
 
     socket.on('tokenRequest', (peerToken)=>{
       storeToken(peerToken);
+
       setTimeout(()=>{
         sendToTargetPeer('storeToken', thisNode, peerToken.address);
 
@@ -140,7 +141,10 @@ const startServer = () =>{
 
     })
 
-		socket.on('storeToken', (token) =>{ storeToken(token)	})
+		socket.on('storeToken', (token) =>{
+      storeToken(token, true);
+      // handleNewPeerConnection(token);
+    })
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
       socket.emit('client-connect', thisNode);
@@ -347,6 +351,7 @@ const initClientSocket = (address) =>{
 		console.log('Connected to ', address);
 
     setTimeout(()=>{
+      peerSocket.emit('tokenRequest', thisNode);
       peerSocket.emit('getTokenFromClient', thisNode);
     }, 2000)
 		peers.push(peerSocket);
@@ -393,6 +398,19 @@ const connectToPeerNetwork = () => {
   This is the socket listener function for when a peer
   Connects to this node as a client
 */
+//
+// const handleNewPeerConnection = (token) =>{
+//   if(token){
+//     if(!clients[token.address]){
+//
+//     }else{
+//       console.log('Nothing to do with that token. Is already discovered')
+//     }
+//   }else{
+//     console.log('Received empty token');
+//   }
+// }
+
 const clientConnect = (socket, token) =>{
 
   if(token != undefined){
@@ -548,13 +566,13 @@ const saveBlockchain = (blockchainReceived) => {
 						blockchainReceived = instanciateBlockchain(blockchainReceived);
 					}
 
-					if(blockchain != undefined){
-						longestBlockchain = compareBlockchains(blockchain, blockchainReceived);
-					}else{
-						longestBlockchain = blockchainReceived;
-					}
+					// if(blockchain != undefined){
+					// 	longestBlockchain = compareBlockchains(blockchain, blockchainReceived);
+					// }else{
+					// 	longestBlockchain = blockchainReceived;
+					// }
 
-					let json = JSON.stringify(longestBlockchain);
+					let json = JSON.stringify(blockchainReceived);
 
 					if(json != undefined){
 						console.log('Writing to blockchain file...');
@@ -664,12 +682,19 @@ const sync = (hash, token) =>{
   This is a listener function that catches, stores and instanciates
   into BlockchainAddresses all node tokens received
 */
-const storeToken = (token) =>{
+const storeToken = (token, commandFromServer=false) =>{
   if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
+    if(!blockchain.nodeTokens[token.publicID]){
 
       console.log('Received a node token from ', token.address);
       blockchain.addNewToken(token);
       saveBlockchain(blockchain);
+
+      if(commandFromServer){
+        initClientSocket(token.address);
+      }
+
+    }
   }
 }
 
@@ -1035,6 +1060,7 @@ setTimeout(()=>{
 
   var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
   blockchain.createTransaction(godTx);
+
 }, 8000)
 // setTimeout(()=>{
 //   var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))

@@ -313,6 +313,13 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           }
           (!endpointToken.isMining? startMining(false) : output('Node already mining...'))
           break;
+        case 'find':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+          runFind(args, cmd);
+          break;
         case 'stop-mine':
           if(!isConnected){
             connectError(cmd);
@@ -413,6 +420,14 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           }
           outputDebug('Disconnected from node');
           console.log("Cleared active connection");
+        }
+      }
+
+      function runFind(args, cmd){
+        if(args.length > 0){
+          if(typeof args[0] == 'string'){
+            socket.emit('firstContact', args[0]);
+          }
         }
       }
 
