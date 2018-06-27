@@ -49,6 +49,8 @@ const loadPrivateKey = (cb) =>{
 			});
     }else{
       createPrivateKey();
+
+
       return 'again';
     }
 
@@ -99,7 +101,7 @@ const loadPublicKey = (cb) =>{
 }
 
 const createPrivateKey = ()=>{
-  exec('openssl genrsa -out private.pem 1024', (err, stdout, stderr) => {
+  exec('openssl genrsa -out private.pem 1024', (err, stdout, output) => {
     if (err) {
       // node couldn't execute the command
       console.log(err);
@@ -107,16 +109,23 @@ const createPrivateKey = ()=>{
     }
 
     // the *entire* stdout and stderr (buffered)
-    console.log(`stdout: ${stdout}`);
-    console.log(`stderr: ${stderr}`);
+    if(stdout){
+      console.log(`stdout: ${stdout}`);
+    }
+    if(output){
+      console.log(`${output}`);
+    }
 
   });
+  setTimeout(()=>{
+    createPublicKey();
+  }, 1500)
 }
 
 const createPublicKey = () =>{
   fs.exists('private.pem', (exists)=>{
     if(exists){
-      exec('openssl rsa -in private.pem -pubout > public.pem', (err, stdout, stderr) => {
+      exec('openssl rsa -in private.pem -pubout > public.pem', (err, stdout, output) => {
         if (err) {
           // node couldn't execute the command
           console.log(err);
@@ -124,11 +133,16 @@ const createPublicKey = () =>{
         }
 
         // the *entire* stdout and stderr (buffered)
-        console.log(`stdout: ${stdout}`);
-        console.log(`stderr: ${stderr}`);
+        if(stdout){
+          console.log(`stdout: ${stdout}`);
+        }
+        if(output){
+          console.log(`${output}`);
+        }
+
       });
     }else{
-      console.log('mykey.pub does not exist')
+      console.log('private.pem does not exist')
     }
 
   })

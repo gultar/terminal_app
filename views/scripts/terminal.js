@@ -274,7 +274,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           output('Initiating transaction generator...');
           var cpt=0;
           txGen = setInterval(function(){
-          	sendTransaction('e42259a16d919f71997b9621f05f0047', 'http://192.168.0.154:8082', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
+          	sendTransaction('1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', '05ab0b18886eeaad050f76943d04ba2b5e3810e3b01ea5d6a065c9961d0db0b1', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
             // outputDebug("Transact - From: " + endpointToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
           	cpt++;
           }, 5000);
@@ -553,7 +553,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         console.log(allTokens[tokenHash]);
 
         output("Node Ip Address : "+ token.address);
-        output("Public Address ID : "+ token.publicAddressKey);
+        output("Public Address ID : "+ token.publicID);
         output("Full Public Address : "+ token.publicKeyFull);
         output("Node Status : "+ token.status);
         output("*********************************************")
@@ -805,11 +805,6 @@ window.onbeforeunload = function() {
 }
 
 window.onload = function() {
-
-
-
-
-
 
     $('#myCanvas').css('visibility', 'hidden');
     $('body').css("background-image", localStorage.getItem('savedBackground'));
