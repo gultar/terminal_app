@@ -511,42 +511,48 @@ class Blockchain{
   validateTransaction(transaction, token){
 
     if(transaction && token){
+      
+      try{
+        var isSendingNodeTheTxSender = (transaction.fromAddress == token.publicID);
+        console.log('Is sending node the original sender? :', isSendingNodeTheTxSender);
 
-      var isSendingNodeTheTxSender = (transaction.fromAddress == token.publicID);
-      console.log('Is sending node the original sender? :', isSendingNodeTheTxSender);
+        var isPartOfNetwork = this.validateAddressToken(token);
+        console.log("Is sending node's token part of the network? :", isPartOfNetwork);
 
-      var isPartOfNetwork = this.validateAddressToken(token);
-      console.log("Is sending node's token part of the network? :", isPartOfNetwork);
+        var fromAddr = this.getTokenByID(transaction.fromAddress);
+        console.log("Is from address a valid public key? :", fromAddr==undefined);
 
-      var fromAddr = this.getTokenByID(transaction.fromAddress);
-      console.log("Is from address a valid public key? :", fromAddr==undefined);
+        var toAddr = this.getTokenByID(transaction.toAddress);
+        console.log("Is to address a valid public key? :", toAddr==undefined);
 
-      var toAddr = this.getTokenByID(transaction.toAddress);
-      console.log("Is to address a valid public key? :", toAddr==undefined);
+        var isChecksumValid = this.validateChecksum(transaction);
+        console.log("Is transaction hash valid? :", isChecksumValid);
 
-      var isChecksumValid = this.validateChecksum(transaction);
-      console.log("Is transaction hash valid? :", isChecksumValid);
+        var isSignatureValid = this.validateSignature(fromAddr.publicKeyFull, transaction);
+        console.log("Is transaction signature valid? :", isSignatureValid);
 
-      var isSignatureValid = this.validateSignature(fromAddr.publicKeyFull, transaction);
-      console.log("Is transaction signature valid? :", isSignatureValid);
+        var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
+        console.log("Balance of sender is : ",balanceOfSendingAddr);
 
-			var balanceOfSendingAddr = this.getBalanceOfAddress(token) + this.checkFundsThroughPendingTransactions(token);
-      console.log("Balance of sender is : ",balanceOfSendingAddr);
+          if(!balanceOfSendingAddr && balanceOfSendingAddr !== 0){
+              console.log('Cannot verify balance of undefined address token');
+              return false;
+          }
 
-  			if(!balanceOfSendingAddr && balanceOfSendingAddr !== 0){
-  					console.log('Cannot verify balance of undefined address token');
-            return false;
-  			}
+          if(balanceOfSendingAddr >= transaction.amount){
+            console.log('Transaction validated successfully');
+            return true;
+          }else if(transaction.type === 'query'){
+            //handle blockbase queries
+          }else{
+            console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
+          }
+      }catch(err){
+        console.log(err);
+      }
 
-				if(balanceOfSendingAddr >= transaction.amount){
 
-          // console.log('TK:',token);
-					console.log('Transaction validated successfully');
-				}else if(transaction.type === 'query'){
-					//handle blockbase queries
-				}else{
-					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
-				}
+
 
   	}else{
   		console.log('ERROR: Either the transaction or the token sent is undefined');

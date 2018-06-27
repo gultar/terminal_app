@@ -146,6 +146,10 @@ const startServer = () =>{
       // handleNewPeerConnection(token);
     })
 
+    socket.on('triggerClientConnect', (token)=>{
+      handleNewPeerConnection(token);
+    })
+
     socket.on('getTokenFromClient', (fromNodeToken)=>{
       socket.emit('client-connect', thisNode);
       socket.emit('storeToken', thisNode);
@@ -352,6 +356,7 @@ const initClientSocket = (address) =>{
 
     setTimeout(()=>{
       peerSocket.emit('tokenRequest', thisNode);
+      peerSocket.emit('triggerClientConnect', thisNode);
       peerSocket.emit('getTokenFromClient', thisNode);
     }, 2000)
 		peers.push(peerSocket);
@@ -399,17 +404,17 @@ const connectToPeerNetwork = () => {
   Connects to this node as a client
 */
 //
-// const handleNewPeerConnection = (token) =>{
-//   if(token){
-//     if(!clients[token.address]){
-//
-//     }else{
-//       console.log('Nothing to do with that token. Is already discovered')
-//     }
-//   }else{
-//     console.log('Received empty token');
-//   }
-// }
+const handleNewPeerConnection = (token) =>{
+  if(token){
+    if(!clients[token.address]){
+      initClientSocket(token.address);
+    }else{
+      console.log('Nothing to do with that token. Is already discovered')
+    }
+  }else{
+    console.log('Received empty token');
+  }
+}
 
 const clientConnect = (socket, token) =>{
 
