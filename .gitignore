@@ -1,1 +1,5 @@
 node_modules/*
+junk/*
+private.pem
+public.pem
+blockchain.json
