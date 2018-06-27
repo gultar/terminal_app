@@ -358,12 +358,14 @@ const initClientSocket = (address) =>{
 	peerSocket.on('connect', () =>{
 
 		console.log('Connected to ', address);
-    peerSocket.emit('triggerClientConnect', thisNode);
+
     setTimeout(()=>{
       peerSocket.emit('tokenRequest', thisNode);
       // peerSocket.emit('getTokenFromClient', thisNode);
-    }, 2000)
-		peers.push(peerSocket);
+      peers.push(peerSocket);
+      sendToTargetPeer('triggerClientConnect', thisNode, address);
+    }, 5000)
+
 	});
 
   peerSocket.on('client-connect', (token) => {
@@ -702,9 +704,10 @@ const storeToken = (token, commandFromServer=false) =>{
       blockchain.addNewToken(token);
       saveBlockchain(blockchain);
 
-      if(commandFromServer){
-        initClientSocket(token.address);
-      }
+      // if(commandFromServer){
+      //   // initClientSocket(token.address);
+      //   console.log('Does it make a difference?')
+      // }
 
     }
   }
