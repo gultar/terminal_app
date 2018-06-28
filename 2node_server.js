@@ -143,16 +143,16 @@ const startServer = () =>{
 
 		socket.on('storeToken', (token) =>{
       storeToken(token, true);
-      // handleNewPeerConnection(token);
+      // handleNewClientConnection(token);
     })
 
     socket.on('triggerClientConnect', (token)=>{
-      handleNewPeerConnection(token);
+      handleNewClientConnection(token);
     })
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
       socket.emit('client-connect', thisNode);
-      socket.emit('storeToken', thisNode);
+      // socket.emit('storeToken', thisNode);
     })
 
 		socket.on('distributedTransaction', (transaction, fromNodeToken) => {
@@ -163,9 +163,6 @@ const startServer = () =>{
       receiveTransactionFromClient(transaction, fromNodeToken);
 	  });
 
-    socket.on('transactionCheckOpened', (transaction, fromNodeToken) =>{
-
-    })
 
 
 	  socket.on('miningRequest', () =>{
@@ -241,8 +238,8 @@ const startServer = () =>{
     socket.on('firstContact', (address)=>{
       if(address){
         if(!clients[address]){
-          initClientSocket(address);
-          // firstContact(address);
+          // initClientSocket(address);
+          firstContact(address);
         }
 
 
@@ -352,18 +349,19 @@ const initClientSocket = (address) =>{
 
 	var peerSocket = io(address, {'forceNew': true});
 
-	peerSocket.emit('client-connect', thisNode);
-	peerSocket.emit('tokenRequest', thisNode);
+
 
 	peerSocket.on('connect', () =>{
 
-		console.log('Connected to ', address);
-
+		console.log('Connected  to ', address);
+    sendToTargetPeer('triggerClientConnect', thisNode, address);
+    peerSocket.emit('client-connect', thisNode);
+    peerSocket.emit('tokenRequest', thisNode);
     setTimeout(()=>{
       peerSocket.emit('tokenRequest', thisNode);
       // peerSocket.emit('getTokenFromClient', thisNode);
       peers.push(peerSocket);
-      sendToTargetPeer('triggerClientConnect', thisNode, address);
+
     }, 5000)
 
 	});
@@ -410,12 +408,10 @@ const connectToPeerNetwork = () => {
   Connects to this node as a client
 */
 //
-const handleNewPeerConnection = (token) =>{
+const handleNewClientConnection = (token) =>{
   if(token){
     if(!clients[token.address]){
       initClientSocket(token.address);
-    }else{
-      console.log('Nothing to do with that token. Is already discovered')
     }
   }else{
     console.log('Received empty token');
@@ -450,13 +446,12 @@ const firstContact = (address) =>{
       tempSocket.on('addressReceived', (peerToken)=>{
         if(ipList.indexOf(peerToken.address) == -1){
           ipList.push(peerToken.address);
-          blockchain.addNewToken(peerToken);
-          saveBlockchain(blockchain);
+          storeToken(peerToken);
           initClientSocket(peerToken.address);
 
         }else{
 
-          initClientSocket(peerToken.address);
+          handleNewClientConnection(peerToken.address);
           tempSocket.destroy();
         }
 
@@ -696,7 +691,7 @@ const sync = (hash, token) =>{
   This is a listener function that catches, stores and instanciates
   into BlockchainAddresses all node tokens received
 */
-const storeToken = (token, commandFromServer=false) =>{
+const storeToken = (token) =>{
   if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
     if(!blockchain.nodeTokens[token.publicID]){
 
@@ -704,10 +699,6 @@ const storeToken = (token, commandFromServer=false) =>{
       blockchain.addNewToken(token);
       saveBlockchain(blockchain);
 
-      if(commandFromServer){
-        // initClientSocket(token.address);
-        console.log('Does it make a difference?')
-      }
 
     }
   }
@@ -1064,7 +1055,6 @@ getKeyPair((keys)=>{
     Skipping privateKey. Only used when signing transactions
     */
     thisNode.publicKeyFull = keys.publicKey;
-    console.log(keys)
     thisNode.publicID = sha256(keys.publicKey);
 
   }
