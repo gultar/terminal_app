@@ -65,6 +65,9 @@ let currentMiners = [];
 let peerBuildsNextBlock = false;
 let sendTrials = 0;
 
+//Variable to handle reconnection efficiently
+let pingClient;
+
 
 /*
   Starts the websocket server, listens for inbound connections
@@ -236,7 +239,9 @@ const startServer = () =>{
     })
 
     socket.on('firstContact', (address)=>{
+
       if(address){
+        socket.emit('message', 'Attempting to reach to '+address);
         if(!clients[address]){
           // initClientSocket(address);
           firstContact(address);
@@ -354,11 +359,12 @@ const initClientSocket = (address) =>{
 	peerSocket.on('connect', () =>{
 
 		console.log('Connected  to ', address);
-    sendToTargetPeer('triggerClientConnect', thisNode, address);
-    peerSocket.emit('client-connect', thisNode);
-    peerSocket.emit('tokenRequest', thisNode);
+
     setTimeout(()=>{
+      sendToTargetPeer('triggerClientConnect', thisNode, address);
+      peerSocket.emit('client-connect', thisNode);
       peerSocket.emit('tokenRequest', thisNode);
+      // peerSocket.emit('tokenRequest', thisNode);
       // peerSocket.emit('getTokenFromClient', thisNode);
       peers.push(peerSocket);
 
@@ -367,6 +373,7 @@ const initClientSocket = (address) =>{
 	});
 
   peerSocket.on('client-connect', (token) => {
+    console.log('client connect from peerSocket')
     clientConnect(peerSocket, token);
   });
 
@@ -379,7 +386,9 @@ const initClientSocket = (address) =>{
 	peerSocket.on('disconnect', () =>{
 		console.log('connection with peer dropped');
 		peers.splice(peers.indexOf(peerSocket), 1);
-		peerSocket.emit('close', thisNode);
+    console.log(peerSocket.io.uri);
+
+		peerSocket.destroy()
 	})
 
 }
@@ -421,17 +430,21 @@ const handleNewClientConnection = (token) =>{
 const clientConnect = (socket, token) =>{
 
   if(token != undefined){
+
     clients[token.address] = token;
+
     if(token.type == 'endpoint'){
       console.log('Endpoint client connected to this node');
       console.log('Hash: '+ token.publicID);
     }else{
       console.log('Connected node at address : ', token.address);
       console.log('Public ID : ', token.publicID);
+      storeToken(token);
 
     }
     console.log('Connected at : '+ displayTime() +"\n");
     socket.emit('message', 'You are now connected to ' + thisNode.address);
+
 
     getNumPeers();
   }
@@ -447,6 +460,8 @@ const firstContact = (address) =>{
         if(ipList.indexOf(peerToken.address) == -1){
           ipList.push(peerToken.address);
           storeToken(peerToken);
+          // blockchain.addNewToken(peerToken);
+          // saveBlockchain(blockchain);
           initClientSocket(peerToken.address);
 
         }else{
@@ -692,13 +707,13 @@ const sync = (hash, token) =>{
   into BlockchainAddresses all node tokens received
 */
 const storeToken = (token) =>{
-  if(token != undefined && blockchain != undefined && blockchain instanceof Blockchain){
-    if(!blockchain.nodeTokens[token.publicID]){
+  if(token && blockchain && blockchain instanceof Blockchain){
+
+    if(blockchain.nodeTokens[token.publicID] != token){
 
       console.log('Received a node token from ', token.address);
       blockchain.addNewToken(token);
       saveBlockchain(blockchain);
-
 
     }
   }
