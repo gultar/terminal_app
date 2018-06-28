@@ -270,7 +270,14 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           runWho(args, cmd);
           break;
         case 'tx':
-          sendTransaction()
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+
+          runSendTx(args, cmd)
+
+
           break;
         case 'txgen':
           if(!isConnected){
@@ -280,7 +287,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           output('Initiating transaction generator...');
           var cpt=0;
           txGen = setInterval(function(){
-          	sendTransaction('1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', '05ab0b18886eeaad050f76943d04ba2b5e3810e3b01ea5d6a065c9961d0db0b1', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
+          	sendTransaction('09a6c107f66e4d1eb5b91bdfeb041ed365d446cfb7581141cdb54a61d4b0d501', '05ab0b18886eeaad050f76943d04ba2b5e3810e3b01ea5d6a065c9961d0db0b1', cpt, { firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 })
             // outputDebug("Transact - From: " + endpointToken + " - To: http://192.168.0.154:8082 - <br> Amount: " + cpt + " - Data: " + JSON.stringify({ firstField:'value', secondField: 'anotherValue', meaningOfLife: 42 }))
           	cpt++;
           }, 5000);
@@ -438,6 +445,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       }
 
       function runWho(args, cmd){
+
         if(args.length >0){
           var key;
           key = lookupPartOfKeyOrID(args[0]);
@@ -453,6 +461,30 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
             output("Could not find key containing : "+ args[0]);
           }
         }
+      }
+
+      function runSendTx(args, cmd){
+
+        args = args.join(' ');
+
+
+
+        if(args.indexOf(';') > -1){
+
+          args = args.split(';');
+          for(var i=0; i<args.length; i++){
+            args[i] = args[i].trim()
+          }
+
+          if(args.length > 2){
+            sendTransaction('09a6c107f66e4d1eb5b91bdfeb041ed365d446cfb7581141cdb54a61d4b0d501', args[0], args[1], args[2]);
+          }else{
+            output('Please enter an <b>address to send to</b>, the <b>amount</b> and some <b>optional data</b>');
+            output('All values are delimited by semi-colons like so: ')
+            output('tx toAddr; amount; data')
+          }
+        }
+
       }
 
 
