@@ -87,6 +87,7 @@ const startServer = () =>{
 
 	  socket.on('message', (msg) => {
 	    console.log('Client:', msg);
+      messageEndpoints(msg);
 	  });
 
 		socket.on('error', (exception)=>{
@@ -305,10 +306,17 @@ const sendToTargetPeer = (eventType, data, address) =>{
 	}
 }
 
-const sendMessageToAllEndpoints = (message) =>{
+const messageEndpoints = (message) =>{
 
 }
 
+
+// const messageEndpoints = (message) =>{
+//   if(message){
+//     ioServer.emit('message', message);
+//   }
+//
+// }
 /*
   Init blockchain starting from local file
 */
@@ -373,15 +381,15 @@ const initClientSocket = (address) =>{
 	});
 
   peerSocket.on('client-connect', (token) => {
-    console.log('client connect from peerSocket')
     clientConnect(peerSocket, token);
   });
 
   peerSocket.on('message', (message)=>{
     console.log('Server: ' + message);
+    messageEndpoints(message);
   })
 
-  peerSocket.on('storeToken', (token) =>{ storeToken(token)	})
+  // peerSocket.on('storeToken', (token) =>{ storeToken(token)	})
 
 	peerSocket.on('disconnect', () =>{
 		console.log('connection with peer dropped');
@@ -431,15 +439,21 @@ const clientConnect = (socket, token) =>{
 
   if(token != undefined){
 
-    clients[token.address] = token;
+
 
     if(token.type == 'endpoint'){
       console.log('Endpoint client connected to this node');
       console.log('Hash: '+ token.publicID);
+      endpoints[token.publicID] = {
+        socket:socket,
+        token:token
+      };
+
     }else{
       console.log('Connected node at address : ', token.address);
       console.log('Public ID : ', token.publicID);
-      storeToken(token);
+      clients[token.address] = token;
+      // storeToken(token);
 
     }
     console.log('Connected at : '+ displayTime() +"\n");
@@ -454,9 +468,15 @@ const firstContact = (address) =>{
   if(address){
     try{
       var tempSocket = io(address);
+
+      messageEndpoints('Establishing link between this node and + '+address);
+      console.log('Establishing link between this node and + '+address);
+
       tempSocket.emit('sendYourAddress', thisNode);
 
       tempSocket.on('addressReceived', (peerToken)=>{
+        messageEndpoints('Peer sent their token:');
+        messageEndpoints(peerToken);
         if(ipList.indexOf(peerToken.address) == -1){
           ipList.push(peerToken.address);
           storeToken(peerToken);
@@ -476,6 +496,8 @@ const firstContact = (address) =>{
     }
   }
 }
+
+
 
 
 const updateIpList = () =>{
@@ -732,6 +754,8 @@ const distributeTransaction = (transaction, fromNodeToken) =>{
       console.log('Peer '+fromNodeToken.address+' has sent a new transaction.');
       console.log(transaction);
 
+      messageEndpoints('Peer '+fromNodeToken.address+' has sent a new transaction.');
+      messageEndpoints(transaction);
       var transactIsValid = blockchain.validateTransaction(transaction, fromNodeToken);
 
       blockchain.createTransaction(transaction);
@@ -739,6 +763,8 @@ const distributeTransaction = (transaction, fromNodeToken) =>{
     }
   }
 }
+
+
 
 /*
   This is a listener function that catches a transaction emitted from endpoint client,
@@ -775,7 +801,11 @@ const receiveTransactionFromClient = (transaction, fromEndpointToken) =>{
 
             blockchain.createTransaction(transactionObj);
             sendEventToAllPeers('distributedTransaction', transactionObj, thisNode);
+
             console.log('Received new transaction:', transactionObj);
+            messageEndpoints('Received new transaction:');
+            messageEndpoints(transactionObj);
+
             transactionObj = null;
           }, 1500)
 
@@ -817,6 +847,7 @@ const buildChainHashes = () =>{
 const getNumPeers = () =>{
 	if(peers != undefined){
 		if(peers.length > 0){
+      messageEndpoints('Number of other available peers on network: '+peers.length);
 			console.log('Number of other available peers on network:',peers.length);
 			return peers.length;
 		}
@@ -835,42 +866,42 @@ const instanciateBlockchain = (blockchain) =>{
   emitting peer every time this is checked, to avoid double spending. An initial coin distribution is made once the genesis
   block has been made. This needs some work since it is easy to send a false transaction and accumulate credits
 */
-const validateTransaction = (transaction, token) =>{
-	if(transaction != undefined && token != undefined){
-
-		if(blockchain != undefined && blockchain instanceof Blockchain){
-
-			var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
-
-			if(!balanceOfSendingAddr){
-					console.log('Cannot verify balance of undefined address token');
-			}else{
-
-				if(balanceOfSendingAddr >= transaction.amount){
-					console.log('Transaction validated successfully');
-          return true;
-
-				}else if(transaction.type === 'query'){
-					//handle blockbase queries
-				}else{
-					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
-          return false
-				}
-
-			}
-
-
-		}else{
-			console.log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
-      return false
-		}
-
-	}else{
-		console.log('ERROR: Either the transaction or the token sent is undefined');
-		return false;
-	}
-
-}
+// const validateTransaction = (transaction, token) =>{
+// 	if(transaction != undefined && token != undefined){
+//
+// 		if(blockchain != undefined && blockchain instanceof Blockchain){
+//
+// 			var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
+//
+// 			if(!balanceOfSendingAddr){
+// 					console.log('Cannot verify balance of undefined address token');
+// 			}else{
+//
+// 				if(balanceOfSendingAddr >= transaction.amount){
+// 					console.log('Transaction validated successfully');
+//           return true;
+//
+// 				}else if(transaction.type === 'query'){
+// 					//handle blockbase queries
+// 				}else{
+// 					console.log('Address '+token.address+' does not have sufficient funds to complete transaction');
+//           return false
+// 				}
+//
+// 			}
+//
+//
+// 		}else{
+// 			console.log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
+//       return false
+// 		}
+//
+// 	}else{
+// 		console.log('ERROR: Either the transaction or the token sent is undefined');
+// 		return false;
+// 	}
+//
+// }
 
 /*
   Need to find a way to use this in transaction validation

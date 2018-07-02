@@ -918,10 +918,9 @@ function issueClientToken(address=localAddress){
   endpointToken = {
     'type' : 'endpoint',
     'address' : address,
-    'publicAddressKey' : sha256(address, currentTime),
+    'publicID' : sha256(address+ Date.now()),
     'isMining':false
   }
-
 
 }
 
