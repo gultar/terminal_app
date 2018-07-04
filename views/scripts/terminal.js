@@ -467,16 +467,18 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
         args = args.join(' ');
 
-
-
         if(args.indexOf(';') > -1){
 
           args = args.split(';');
+          console.log(args[0]);
+          console.log(args[1]);
+          console.log(args[2]);
           for(var i=0; i<args.length; i++){
             args[i] = args[i].trim()
           }
 
           if(args.length > 2){
+
             sendTransaction('09a6c107f66e4d1eb5b91bdfeb041ed365d446cfb7581141cdb54a61d4b0d501', args[0], args[1], args[2]);
           }else{
             output('Please enter an <b>address to send to</b>, the <b>amount</b> and some <b>optional data</b>');
@@ -764,7 +766,8 @@ setTimeout(function(){
     socket.emit('registerEndpoint', endpointToken)
 
       socket.on('disconnect', function(){
-        console.log('You have disconnected from node server');
+        console.log('Disconnected from node server');
+        outputDebug('Disconnected from node server');
         isConnected = false;
         clearAll();
 

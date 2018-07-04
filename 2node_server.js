@@ -151,6 +151,7 @@ const startServer = () =>{
     })
 
     socket.on('triggerClientConnect', (token)=>{
+      console.log('Triggering client connection');
       handleNewClientConnection(token);
     })
 
@@ -360,7 +361,7 @@ const initBlockchain = (tryOnceAgain=true) => {
 */
 const initClientSocket = (address) =>{
 
-	var peerSocket = io(address, {'forceNew': true});
+	var peerSocket = io(address);
 
 
 
@@ -369,8 +370,9 @@ const initClientSocket = (address) =>{
 		console.log('Connected  to ', address);
 
     setTimeout(()=>{
-      sendToTargetPeer('triggerClientConnect', thisNode, address);
+
       peerSocket.emit('client-connect', thisNode);
+      peerSocket.emit('triggerClientConnect', thisNode);
       peerSocket.emit('tokenRequest', thisNode);
       // peerSocket.emit('tokenRequest', thisNode);
       // peerSocket.emit('getTokenFromClient', thisNode);
@@ -1110,8 +1112,8 @@ getKeyPair((keys)=>{
 
 setTimeout(()=>{
 
-  var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
-  blockchain.createTransaction(godTx);
+  // var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
+  // blockchain.createTransaction(godTx);
 
 }, 8000)
 // setTimeout(()=>{
