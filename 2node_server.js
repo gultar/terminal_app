@@ -371,8 +371,8 @@ const initClientSocket = (address) =>{
 
     setTimeout(()=>{
 
-      peerSocket.emit('client-connect', thisNode);
       peerSocket.emit('triggerClientConnect', thisNode);
+      peerSocket.emit('client-connect', thisNode);
       peerSocket.emit('tokenRequest', thisNode);
       // peerSocket.emit('tokenRequest', thisNode);
       // peerSocket.emit('getTokenFromClient', thisNode);
