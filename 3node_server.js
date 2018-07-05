@@ -393,7 +393,7 @@ const initClientSocket = (address) =>{
     peerSocket.on('disconnect', () =>{
       console.log('connection with peer dropped');
       peers.splice(peers.indexOf(peerSocket), 1);
-      console.log(peerSocket.io.uri);
+      // console.log(peerSocket.io.uri);
 
       peerSocket.destroy()
     })
@@ -722,18 +722,18 @@ const sync = (hash, token) =>{
 
       var blocks = blockchain.getBlocksFromHash(hash);
 
-      if(blocks){
-        if(blocks.length > 0){
+    if(blocks){
+      if(blocks.length > 0){
 
-          sendEventToAllPeers('message', 'Updating the chain of peer '+token.address+"Sending "+blocks.length+" blocks");
-          sendToTargetPeer('newBlock', blocks, token.address);
-        }
+        sendEventToAllPeers('message', 'Updating the chain of peer '+token.address+"Sending "+blocks.length+" blocks");
+        sendToTargetPeer('newBlock', blocks, token.address);
+      }
 
 
 
-      }else if(!blocks){
+    }else if(!blocks){
 
-                        }
+    }
 
   }
 }
@@ -745,12 +745,14 @@ const sync = (hash, token) =>{
 const storeToken = (token) =>{
   if(token && blockchain && blockchain instanceof Blockchain){
 
-    if(blockchain.nodeTokens[token.publicID] != token){
+    if(!blockchain.nodeTokens[token.publicID]){
 
       console.log('Received a node token from ', token.address);
       blockchain.addNewToken(token);
       saveBlockchain(blockchain);
 
+    }else{
+      console.log('Token already received');
     }
   }
 }
