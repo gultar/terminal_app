@@ -384,9 +384,9 @@ const initClientSocket = (address) =>{
 
 	});
 
-  peerSocket.on('client-connect', (token) => {
-    clientConnect(peerSocket, token);
-  });
+  // peerSocket.on('client-connect', (token) => {
+  //   clientConnect(peerSocket, token);
+  // });
 
   peerSocket.on('message', (message)=>{
     console.log('Server: ' + message);
