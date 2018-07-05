@@ -284,12 +284,16 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
   if(peerAddresses.length > 0){
     for(var i=0; i<peerAddresses.length; i++){
         peer = peers[peerAddresses[i]]
-        if(!moreData){
-          peer.emit(eventType, data);
-        }else{
+        console.log('eventType: '+eventType+' <<<>>> '+ + peer);
+        if(peer){
+          if(!moreData){
+            peer.emit(eventType, data);
+          }else{
 
-          peer.emit(eventType, data, moreData);
+            peer.emit(eventType, data, moreData);
+          }
         }
+
       }
   }
   // if(peers.length > 0){
