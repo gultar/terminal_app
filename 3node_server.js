@@ -363,18 +363,13 @@ const initBlockchain = (tryOnceAgain=true) => {
   Defines a client socket connection
 */
 const initClientSocket = (address) =>{
-  var connected = false;
+  var connected;
 
   if(!isPeerConnected(address)){
 
     var peerSocket = io(address);
 
-    setInterval(()=>{
-      if(!connected){
-        console.log('Reconnecting to '+address);
-        peerSocket = io(address);
-      }
-    }, 15000)
+    peerSocket.emit('triggerClientConnect', thisNode);
 
   	peerSocket.on('connect', () =>{
       connected = true;
@@ -382,7 +377,7 @@ const initClientSocket = (address) =>{
 
       setTimeout(()=>{
 
-        peerSocket.emit('triggerClientConnect', thisNode);
+
         peerSocket.emit('clientConnect', thisNode);
         peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('tokenRequest', thisNode);
