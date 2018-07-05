@@ -440,6 +440,7 @@ const pingConnection = (address, socket) =>{
           console.log('Ping '+ socket.io.uri)
           console.log(clients);
             socket.emit('triggerClientConnect', thisNode);
+            socket.emit('message', 'this is a message from a peer connection')
         }
     }
   }, 15000)
