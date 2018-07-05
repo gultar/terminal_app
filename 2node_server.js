@@ -154,7 +154,7 @@ const startServer = () =>{
 
     socket.on('triggerClientConnect', (token)=>{
       // console.log('Triggering client connection');
-      // handleNewClientConnection(token);
+      handleNewClientConnection(token);
     })
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
@@ -376,7 +376,7 @@ const initClientSocket = (address) =>{
 
       setTimeout(()=>{
 
-        // peerSocket.emit('triggerClientConnect', thisNode);
+        peerSocket.emit('triggerClientConnect', thisNode);
         peerSocket.emit('clientConnect', thisNode);
         peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('tokenRequest', thisNode);
@@ -438,7 +438,7 @@ const pingConnection = (address, socket) =>{
 
         if(isPeerConnected(address)){
           console.log('Ping')
-            socket.emit('clientConnect', thisNode);
+            socket.emit('triggerClientConnect', thisNode);
         }
     }
   }, 15000)
@@ -451,7 +451,7 @@ const pingConnection = (address, socket) =>{
 //
 const handleNewClientConnection = (token) =>{
   if(token){
-    if(!clients[token.address]){
+    if(!isPeerConnected(token.address)){
       initClientSocket(token.address);
     }
   }else{
@@ -463,9 +463,7 @@ const clientConnect = (socket, token) =>{
 
   if(token != undefined){
 
-    if(!isPeerConnected(token.address)){
-      initClientSocket(token.address);
-    }
+
 
     if(token.type == 'endpoint'){
       console.log('Endpoint client connected to this node');
@@ -485,6 +483,9 @@ const clientConnect = (socket, token) =>{
     console.log('Connected at : '+ displayTime() +"\n");
     socket.emit('message', 'You are now connected to ' + thisNode.address);
 
+    if(!isPeerConnected(token.address)){
+      initClientSocket(token.address);
+    }
 
     getNumPeers();
   }
