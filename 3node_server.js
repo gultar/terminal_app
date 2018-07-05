@@ -437,7 +437,8 @@ const pingConnection = (address, socket) =>{
     if(address && socket){
 
         if(isPeerConnected(address)){
-          console.log('Ping')
+          console.log('Ping '+ socket.io.uri)
+          console.log(clients);
             socket.emit('triggerClientConnect', thisNode);
         }
     }
