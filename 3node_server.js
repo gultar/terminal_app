@@ -134,7 +134,6 @@ const startServer = () =>{
     })
 
 
-
     socket.on('tokenRequest', (peerToken)=>{
       storeToken(peerToken);
 
@@ -147,12 +146,11 @@ const startServer = () =>{
 
 		socket.on('storeToken', (token) =>{
       storeToken(token, true);
-      // handleNewClientConnection(token);
     })
 
     socket.on('triggerClientConnect', (token)=>{
       console.log('Triggering client connection');
-      handleNewClientConnection(token);
+      // handleNewClientConnection(token);
     })
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
@@ -281,16 +279,29 @@ const startServer = () =>{
 
 */
 const sendEventToAllPeers = (eventType, data, moreData=false ) => {
-  if(peers.length > 0){
-    for(var i=0; i<peers.length; i++){
-      if(!moreData){
-        peers[i].emit(eventType, data);
-      }else{
+  var peerAddresses = Object.keys(peers);
+  var peer;
+  if(peerAddresses.length > 0){
+    for(var i=0; i<peerAddresses.length; i++){
+        peer = peers[peerAddresses[i]]
+        if(!moreData){
+          peer.emit(eventType, data);
+        }else{
 
-        peers[i].emit(eventType, data, moreData);
+          peer.emit(eventType, data, moreData);
+        }
       }
-    }
   }
+  // if(peers.length > 0){
+  //   for(var i=0; i<peers.length; i++){
+  //     if(!moreData){
+  //       peers[i].emit(eventType, data);
+  //     }else{
+  //
+  //       peers[i].emit(eventType, data, moreData);
+  //     }
+  //   }
+  // }
 
 }
 
@@ -298,7 +309,8 @@ const sendEventToAllPeers = (eventType, data, moreData=false ) => {
   Sends event to target socket client
 */
 const sendToTargetPeer = (eventType, data, address) =>{
-	for(peer of peers){
+	for(var peerAddr of Object.keys(peers)){
+    var peer = peers[peerAddr]
 		var peerAddress = 'http://'+peer.io.opts.hostname +':'+ peer.io.opts.port
 
 		if(peerAddress === address){
@@ -312,12 +324,6 @@ const messageEndpoints = (message) =>{
 }
 
 
-// const messageEndpoints = (message) =>{
-//   if(message){
-//     ioServer.emit('message', message);
-//   }
-//
-// }
 /*
   Init blockchain starting from local file
 */
@@ -360,46 +366,49 @@ const initBlockchain = (tryOnceAgain=true) => {
   Defines a client socket connection
 */
 const initClientSocket = (address) =>{
+  if(address){
+    if(!peers[address]){
+      var peerSocket = io(address);
 
-	var peerSocket = io(address);
 
+    	peerSocket.on('connect', () =>{
 
+    		console.log('Connected  to ', address);
 
-	peerSocket.on('connect', () =>{
+        setTimeout(()=>{
 
-		console.log('Connected  to ', address);
+          // peerSocket.emit('triggerClientConnect', thisNode);
+          peerSocket.emit('client-connect', thisNode);
+          peerSocket.emit('tokenRequest', thisNode);
+          // peers.push(peerSocket);
+          peers[address] = peerSocket;
 
-    setTimeout(()=>{
+        }, 5000)
 
-      peerSocket.emit('triggerClientConnect', thisNode);
-      peerSocket.emit('client-connect', thisNode);
-      peerSocket.emit('tokenRequest', thisNode);
-      // peerSocket.emit('tokenRequest', thisNode);
-      // peerSocket.emit('getTokenFromClient', thisNode);
-      peers.push(peerSocket);
+    	});
 
-    }, 5000)
+      // peerSocket.on('client-connect', (token) => {
+      //   clientConnect(peerSocket, token);
+      // });
 
-	});
+      peerSocket.on('message', (message)=>{
+        console.log('Server: ' + message);
+        messageEndpoints(message);
+      })
 
-  peerSocket.on('client-connect', (token) => {
-    clientConnect(peerSocket, token);
-  });
+      // peerSocket.on('storeToken', (token) =>{ storeToken(token)	})
 
-  peerSocket.on('message', (message)=>{
-    console.log('Server: ' + message);
-    messageEndpoints(message);
-  })
+    	peerSocket.on('disconnect', () =>{
+    		console.log('connection with peer dropped');
 
-  // peerSocket.on('storeToken', (token) =>{ storeToken(token)	})
-
-	peerSocket.on('disconnect', () =>{
-		console.log('connection with peer dropped');
-		peers.splice(peers.indexOf(peerSocket), 1);
-    console.log(peerSocket.io.uri);
-
-		peerSocket.destroy()
-	})
+    		peers[address] = false;
+    		peerSocket.destroy()
+    	})
+    }else{
+      console.log('Peer connection already exists');
+      return peers[address]
+    }
+  }
 
 }
 
@@ -429,7 +438,7 @@ const connectToPeerNetwork = () => {
 //
 const handleNewClientConnection = (token) =>{
   if(token){
-    if(!clients[token.address]){
+    if(!peers[token.address]){
       initClientSocket(token.address);
     }
   }else{
@@ -441,28 +450,32 @@ const clientConnect = (socket, token) =>{
 
   if(token != undefined){
 
+    if(!peers[token.address]){
+      initClientSocket(token.address);
+      }
+      if(token.type == 'endpoint'){
+        console.log('Endpoint client connected to this node');
+        console.log('Hash: '+ token.publicID);
+        endpoints[token.publicID] = {
+          socket:socket,
+          token:token
+        };
+
+      }else{
+        console.log('Connected node at address : ', token.address);
+        console.log('Public ID : ', token.publicID);
+        clients[token.address] = token;
+        // storeToken(token);
+
+      }
+      console.log('Connected at : '+ displayTime() +"\n");
+      socket.emit('message', 'You are now connected to ' + thisNode.address);
 
 
-    if(token.type == 'endpoint'){
-      console.log('Endpoint client connected to this node');
-      console.log('Hash: '+ token.publicID);
-      endpoints[token.publicID] = {
-        socket:socket,
-        token:token
-      };
-
-    }else{
-      console.log('Connected node at address : ', token.address);
-      console.log('Public ID : ', token.publicID);
-      clients[token.address] = token;
-      // storeToken(token);
-
-    }
-    console.log('Connected at : '+ displayTime() +"\n");
-    socket.emit('message', 'You are now connected to ' + thisNode.address);
-
-
-    getNumPeers();
+      getNumPeers();
+    // else{
+    //   console.log("Peer "+token.address+" already connected");
+    // }
   }
 }
 
@@ -847,11 +860,12 @@ const buildChainHashes = () =>{
   Logs the number of other active peers on network
 */
 const getNumPeers = () =>{
+  var peersLength = Object.keys(peers).length;
 	if(peers != undefined){
-		if(peers.length > 0){
-      messageEndpoints('Number of other available peers on network: '+peers.length);
-			console.log('Number of other available peers on network:',peers.length);
-			return peers.length;
+		if(peersLength > 0){
+      messageEndpoints('Number of other available peers on network: '+peersLength);
+			console.log('Number of other available peers on network:',peersLength);
+			return peersLength;
 		}
 
 	}
@@ -1114,8 +1128,8 @@ setTimeout(()=>{
 
   // var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
   // blockchain.createTransaction(godTx);
-
-}, 8000)
+// console.log(peers);
+}, 12000)
 // setTimeout(()=>{
 //   var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))
 //
