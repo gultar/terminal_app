@@ -467,7 +467,7 @@ const handleNewClientConnection = (token) =>{
   if(token){
     if(!isPeerConnected(token.address)){
       return initClientSocket(token.address);
-    }else if(!clients[address]){
+    }else if(!clients[token.address]){
 
       var socket = getPeer(token.address);
       if(socket){
