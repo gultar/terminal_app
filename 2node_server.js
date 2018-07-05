@@ -363,45 +363,53 @@ const initBlockchain = (tryOnceAgain=true) => {
 */
 const initClientSocket = (address) =>{
 
-	var peerSocket = io(address);
+
+  if(!isAlreadyConnected(address)){
+
+    var peerSocket = io(address);
 
 
 
-	peerSocket.on('connect', () =>{
+  	peerSocket.on('connect', () =>{
 
-		console.log('Connected  to ', address);
+  		console.log('Connected  to ', address);
 
-    setTimeout(()=>{
+      setTimeout(()=>{
 
-      peerSocket.emit('triggerClientConnect', thisNode);
-      peerSocket.emit('client-connect', thisNode);
-      peerSocket.emit('tokenRequest', thisNode);
-      // peerSocket.emit('tokenRequest', thisNode);
-      // peerSocket.emit('getTokenFromClient', thisNode);
-      peers.push(peerSocket);
+        peerSocket.emit('triggerClientConnect', thisNode);
+        peerSocket.emit('client-connect', thisNode);
+        peerSocket.emit('tokenRequest', thisNode);
+        // peerSocket.emit('tokenRequest', thisNode);
+        // peerSocket.emit('getTokenFromClient', thisNode);
+        peers.push(peerSocket);
 
-    }, 5000)
+      }, 5000)
 
-	});
+  	});
 
-  // peerSocket.on('client-connect', (token) => {
-  //   clientConnect(peerSocket, token);
-  // });
+    // peerSocket.on('client-connect', (token) => {
+    //   clientConnect(peerSocket, token);
+    // });
 
-  peerSocket.on('message', (message)=>{
-    console.log('Server: ' + message);
-    messageEndpoints(message);
-  })
+    peerSocket.on('message', (message)=>{
+      console.log('Server: ' + message);
+      messageEndpoints(message);
+    })
 
-  // peerSocket.on('storeToken', (token) =>{ storeToken(token)	})
+    // peerSocket.on('storeToken', (token) =>{ storeToken(token)	})
 
-	peerSocket.on('disconnect', () =>{
-		console.log('connection with peer dropped');
-		peers.splice(peers.indexOf(peerSocket), 1);
-    console.log(peerSocket.io.uri);
+  	peerSocket.on('disconnect', () =>{
+  		console.log('connection with peer dropped');
+  		peers.splice(peers.indexOf(peerSocket), 1);
+      console.log(peerSocket.io.uri);
 
-		peerSocket.destroy()
-	})
+  		peerSocket.destroy()
+  	})
+  }else{
+    console.log('Peer is already connected');
+    return false;
+  }
+
 
 }
 
@@ -443,9 +451,6 @@ const clientConnect = (socket, token) =>{
 
   if(token != undefined){
 
-    if(!clients[token.address]){
-      initClientSocket(token.address);
-    }
 
     if(token.type == 'endpoint'){
       console.log('Endpoint client connected to this node');
@@ -500,6 +505,18 @@ const firstContact = (address) =>{
     }catch(err){
       console.log(err);
     }
+  }
+}
+
+const isAlreadyConnected = (address) =>{
+  if(address){
+    for(var peer of peers){
+      console.log(peer.io.uri);
+      if(peer.io.uri == address){
+        return true;
+      }
+    }
+    return false;
   }
 }
 
@@ -862,6 +879,8 @@ const getNumPeers = () =>{
 }
 
 
+
+
 //self describing
 const instanciateBlockchain = (blockchain) =>{
 	return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeTokens, blockchain.ipAddresses, blockchain.orphanedBlocks, blockchain.publicKeys);
@@ -1119,7 +1138,7 @@ setTimeout(()=>{
   // var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
   // blockchain.createTransaction(godTx);
 
-}, 8000)
+}, 20000)
 // setTimeout(()=>{
 //   var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))
 //
