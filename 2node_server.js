@@ -369,7 +369,6 @@ const initClientSocket = (address) =>{
 
     var peerSocket = io(address);
 
-    peerSocket.emit('triggerClientConnect', thisNode);
 
   	peerSocket.on('connect', () =>{
       connected = true;
@@ -379,6 +378,7 @@ const initClientSocket = (address) =>{
 
 
         peerSocket.emit('clientConnect', thisNode);
+        peerSocket.emit('triggerClientConnect', thisNode);
         peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('getTokenFromClient', thisNode);
