@@ -453,7 +453,7 @@ const pingConnection = (address, socket) =>{
 //
 const handleNewClientConnection = (token) =>{
   if(token){
-    if(!isPeerConnected(token.address)){
+    if(!isPeerConnected(token.address) || !clients[token.address]){
       initClientSocket(token.address);
     }
   }else{
