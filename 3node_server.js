@@ -154,7 +154,8 @@ const startServer = () =>{
 
     socket.on('triggerClientConnect', (token)=>{
       // console.log('Triggering client connection');
-      handleNewClientConnection(token);
+      // handleNewClientConnection(token);
+      socket.emit('clientConnect', thisNode);
     })
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
