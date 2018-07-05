@@ -98,7 +98,7 @@ const startServer = () =>{
 		})
 
      //Create validation for connecting nodes
-	  socket.on('client-connect', (token) => {
+	  socket.on('clientConnect', (token) => {
       clientConnect(socket, token);
     });
 
@@ -158,7 +158,7 @@ const startServer = () =>{
     })
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
-      socket.emit('client-connect', thisNode);
+      socket.emit('clientConnect', thisNode);
       // socket.emit('storeToken', thisNode);
     })
 
@@ -364,11 +364,11 @@ const initBlockchain = (tryOnceAgain=true) => {
 const initClientSocket = (address) =>{
 
 
-  if(!isAlreadyConnected(address)){
+  if(!isPeerConnected(address)){
 
     var peerSocket = io(address);
 
-
+    pingConnection(address, peerSocket);
 
   	peerSocket.on('connect', () =>{
 
@@ -376,8 +376,8 @@ const initClientSocket = (address) =>{
 
       setTimeout(()=>{
 
-        peerSocket.emit('triggerClientConnect', thisNode);
-        peerSocket.emit('client-connect', thisNode);
+        // peerSocket.emit('triggerClientConnect', thisNode);
+        peerSocket.emit('clientConnect', thisNode);
         peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('getTokenFromClient', thisNode);
@@ -387,7 +387,7 @@ const initClientSocket = (address) =>{
 
   	});
 
-    // peerSocket.on('client-connect', (token) => {
+    // peerSocket.on('clientConnect', (token) => {
     //   clientConnect(peerSocket, token);
     // });
 
@@ -432,6 +432,18 @@ const connectToPeerNetwork = () => {
 
 }
 
+const pingConnection = (address, socket) =>{
+  setInterval(()=>{
+    if(address && socket){
+
+        if(isPeerConnected(address)){
+          console.log('Ping')
+            socket.emit('clientConnect', thisNode);
+        }
+    }
+  }, 15000)
+}
+
 /*
   This is the socket listener function for when a peer
   Connects to this node as a client
@@ -451,6 +463,9 @@ const clientConnect = (socket, token) =>{
 
   if(token != undefined){
 
+    if(!isPeerConnected(token.address)){
+      initClientSocket(token.address);
+    }
 
     if(token.type == 'endpoint'){
       console.log('Endpoint client connected to this node');
@@ -508,10 +523,9 @@ const firstContact = (address) =>{
   }
 }
 
-const isAlreadyConnected = (address) =>{
+const isPeerConnected = (address) =>{
   if(address){
     for(var peer of peers){
-      console.log(peer.io.uri);
       if(peer.io.uri == address){
         return true;
       }
