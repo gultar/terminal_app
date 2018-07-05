@@ -378,13 +378,17 @@ const initClientSocket = (address) =>{
 
 
         peerSocket.emit('clientConnect', thisNode);
-        peerSocket.emit('triggerClientConnect', thisNode);
         peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('getTokenFromClient', thisNode);
         peers.push(peerSocket);
 
       }, 5000)
+
+
+      setInterval(()=>{
+        peerSocket.emit('triggerClientConnect', thisNode);
+      }, 10000)
 
   	});
 
@@ -461,9 +465,17 @@ const pingConnection = (address, socket) =>{
 //
 const handleNewClientConnection = (token) =>{
   if(token){
-    if(!isPeerConnected(token.address) || !clients[token.address]){
-      initClientSocket(token.address);
+    if(!isPeerConnected(token.address)){
+      return initClientSocket(token.address);
+    }else if(!clients[address]){
+
+      var socket = getPeer(token.address);
+      if(socket){
+        return clientConnect(socket, token);
+      }
+
     }
+
   }else{
     console.log('Received empty token');
   }
@@ -539,6 +551,17 @@ const isPeerConnected = (address) =>{
     for(var peer of peers){
       if(peer.io.uri == address){
         return true;
+      }
+    }
+    return false;
+  }
+}
+
+const getPeer = (address) =>{
+  if(address){
+    for(var peer of peers){
+      if(peer.io.uri == address){
+        return peer;
       }
     }
     return false;
