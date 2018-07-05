@@ -154,8 +154,8 @@ const startServer = () =>{
 
     socket.on('triggerClientConnect', (token)=>{
       // console.log('Triggering client connection');
-      // handleNewClientConnection(token);
-      socket.emit('clientConnect', thisNode);
+      handleNewClientConnection(token);
+      // socket.emit('clientConnect', thisNode);
     })
 
     socket.on('getTokenFromClient', (fromNodeToken)=>{
@@ -363,16 +363,21 @@ const initBlockchain = (tryOnceAgain=true) => {
   Defines a client socket connection
 */
 const initClientSocket = (address) =>{
-
+  var connected = false;
 
   if(!isPeerConnected(address)){
 
     var peerSocket = io(address);
 
-    pingConnection(address, peerSocket);
+    setInterval(()=>{
+      if(!connected){
+        console.log('Reconnecting to '+address);
+        peerSocket = io(address);
+      }
+    }, 15000)
 
   	peerSocket.on('connect', () =>{
-
+      connected = true;
   		console.log('Connected  to ', address);
 
       setTimeout(()=>{
@@ -403,7 +408,7 @@ const initClientSocket = (address) =>{
   		console.log('connection with peer dropped');
   		peers.splice(peers.indexOf(peerSocket), 1);
       console.log(peerSocket.io.uri);
-
+      connected = false;
   		peerSocket.destroy()
   	})
   }else{
@@ -435,13 +440,20 @@ const connectToPeerNetwork = () => {
 
 const pingConnection = (address, socket) =>{
   setInterval(()=>{
-    if(address && socket){
+    if(address){
+        //
+        // if(isPeerConnected(address)){
+        //   console.log('Ping '+ socket.io.uri)
+        //   console.log(Object.keys(clients).length);
+        //     socket.emit('triggerClientConnect', thisNode);
+        //     socket.emit('message', 'this is a message from a peer connection')
+        // }
 
-        if(isPeerConnected(address)){
-          console.log('Ping '+ socket.io.uri)
-          console.log(clients);
-            socket.emit('triggerClientConnect', thisNode);
-            socket.emit('message', 'this is a message from a peer connection')
+        for(var i=0; i<peers.length; i++){
+          var addr = peers[i].io.uri
+          if(peers[i] && !clients[addr]){
+            clientConnect(socket, )
+          }
         }
     }
   }, 15000)
