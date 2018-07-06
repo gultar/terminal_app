@@ -432,7 +432,7 @@ const makeSureIsConnectedToThisNode = (socket, address) =>{
     var requesting = setInterval(()=>{
       if(isPeerConnected(address)){
         console.log('Requesting client connection from '+address);
-        socket.emit('triggerClientConnect', token)
+        socket.emit('triggerClientConnect', thisNode)
       }
 
       if(clients[address]){
