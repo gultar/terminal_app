@@ -150,6 +150,7 @@ const startServer = () =>{
     })
 
     socket.on('triggerClientConnect', (token)=>{
+      console.log('Received a token from ', token.address)
       handleNewClientConnection(token);
     })
 
@@ -477,8 +478,9 @@ const getPeer = (address) =>{
 const handleNewClientConnection = (token) =>{
   if(token){
     if(!isPeerConnected(token.address)){
+      console.log('Initating peer connection to ', token.address);
       initClientSocket(token.address);
-
+      storeToken(token);
       clientConnect(null, token);
     }
   }else{
