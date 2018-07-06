@@ -21,7 +21,7 @@ const { getIPAddress } = require('./backend/ipFinder.js');
 /*              'http://10.112.106.71:8080', 'http://10.112.106.71:8081', 'http://10.112.106.71:8082', //odesn't work - rasbpi at maria's
     'http://10.242.19.178:8080', 'http://10.242.19.178:8081', 'http://10.242.19.178:8082',
     'http://169.254.105.109:8080','http://169.254.105.109:8081','http://169.254.105.109:8082', //Ad hoc laptop*/
-let thisAddress = 'http://24.201.224.97:8080'//'http://'+getIPAddress()+':'+port;
+let thisAddress = 'http://'+getIPAddress()+':'+port;//'http://24.201.224.97:8080'
 let ipList = [ thisAddress ];
   // = [
   //     'http://'+getIPAddress()+':'+port,
@@ -372,7 +372,7 @@ const initClientSocket = (address) =>{
 
       }, 5000)
 
-          });
+    });
 
     peerSocket.on('client-connect', (token) => {
       console.log('client connect from peerSocket')
