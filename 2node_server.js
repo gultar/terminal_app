@@ -776,6 +776,7 @@ const storeToken = (token) =>{
 
     if(!blockchain.nodeTokens[token.publicID]){
       console.log('Received a node token from ', token.address);
+      console.log(blockchain.nodeTokens[token.publicID]);
       saveBlockchain(blockchain);
       blockchain.addNewToken(token);
       blockchain.nodeTokens[token.publicID] = token;
