@@ -156,6 +156,16 @@ class Blockchain{
     }
   }
 
+  hasToken(token){
+    if(token){
+      if(!this.nodeTokens[token.publicID]){
+        return false;
+      }else{
+        return this.nodeTokens[token.publicID];
+      }
+    }
+  }
+
   addMiningAddress(token){
     if(!this.miningAddresses[token.publicID]){
       this.miningAddresses[token.publicID] = new BlockchainAddress(token);
@@ -511,7 +521,7 @@ class Blockchain{
   validateTransaction(transaction, token){
 
     if(transaction && token){
-      
+
       try{
         var isSendingNodeTheTxSender = (transaction.fromAddress == token.publicID);
         console.log('Is sending node the original sender? :', isSendingNodeTheTxSender);

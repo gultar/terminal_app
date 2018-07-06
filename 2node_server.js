@@ -353,57 +353,61 @@ const initBlockchain = (tryOnceAgain=true) => {
   Defines a client socket connection
 */
 const initClientSocket = (address) =>{
+  if(address){
+    if(!isPeerConnected(address)){
+      var peerSocket = io(address);
 
-  if(!isPeerConnected(address)){
-    var peerSocket = io(address);
+      peerSocket.on('connect', () =>{
+        peers.push(peerSocket);
+        console.log('Connected  to ', address);
+        getNumPeers();
+        setTimeout(()=>{
 
-    peerSocket.on('connect', () =>{
-      peers.push(peerSocket);
-      console.log('Connected  to ', address);
-      getNumPeers();
-      setTimeout(()=>{
-
-        peerSocket.emit('triggerClientConnect', thisNode);
-        // peerSocket.emit('client-connect', thisNode);
-        peerSocket.emit('tokenRequest', thisNode);
-        peerSocket.emit('message', 'You are now connected to ' + thisNode.address);
-        peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
-        makeSureIsConnectedToThisNode(peerSocket, address);
-        // peerSocket.emit('tokenRequest', thisNode);
-        // peerSocket.emit('getTokenFromClient', thisNode);
+          peerSocket.emit('triggerClientConnect', thisNode);
+          // peerSocket.emit('client-connect', thisNode);
+          peerSocket.emit('tokenRequest', thisNode);
+          peerSocket.emit('message', 'You are now connected to ' + thisNode.address);
+          peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
+          makeSureIsConnectedToThisNode(peerSocket, address);
+          // peerSocket.emit('tokenRequest', thisNode);
+          // peerSocket.emit('getTokenFromClient', thisNode);
 
 
-      }, 5000)
+        }, 5000)
 
-    });
+      });
 
-    // peerSocket.on('client-connect', (token) => {
-    //   console.log('client connect from peerSocket')
-    //   clientConnect(peerSocket, token);
-    // });
+      // peerSocket.on('client-connect', (token) => {
+      //   console.log('client connect from peerSocket')
+      //   clientConnect(peerSocket, token);
+      // });
 
-    peerSocket.on('message', (message)=>{
-      console.log('Server: ' + message);
-    })
+      peerSocket.on('message', (message)=>{
+        console.log('Server: ' + message);
+      })
 
-    peerSocket.on('storeToken', (token) =>{
-      storeToken(token);
+      peerSocket.on('storeToken', (token) =>{
+        storeToken(token);
 
-      console.log('Node Address : ', token.address);
-      console.log('Public ID : ', token.publicID);
+        console.log('Node Address : ', token.address);
+        console.log('Public ID : ', token.publicID);
 
-    })
+      })
 
-    peerSocket.on('disconnect', () =>{
-      console.log('connection with peer dropped');
-      peers.splice(peers.indexOf(peerSocket), 1);
-      // console.log(peerSocket.io.uri);
+      peerSocket.on('disconnect', () =>{
+        console.log('connection with peer dropped');
+        peers.splice(peers.indexOf(peerSocket), 1);
+        // console.log(peerSocket.io.uri);
 
-      peerSocket.destroy()
-    })
+        peerSocket.destroy()
+      })
+    }else{
+      console.log('Peer '+address+' already connected');
+    }
   }else{
-    console.log('Peer '+address+' already connected');
+    console.log('Address in undefined');
   }
+
 
 
 
@@ -432,7 +436,6 @@ const makeSureIsConnectedToThisNode = (socket, address) =>{
   if(socket && address){
     var requesting = setInterval(()=>{
       if(isPeerConnected(address)){
-        console.log('Requesting client connection from '+address);
         socket.emit('triggerClientConnect', thisNode)
       }
 
@@ -771,14 +774,13 @@ const sync = (hash, token) =>{
 const storeToken = (token) =>{
   if(token && blockchain && blockchain instanceof Blockchain){
 
-    if(!blockchain.nodeTokens[token.publicID]){
-
+    if(!blockchain.hasToken(token)){
       console.log('Received a node token from ', token.address);
       blockchain.addNewToken(token);
       saveBlockchain(blockchain);
-
+      updateIpList();
     }else{
-      console.log('Token already received');
+      // console.log('Token already received');
     }
   }
 }
