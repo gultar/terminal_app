@@ -150,7 +150,7 @@ const startServer = () =>{
     })
 
     socket.on('triggerClientConnect', (token)=>{
-      console.log('Received a token from ', token.address)
+    
       handleNewClientConnection(token);
     })
 

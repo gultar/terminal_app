@@ -7,7 +7,7 @@
 const express = require('express');
 const http = require('http');
 const app = express();
-const port = process.env.PORT || 8082
+const port = process.env.PORT || 8080
 const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
@@ -150,7 +150,7 @@ const startServer = () =>{
     })
 
     socket.on('triggerClientConnect', (token)=>{
-      console.log('Received a token from ', token.address)
+    
       handleNewClientConnection(token);
     })
 
