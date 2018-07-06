@@ -367,7 +367,7 @@ const initClientSocket = (address) =>{
         peerSocket.emit('tokenRequest', thisNode);
         peerSocket.emit('message', 'You are now connected to ' + thisNode.address);
         peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
-        makeSureIsConnectedToThisNode(peerSocket, token.address);
+        makeSureIsConnectedToThisNode(peerSocket, address);
         // peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('getTokenFromClient', thisNode);
 
