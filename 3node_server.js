@@ -153,6 +153,7 @@ const startServer = () =>{
       handleNewClientConnection(token);
     })
 
+
     socket.on('getTokenFromClient', (fromNodeToken)=>{
       socket.emit('client-connect', thisNode);
       // socket.emit('storeToken', thisNode);
@@ -366,7 +367,7 @@ const initClientSocket = (address) =>{
         peerSocket.emit('tokenRequest', thisNode);
         peerSocket.emit('message', 'You are now connected to ' + thisNode.address);
         peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
-
+        makeSureIsConnectedToThisNode(peerSocket, token.address);
         // peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('getTokenFromClient', thisNode);
 
@@ -375,17 +376,18 @@ const initClientSocket = (address) =>{
 
     });
 
-    peerSocket.on('client-connect', (token) => {
-      console.log('client connect from peerSocket')
-      clientConnect(peerSocket, token);
-    });
+    // peerSocket.on('client-connect', (token) => {
+    //   console.log('client connect from peerSocket')
+    //   clientConnect(peerSocket, token);
+    // });
 
     peerSocket.on('message', (message)=>{
       console.log('Server: ' + message);
     })
 
     peerSocket.on('storeToken', (token) =>{
-      storeToken(token)
+      storeToken(token);
+
       console.log('Node Address : ', token.address);
       console.log('Public ID : ', token.publicID);
 
@@ -425,6 +427,24 @@ const connectToPeerNetwork = () => {
 
 }
 
+const makeSureIsConnectedToThisNode = (socket, address) =>{
+  if(socket && address){
+    var requesting = setInterval(()=>{
+      if(isPeerConnected(address)){
+        console.log('Requesting client connection from '+address);
+        socket.emit('triggerClientConnect', token)
+      }
+
+      if(clients[address]){
+        clearInterval(requesting);
+      }
+    }, 10000)
+
+  }
+
+}
+
+
 
 const isPeerConnected = (address) =>{
   if(address){
@@ -458,6 +478,8 @@ const handleNewClientConnection = (token) =>{
   if(token){
     if(!isPeerConnected(token.address)){
       initClientSocket(token.address);
+
+      clientConnect(null, token);
     }
   }else{
     console.log('Received empty token');
@@ -466,23 +488,21 @@ const handleNewClientConnection = (token) =>{
 
 const clientConnect = (socket, token) =>{
 
-  if(token != undefined){
+  if(token){
 
-    clients[token.address] = token;
 
-    if(token.type == 'endpoint'){
+
+    if(token.type == 'endpoint' && socket){
       console.log('Endpoint client connected to this node');
       console.log('Hash: '+ token.publicID);
       socket.emit('message', 'You are now connected to ' + thisNode.address);
       console.log('Connected at : '+ displayTime() +"\n");
+
+    }else{
+
+      clients[token.address] = token;
+      console.log('Added '+token.address+' as a client connection to this node');
     }
-    // else{
-    //   console.log('Connected node at address : ', token.address);
-    //   console.log('Public ID : ', token.publicID);
-    //   storeToken(token);
-    //
-    // }
-    //
 
 
 
