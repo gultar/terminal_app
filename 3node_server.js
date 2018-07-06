@@ -358,7 +358,7 @@ const initClientSocket = (address) =>{
     peerSocket.on('connect', () =>{
       peers.push(peerSocket);
       console.log('Connected  to ', address);
-
+      getNumPeers();
       setTimeout(()=>{
 
         peerSocket.emit('triggerClientConnect', thisNode);
@@ -366,6 +366,7 @@ const initClientSocket = (address) =>{
         peerSocket.emit('tokenRequest', thisNode);
         peerSocket.emit('message', 'You are now connected to ' + thisNode.address);
         peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
+
         // peerSocket.emit('tokenRequest', thisNode);
         // peerSocket.emit('getTokenFromClient', thisNode);
 
@@ -472,17 +473,20 @@ const clientConnect = (socket, token) =>{
     if(token.type == 'endpoint'){
       console.log('Endpoint client connected to this node');
       console.log('Hash: '+ token.publicID);
-    }else{
-      console.log('Connected node at address : ', token.address);
-      console.log('Public ID : ', token.publicID);
-      storeToken(token);
-
+      socket.emit('message', 'You are now connected to ' + thisNode.address);
+      console.log('Connected at : '+ displayTime() +"\n");
     }
-    console.log('Connected at : '+ displayTime() +"\n");
+    // else{
+    //   console.log('Connected node at address : ', token.address);
+    //   console.log('Public ID : ', token.publicID);
+    //   storeToken(token);
+    //
+    // }
+    //
 
 
 
-    getNumPeers();
+
   }
 }
 
