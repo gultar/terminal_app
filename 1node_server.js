@@ -441,7 +441,7 @@ const makeSureIsConnectedToThisNode = (socket, address, nonce=10) =>{
       if(isPeerConnected(address)){
         socket.emit('triggerClientConnect', thisNode)
       }
-      console.log('Time', requestTime);
+      // console.log('Time', requestTime);
       // requestNumber = requestNumber + requestNumber;
       nonce = nonce + 5
       return makeSureIsConnectedToThisNode(socket, address, nonce)
