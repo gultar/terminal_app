@@ -432,17 +432,22 @@ const connectToPeerNetwork = () => {
 
 }
 
-const makeSureIsConnectedToThisNode = (socket, address) =>{
+const makeSureIsConnectedToThisNode = (socket, address, nonce=10) =>{
   if(socket && address){
-    var requesting = setInterval(()=>{
+    var nonce = nonce;
+    var requestTime = 1000 * nonce
+    var requesting = setTimeout(()=>{
+      // requestTime = 1000 * requestNumber;
       if(isPeerConnected(address)){
         socket.emit('triggerClientConnect', thisNode)
       }
+      console.log('Time', requestTime);
+      // requestNumber = requestNumber + requestNumber;
+      nonce = nonce + 5
+      return makeSureIsConnectedToThisNode(socket, address, nonce)
+    }, requestTime)
 
-      if(clients[address]){
-        clearInterval(requesting);
-      }
-    }, 10000)
+
 
   }
 
