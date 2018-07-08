@@ -203,6 +203,21 @@ class Blockchain{
 
   }
 
+  getTokenByAddress(addr){
+    if(addr){
+      var token;
+      for(var tokenID of Object.keys(this.nodeTokens)){
+        token = this.nodeTokens[tokenID];
+        if(token.address == addr){
+          return token;
+        }
+      }
+
+      return false;
+    }
+
+  }
+
   syncBlock(newBlock, callback){
 
       var blockStatus;

@@ -763,11 +763,11 @@ setTimeout(function(){
 
     socket  = io(nodeAddress);
 
-    socket.emit('registerEndpoint', endpointToken)
+
 
       socket.on('disconnect', function(){
-        console.log('Disconnected from node server');
-        outputDebug('Disconnected from node server');
+        console.log('Node went offline');
+        outputDebug('Node went offline');
         isConnected = false;
         clearAll();
 
@@ -782,15 +782,15 @@ setTimeout(function(){
       socket.on('connect', function(){
         console.log('Connected to node ', nodeAddress);
         setTimeout(()=>{
-          socket.emit('client-connect', endpointToken);
+          socket.emit('registerEndpoint', endpointToken);
           fetchBlockchainFromServer();
           isConnected = true;
         }, 2000)
       })
 
       socket.on('message', function(message){
-        console.log('Server:', message);
-        outputDebug('Server: '+message)
+        console.log('<LOG>', message);
+        outputDebug('<LOG> '+message)
       })
 
       socket.on('serverMessage', function(message){
@@ -879,7 +879,8 @@ window.onbeforeunload = function() {
     clearAll();
     localStorage.setItem('savedBackground', $('body').css("background-image"));
     //saving the blockchain to server, then to file
-    socket.close();
+    socket.emit('close', endpointToken);
+    socket.destroy();
     // saveBlockchainToServer();
 
 }
