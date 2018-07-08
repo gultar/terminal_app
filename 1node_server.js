@@ -560,7 +560,7 @@ const updateIpList = () =>{
     }
   }
 
-  log(ipList);
+  // log(ipList);
 }
 
 /*
