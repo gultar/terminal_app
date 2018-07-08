@@ -790,7 +790,7 @@ setTimeout(function(){
 
       socket.on('message', function(message){
         console.log('<LOG>', message);
-        outputDebug('<LOG> '+message)
+        outputDebug('<LOG>'+message)
       })
 
       socket.on('serverMessage', function(message){
