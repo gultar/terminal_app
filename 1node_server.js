@@ -225,7 +225,7 @@ const startServer = () =>{
         socket.emit('message', 'Attempting to reach to '+address);
         if(!clients[address]){
           // initClientSocket(address);
-          firstContact(address);
+          initClientSocket(address)
         }
 
 
