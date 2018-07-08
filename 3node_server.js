@@ -560,7 +560,7 @@ const updateIpList = () =>{
     }
   }
 
-  log(ipList);
+  // log(ipList);
 }
 
 /*
@@ -842,7 +842,7 @@ const receiveTransactionFromClient = (transaction, fromEndpointToken) =>{
 
             blockchain.createTransaction(transactionObj);
             sendEventToAllPeers('distributedTransaction', transactionObj, thisNode);
-            log('Received new transaction:', transactionObj);
+            console.log('Received new transaction:', transactionObj);
             transactionObj = null;
           }, 1500)
 
