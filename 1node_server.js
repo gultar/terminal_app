@@ -429,7 +429,7 @@ const makeSureIsConnectedToThisNode = (socket, address, nonce=10) =>{
     var requesting = setTimeout(()=>{
       // requestTime = 1000 * requestNumber;
       if(isPeerConnected(address)){
-        socket.emit('triggerClientConnect', thisNode)
+        socket.emit('tokenRequest', thisNode)
       }
       // log('Time', requestTime);
       // requestNumber = requestNumber + requestNumber;
