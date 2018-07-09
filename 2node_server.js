@@ -12,7 +12,6 @@ const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 10000, 'forceNew':false });
-const p2p = require('socket.io-p2p-server').Server
 const fs = require('fs');
 const { compareBlockchains } = require('./backend/validation.js');
 /*
@@ -353,8 +352,6 @@ const initBlockchain = (tryOnceAgain=true) => {
   Defines a client socket connection
 */
 const initClientSocket = (address) =>{
-  var P2P = require('socket.io-p2p');
-  var io = require('socket.io-client');
   if(address){
     if(!isPeerConnected(address)){
 
