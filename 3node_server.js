@@ -375,14 +375,14 @@ const initClientSocket = (address) =>{
           // peerSocket.emit('client-connect', thisNode);
           peerSocket.emit('tokenRequest', thisNode);
 
-          peerSocket.emit('message', thisNode.address + ' established a peer connection to ' + address);
+          peerSocket.emit('message', 'Peer connection established by ', thisNode.address);
           peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
           keepAlive(peerSocket, address);
           // peerSocket.emit('tokenRequest', thisNode);
           // peerSocket.emit('getTokenFromClient', thisNode);
 
 
-        }, 5000)
+        }, 8000)
 
       });
 
