@@ -12,6 +12,7 @@ const server = http.createServer(app).listen(port);
 const expressWs = require('express-ws')(app);
 const io = require('socket.io-client');
 const ioServer = require('socket.io')(server, {'pingInterval': 2000, 'pingTimeout': 10000, 'forceNew':false });
+const p2p = require('socket.io-p2p-server').Server
 const fs = require('fs');
 const { compareBlockchains } = require('./backend/validation.js');
 /*
@@ -82,6 +83,7 @@ const startServer = () =>{
     res.send(getIPAddress());
   })
 
+  ioServer.use(p2p);
 
   ioServer.on('connection', (socket) => {
 
@@ -351,16 +353,23 @@ const initBlockchain = (tryOnceAgain=true) => {
   Defines a client socket connection
 */
 const initClientSocket = (address) =>{
+  var P2P = require('socket.io-p2p');
+  var io = require('socket.io-client');
   if(address){
     if(!isPeerConnected(address)){
-      try{
-        var peerSocket = io(address);
-        log('Connecting to '+ address+ ' ...');
-      }catch(err){
 
+      try{
+
+        var peerSocket = io(address, { reconnectionAttempts : 20});
+
+        log('Connecting to '+ address+ ' ...');
+
+      }catch(err){
+        console.log(err);
       }
 
       peerSocket.on('connect', () =>{
+
         peers.push(peerSocket);
         log('Connected!')
         getNumPeers();
@@ -372,7 +381,7 @@ const initClientSocket = (address) =>{
 
           peerSocket.emit('message', thisNode.address + 'Established a peer connection to ' + address);
           peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
-          makeSureIsConnectedToThisNode(peerSocket, address);
+          keepAlive(peerSocket, address);
           // peerSocket.emit('tokenRequest', thisNode);
           // peerSocket.emit('getTokenFromClient', thisNode);
 
@@ -443,6 +452,17 @@ const makeSureIsConnectedToThisNode = (socket, address, nonce=10) =>{
 
 }
 
+const keepAlive = (socket, address) =>{
+  if(socket && address){
+    if(isPeerConnected(address)){
+      var keepAlive = setInterval(()=>{
+        socket.emit('tokenRequest', thisNode)
+      }, 30000)
+
+    }
+  }
+}
+
 
 
 const isPeerConnected = (address) =>{
@@ -456,14 +476,14 @@ const isPeerConnected = (address) =>{
   }
 }
 
-const getPeer = (address) =>{
+const getPeer = (address, cb) =>{
   if(address){
     for(var peer of peers){
       if(peer.io.uri == address){
-        return peer;
+        cb(peer);
       }
     }
-    return false;
+    cb(false)
   }
 }
 
@@ -479,6 +499,23 @@ const handleNewClientConnection = (token) =>{
 
       log('Initating peer connection to ', token.address);
       initClientSocket(token.address);
+    }else if(isPeerConnected(token.address) && !clients[token.address]){
+      var peer;
+      log('Received token from an inconnected client');
+      log('Sending this token to request connection');
+
+      getPeer(token.address, (socket)=>{
+        peer = socket;
+
+        if(peer){
+          peer.emit('tokenRequest', thisNode);
+        }else{
+          log('invalid address');
+        }
+      });
+
+    }else{
+      log('peer '+token.address+' already connected')
     }
   }else{
     log('Received empty token');

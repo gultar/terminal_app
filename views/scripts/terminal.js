@@ -879,8 +879,11 @@ window.onbeforeunload = function() {
     clearAll();
     localStorage.setItem('savedBackground', $('body').css("background-image"));
     //saving the blockchain to server, then to file
-    socket.emit('close', endpointToken);
-    socket.destroy();
+    if(socket){
+      socket.emit('close', endpointToken);
+      socket.destroy();
+    }
+
     // saveBlockchainToServer();
 
 }
