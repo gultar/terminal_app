@@ -356,7 +356,7 @@ const initClientSocket = (address) =>{
 
       try{
 
-        var peerSocket = io(address, { reconnectionAttempts : 20});
+        var peerSocket = io(address, { 'reconnection limit' : 1000, 'max reconnection attempts' : 20});
 
         log('Connecting to '+ address+ ' ...');
 
@@ -375,7 +375,7 @@ const initClientSocket = (address) =>{
           // peerSocket.emit('client-connect', thisNode);
           peerSocket.emit('tokenRequest', thisNode);
 
-          peerSocket.emit('message', thisNode.address + 'Established a peer connection to ' + address);
+          peerSocket.emit('message', thisNode.address + ' established a peer connection to ' + address);
           peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
           keepAlive(peerSocket, address);
           // peerSocket.emit('tokenRequest', thisNode);
@@ -397,7 +397,7 @@ const initClientSocket = (address) =>{
         peerSocket.destroy()
       })
     }else{
-      log('Peer '+address+' already connected');
+      // log('Peer '+address+' already connected');
     }
   }else{
     log('Address in undefined');
@@ -420,7 +420,8 @@ const connectToPeerNetwork = () => {
     if(ipList[i] != thisNode.address){
 
         var address = ipList[i];
-        initClientSocket(address);
+        // initClientSocket(address);
+        firstContact(address);
 
     }
   }
@@ -511,7 +512,7 @@ const handleNewClientConnection = (token) =>{
       });
 
     }else{
-      log('peer '+token.address+' already connected')
+      // log('peer '+token.address+' already connected')
     }
   }else{
     log('Received empty token');
