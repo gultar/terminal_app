@@ -82,7 +82,6 @@ const startServer = () =>{
     res.send(getIPAddress());
   })
 
-  ioServer.use(p2p);
 
   ioServer.on('connection', (socket) => {
 
