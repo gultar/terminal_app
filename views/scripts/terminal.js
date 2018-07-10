@@ -236,6 +236,9 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
       }
 
       switch (cmd) {
+        case 'start':
+          startServer();
+          break;
         case 'c':
         case 'con':
         case 'connect':
@@ -251,6 +254,14 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
         case 'reconnect':
           disconnect(args, cmd);
           connect(args, cmd);
+          break;
+        case 'j':
+        case 'join':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+          joinNetwork(args, cmd);
           break;
         case 'goto': openInNewTab(args[0]);
           break;
@@ -333,6 +344,13 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           }
           runFind(args, cmd);
           break;
+        case 'drop':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+          runDrop(args, cmd);
+          break;
         case 'stop-mine':
           if(!isConnected){
             connectError(cmd);
@@ -401,6 +419,11 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           initTerminalMsg();
 
       }
+      function startServer(args, cmd){
+        if(!serverStarted){
+
+        }
+      }
 
       function connect(args, cmd){
         if(args.length > 0){
@@ -418,6 +441,10 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           initSocketConnection();
         }
 
+      }
+
+      function joinNetwork(args, cmd){
+        socket.emit('joinNetwork', endpointToken);
       }
 
       function disconnect(args, cmd){
@@ -459,6 +486,15 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
             output(key.publicID);
           }else{
             output("Could not find key containing : "+ args[0]);
+          }
+        }
+      }
+
+      function runDrop(args, cmd){
+        if(args.length > 0){
+          if(typeof args[0] == 'string'){
+            output('Dropping peer connection '+args[0])
+            socket.emit('dropPeer', args[0]);
           }
         }
       }
@@ -789,18 +825,19 @@ setTimeout(function(){
       })
 
       socket.on('message', function(message){
-        console.log('<LOG>', message);
-        outputDebug('<LOG>'+message)
+        console.log('NODE->', message);
+        outputDebug('NODE-> '+message)
       })
 
-      socket.on('serverMessage', function(message){
-        console.log('Server', message);
-        outputDebug('Server: '+message);
-      })
+      // socket.on('serverMessage', function(message){
+      //   console.log('Server', message);
+      //   outputDebug('Server: '+message);
+      // })
 
       socket.on('miningApproved', function(updatedBlockchain){
         var latestBlock = getLatestBlock(updatedBlockchain);
         console.log('Latest Block Hash:', latestBlock.hash);
+        outputDebug('Latest Block Hash: '+ latestBlock.hash)
         blockchain = updatedBlockchain;
         console.log("Blockchain:", updatedBlockchain);
         output('Block mined: ' + latestBlock.hash + " by " + latestBlock.minedBy);

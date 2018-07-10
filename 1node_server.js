@@ -74,8 +74,12 @@ let pingClient;
 */
 
 const startServer = () =>{
-        log('\nStarting node at '+thisNode.address+"\n");
-        log('Node Public Address: '+thisNode.publicID + "\n");
+
+
+
+  log('\nStarting node at '+thisNode.address+"\n");
+  log('Node Public Address: '+thisNode.publicID + "\n");
+
   app.use(express.static(__dirname+'/views'));
 
   app.on('/', () => {
@@ -202,11 +206,25 @@ const startServer = () =>{
 
     });
 
+    socket.on('joinNetwork', (token)=>{
+      if(token){
+        connectToPeerNetwork();
+      }
+    })
+
+    socket.on('startServer', (token)=>{
+      if(token){
+        startServer();
+      }
+    })
+
     socket.on('blockchain', (blockchainReceived) => {
             blockchain = compareBlockchains(blockchain, blockchainReceived);
     });
 
     socket.on('broadcastMessage', (msg) =>{
+
+      log('-BROADCAST- '+msg);
       sendEventToAllPeers('message', msg);
     })
 
@@ -229,6 +247,12 @@ const startServer = () =>{
         }
 
 
+      }
+    })
+
+    socket.on('dropPeer', (address)=>{
+      if(address){
+        dropPeer(address);
       }
     })
 
@@ -375,7 +399,7 @@ const initClientSocket = (address) =>{
           // peerSocket.emit('client-connect', thisNode);
           peerSocket.emit('tokenRequest', thisNode);
 
-          peerSocket.emit('message', 'Peer connection established by ', thisNode.address);
+          peerSocket.emit('message', 'Peer connection established by '+ thisNode.address);
           peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
           keepAlive(peerSocket, address);
           // peerSocket.emit('tokenRequest', thisNode);
@@ -516,6 +540,24 @@ const handleNewClientConnection = (token) =>{
     }
   }else{
     log('Received empty token');
+  }
+}
+
+const dropPeer = (address) =>{
+  if(address){
+    if(isPeerConnected(address)){
+      log('address:'+address);
+      getPeer(address, (socket)=>{
+        if(socket){
+          log('Connection to peer '+address+' closed');
+          socket.emit('close');
+          socket.destroy;
+        }else{
+          log('Cannot drop connection, peer '+address+' not found')
+        }
+
+      })
+    }
   }
 }
 
@@ -1172,10 +1214,10 @@ const log = (message, orMessageHere) =>{
 
 initBlockchain();
 setTimeout(()=>{
-  connectToPeerNetwork();
-  startServer()
+  startServer();
 
-        chainUpdater();
+
+  chainUpdater();
 }, 5000)
 
 getKeyPair((keys)=>{
