@@ -265,16 +265,20 @@ const startServer = () =>{
 
 
     socket.on('close', (token) => {
-      if(token.type == 'endpoint'){
-        delete endpoints[token.publicID];
-        log('endpoint disconnected')
-      }else{
-        delete clients[token.address];
-        log('Disconnected clients: ', token.address);
-        getNumPeers();
+      if(token){
+        try{
+          if(token.type == 'endpoint'){
+            delete endpoints[token.publicID];
+            log('endpoint disconnected')
+          }else{
+            delete clients[token.address];
+            log('Disconnected clients: ', token.address);
+            getNumPeers();
+          }
+        }catch(err){
+          log(err);
+        }
       }
-
-
 
     });
 
@@ -552,8 +556,10 @@ const dropPeer = (address) =>{
           log('Connection to peer '+address+' closed');
           socket.emit('close');
           socket.destroy;
+          return true;
         }else{
           log('Cannot drop connection, peer '+address+' not found')
+
         }
 
       })
