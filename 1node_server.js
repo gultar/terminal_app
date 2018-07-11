@@ -1224,8 +1224,6 @@ setTimeout(()=>{
   // var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
   // blockchain.createTransaction(godTx);
   // saveBlockchain(blockchain);
-  console.log('IP:',ipList);
-  console.log('clients', blockchain.nodeTokens);
 }, 12000)
 // setTimeout(()=>{
 //   var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))
