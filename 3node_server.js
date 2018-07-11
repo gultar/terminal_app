@@ -120,8 +120,8 @@ const startServer = () =>{
     })
 
     socket.on('endpointTalk', (msg)=>{
-      log('Sending back a message');
-      sendMessageToAllEndpoints(msg);
+      log(ipList);
+      // sendMessageToAllEndpoints(msg);
     })
 
     socket.on('tokenRequest', (peerToken)=>{
@@ -393,7 +393,7 @@ const initClientSocket = (address) =>{
       try{
 
         var peerSocket = io(address, { 'reconnection limit' : 1000, 'max reconnection attempts' : 20});
-
+        peerSocket.heartbeatTimeout = 20000;
         log('Connecting to '+ address+ ' ...');
 
       }catch(err){
@@ -602,7 +602,7 @@ const registerEndpoint = (socket, token) =>{
       log('Hash: '+ token.publicID);
       socket.emit('message', 'You are now connected to ' + thisNode.address);
       log('Connected at : '+ displayTime() +"\n");
-      
+
       getNumPeers();
 
     }
