@@ -212,6 +212,12 @@ const startServer = () =>{
       }
     })
 
+    socket.on('leaveNetwork', (token)=>{
+      if(token){
+        leaveNetwork();
+      }
+    })
+
     socket.on('startServer', (token)=>{
       if(token){
         startServer();
@@ -241,9 +247,11 @@ const startServer = () =>{
 
       if(address){
         socket.emit('message', 'Attempting to reach to '+address);
-        if(!clients[address]){
+        if(!isPeerConnected(address)){
           // initClientSocket(address);
           initClientSocket(address)
+        }else{
+          log('Peer '+address+' is already connected');
         }
 
 
@@ -451,8 +459,25 @@ const connectToPeerNetwork = () => {
         // initClientSocket(address);
         firstContact(address);
 
+
     }
   }
+
+}
+
+const leaveNetwork = () =>{
+  log('Leaving network...');
+  peers = [];
+  // if(peers.length > 0){
+  //   // for(var peer of peers){
+  //   //   log('Closing connection to '+ peer.io.uri);
+  //   //   peer.emit('close', thisNode);
+  //   //   peer.destroy();
+  //   // }
+  //
+  // }else{
+  //   log('Need to be connected to at least one peer...');
+  // }
 
 }
 
@@ -577,6 +602,9 @@ const registerEndpoint = (socket, token) =>{
       log('Hash: '+ token.publicID);
       socket.emit('message', 'You are now connected to ' + thisNode.address);
       log('Connected at : '+ displayTime() +"\n");
+      
+      getNumPeers();
+
     }
   }
 }
@@ -944,6 +972,7 @@ const buildChainHashes = () =>{
 */
 const getNumPeers = () =>{
   if(peers != undefined){
+
     if(peers.length > 0){
             log('Number of other available peers on network:',peers.length);
             return peers.length;

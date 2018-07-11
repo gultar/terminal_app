@@ -264,6 +264,14 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           }
           joinNetwork(args, cmd);
           break;
+        case 'leave':
+          if(!isConnected){
+            connectError(cmd);
+            break;
+          }
+          leaveNetwork(args, cmd);
+          break;
+
         case 'goto': openInNewTab(args[0]);
           break;
         case 'clear': runClear(args, cmd);
@@ -388,7 +396,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
           runShowPublicKeys();
           break;
 
-        case 'b-msg':
+        case 'msg':
           if(!isConnected){
             connectError(cmd);
             break;
@@ -446,6 +454,10 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
       function joinNetwork(args, cmd){
         socket.emit('joinNetwork', endpointToken);
+      }
+
+      function leaveNetwork(args, cmd){
+        socket.emit('leaveNetwork', endpointToken);
       }
 
       function disconnect(args, cmd){
