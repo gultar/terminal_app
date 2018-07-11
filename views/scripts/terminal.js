@@ -42,7 +42,8 @@ var backgroundUrl = $('body').css("background-image");
 
 //container for DOM element that represents the seccond right hand side console on application
 var debugOutput_ = document.getElementById('second-container');
-
+var consolePanel = document.getElementById("console-panel");
+var entryIndex = 0;
 //Server connection
 var socket;
 
@@ -737,9 +738,11 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
 function outputDebug(html) {
 
-  debugOutput_.insertAdjacentHTML('beforeEnd', '<p>' + html + '</p>');
-
-
+  debugOutput_.insertAdjacentHTML('beforeEnd', '<p id=entry'+entryIndex+'>' + html + '</p>');
+  consolePanel.scrollTop = consolePanel.scrollHeight;
+  // var newestEntry = document.getElementById('entry'+entryIndex);
+  // newestEntry.focus();
+  // entryIndex++;
 }
 
 
@@ -805,13 +808,13 @@ setTimeout(function(){
         console.log('Node went offline');
         outputDebug('Node went offline');
         isConnected = false;
-        clearAll();
-
-        socket.removeAllListeners('message');
-        socket.removeAllListeners('disconnect');
-        socket.removeAllListeners('serverMessage');
-        socket.removeAllListeners('miningApproved');
-        socket.removeAllListeners('blockchain');
+        // clearAll();
+        //
+        // socket.removeAllListeners('message');
+        // socket.removeAllListeners('disconnect');
+        // socket.removeAllListeners('serverMessage');
+        // socket.removeAllListeners('miningApproved');
+        // socket.removeAllListeners('blockchain');
 
       })
 

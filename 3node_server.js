@@ -522,7 +522,7 @@ const handleNewClientConnection = (token) =>{
   if(token){
     if(!isPeerConnected(token.address)){
 
-      log('Initating peer connection to ', token.address);
+      log('Initiating peer connection to ', token.address);
       initClientSocket(token.address);
     }else if(isPeerConnected(token.address) && !clients[token.address]){
       var peer;
@@ -581,27 +581,6 @@ const registerEndpoint = (socket, token) =>{
   }
 }
 
-// const clientConnect = (socket, token) =>{
-//
-//   if(token){
-//
-//     if(token.type == 'endpoint' && socket){
-//       log('Endpoint client connected to this node');
-//       log('Hash: '+ token.publicID);
-//       socket.emit('message', 'You are now connected to ' + thisNode.address);
-//       log('Connected at : '+ displayTime() +"\n");
-//
-//     }else{
-//
-//       clients[token.address] = token;
-//       log('Added '+token.address+' as a client connection to this node');
-//     }
-//
-//
-//
-//
-//   }
-// }
 
 const firstContact = (address) =>{
   if(address){
@@ -609,17 +588,17 @@ const firstContact = (address) =>{
       var tempSocket = io(address);
       tempSocket.emit('sendYourAddress', thisNode);
 
-      tempSocket.on('addressReceived', (peerToken)=>{
-        if(ipList.indexOf(peerToken.address) == -1){
-          ipList.push(peerToken.address);
-          storeToken(peerToken);
+      tempSocket.on('addressReceived', (token)=>{
+        if(ipList.indexOf(token.address) == -1){
+          ipList.push(token.address);
+          storeToken(token);
           // blockchain.addNewToken(peerToken);
           // saveBlockchain(blockchain);
-          initClientSocket(peerToken.address);
+          initClientSocket(token.address);
 
         }else{
 
-          handleNewClientConnection(peerToken);
+          handleNewClientConnection(token);
           tempSocket.destroy();
         }
 
@@ -1245,6 +1224,8 @@ setTimeout(()=>{
   // var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
   // blockchain.createTransaction(godTx);
   // saveBlockchain(blockchain);
+  console.log('IP:',ipList);
+  console.log('clients', blockchain.nodeTokens);
 }, 12000)
 // setTimeout(()=>{
 //   var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))

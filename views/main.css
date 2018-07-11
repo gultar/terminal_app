@@ -21,6 +21,13 @@ html, body {
 #container output pre {
   margin: 0;
 }
+
+.console-panel{
+  display: flex;
+  flex-direction: column-reverse;
+  padding-bottom:10px;
+}
+
 .input-line {
   display: -webkit-box;
   -webkit-box-orient: horizontal;
