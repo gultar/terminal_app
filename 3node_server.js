@@ -136,7 +136,7 @@ const startServer = () =>{
     })
 
     socket.on('storeToken', (token) =>{
-      storeToken(token, true);
+      storeToken(token);
       // handleNewClientConnection(token);
     })
 
@@ -862,8 +862,9 @@ const sync = (hash, token) =>{
   into BlockchainAddresses all node tokens received
 */
 const storeToken = (token) =>{
-  if(token && blockchain && blockchain instanceof Blockchain){
+  if(token && blockchain instanceof Blockchain){
 
+    log('TOKEN ADDRESS '+token.address);
     clients[token.address] = token;
 
     if(!blockchain.nodeTokens[token.publicID]){
@@ -1247,7 +1248,7 @@ getKeyPair((keys)=>{
     Skipping privateKey. Only used when signing transactions
     */
     thisNode.publicKeyFull = keys.publicKey;
-    thisNode.publicID = sha256(keys.publicKey);
+    thisNode.publicID = sha256(keys.publicKey + thisAddress);
 
   }
 
