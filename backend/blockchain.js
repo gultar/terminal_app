@@ -545,10 +545,10 @@ class Blockchain{
         console.log("Is sending node's token part of the network? :", isPartOfNetwork);
 
         var fromAddr = this.getTokenByID(transaction.fromAddress);
-        console.log("Is from address a valid public key? :", fromAddr==undefined);
+        console.log("Is from address a valid public key? :", (fromAddr? true:false));
 
         var toAddr = this.getTokenByID(transaction.toAddress);
-        console.log("Is to address a valid public key? :", toAddr==undefined);
+        console.log("Is to address a valid public key? :", (toAddr? true:false));
 
         var isChecksumValid = this.validateChecksum(transaction);
         console.log("Is transaction hash valid? :", isChecksumValid);
@@ -638,7 +638,12 @@ class Blockchain{
 
   getTokenByID(id){
     if(id){
-      return this.nodeTokens[id];
+      for(var tokenID of Object.keys(this.nodeTokens)){
+        if(id == tokenID){
+          return this.nodeTokens[tokenID];
+        }
+      }
+      return false;
     }
 
   }
