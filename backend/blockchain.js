@@ -39,7 +39,7 @@ class Transaction{
           var sign = crypto.createSign('RSA-SHA256');
           sign.update(this.hash);  // data from your file would go here
           this.signature = sign.sign(key, 'hex');
-          console.log('Signed this:', this.signature)
+
 
         }catch(err){
           console.log(err);
@@ -594,7 +594,7 @@ class Blockchain{
       if(this.nodeTokens[token.publicID] === token){
         exists = true;
 
-        if(this.nodeTokens[token.publicID].publicID === sha256(this.nodeTokens[token.publicID].publicKeyFull)){
+        if(this.nodeTokens[token.publicID].publicID === sha256(this.nodeTokens[token.publicID].publicKeyFull + this.nodeTokens[token.publicID].address)){
           isValid = true;
         }
       }

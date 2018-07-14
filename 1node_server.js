@@ -994,47 +994,43 @@ const instanciateBlockchain = (blockchain) =>{
         return new Blockchain(blockchain.chain, blockchain.pendingTransactions, blockchain.nodeTokens, blockchain.ipAddresses, blockchain.orphanedBlocks, blockchain.publicKeys);
 }
 
-/*
-  To run a proper transaction validation, one must look back at all the previous transactions that have been made by
-  emitting peer every time this is checked, to avoid double spending. An initial coin distribution is made once the genesis
-  block has been made. This needs some work since it is easy to send a false transaction and accumulate credits
-*/
-const validateTransaction = (transaction, token) =>{
-    if(transaction != undefined && token != undefined){
 
-        if(blockchain != undefined && blockchain instanceof Blockchain){
-
-            var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
-
-            if(!balanceOfSendingAddr){
-                            log('Cannot verify balance of undefined address token');
-            }else{
-
-                if(balanceOfSendingAddr >= transaction.amount){
-                        log('Transaction validated successfully');
-                        return true;
-
-                }else if(transaction.type === 'query'){
-                        //handle blockbase queries
-                }else{
-                        log('Address '+token.address+' does not have sufficient funds to complete transaction');
-                        return false
-                }
-
-            }
-
-
-        }else{
-                log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
-                return false
-        }
-
-  }else{
-          log('ERROR: Either the transaction or the token sent is undefined');
-          return false;
-  }
-
-}
+// const validateTransaction = (transaction, token) =>{
+//     if(transaction != undefined && token != undefined){
+//
+//         if(blockchain != undefined && blockchain instanceof Blockchain){
+//
+//             var balanceOfSendingAddr = blockchain.getBalanceOfAddress(token) + blockchain.checkFundsThroughPendingTransactions(token);
+//
+//             if(!balanceOfSendingAddr){
+//                             log('Cannot verify balance of undefined address token');
+//             }else{
+//
+//                 if(balanceOfSendingAddr >= transaction.amount){
+//                         log('Transaction validated successfully');
+//                         return true;
+//
+//                 }else if(transaction.type === 'query'){
+//                         //handle blockbase queries
+//                 }else{
+//                         log('Address '+token.address+' does not have sufficient funds to complete transaction');
+//                         return false
+//                 }
+//
+//             }
+//
+//
+//         }else{
+//                 log("ERROR: Can't validate. Blockchain is undefined or not instanciated. Resync your chain");
+//                 return false
+//         }
+//
+//   }else{
+//           log('ERROR: Either the transaction or the token sent is undefined');
+//           return false;
+//   }
+//
+// }
 
 /*
   Need to find a way to use this in transaction validation
