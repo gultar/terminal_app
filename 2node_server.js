@@ -124,7 +124,7 @@ const startServer = () =>{
       // sendMessageToAllEndpoints(msg);
     })
 
-    socket.on('tokenRequest', (peerToken)=>{
+    socket.on('connectionRequest', (peerToken)=>{
 
       storeToken(peerToken);
 
@@ -205,6 +205,14 @@ const startServer = () =>{
       }
 
     });
+
+    socket.on('broadcastToken', (token)=>{
+      if(token){
+        log('Broadcasting token...');
+        sendEventToAllPeers('storeToken', thisNode);
+      }
+
+    })
 
     socket.on('joinNetwork', (token)=>{
       if(token){
@@ -393,7 +401,7 @@ const initClientSocket = (address) =>{
       try{
 
         var peerSocket = io(address, { 'reconnection limit' : 1000, 'max reconnection attempts' : 20});
-        peerSocket.heartbeatTimeout = 20000;
+        peerSocket.heartbeatTimeout = 120000;
         log('Connecting to '+ address+ ' ...');
 
       }catch(err){
@@ -407,15 +415,13 @@ const initClientSocket = (address) =>{
         getNumPeers();
         setTimeout(()=>{
 
-          // peerSocket.emit('triggerClientConnect', thisNode);
-          // peerSocket.emit('client-connect', thisNode);
-          peerSocket.emit('tokenRequest', thisNode);
+
+          peerSocket.emit('connectionRequest', thisNode);
 
           peerSocket.emit('message', 'Peer connection established by '+ thisNode.address);
           peerSocket.emit('message', 'Connected at : '+ displayTime() +"\n");
           keepAlive(peerSocket, address);
-          // peerSocket.emit('tokenRequest', thisNode);
-          // peerSocket.emit('getTokenFromClient', thisNode);
+
 
 
         }, 8000)
@@ -488,7 +494,7 @@ const makeSureIsConnectedToThisNode = (socket, address, nonce=10) =>{
     var requesting = setTimeout(()=>{
       // requestTime = 1000 * requestNumber;
       if(isPeerConnected(address)){
-        socket.emit('tokenRequest', thisNode)
+        socket.emit('connectionRequest', thisNode)
       }
       // log('Time', requestTime);
       // requestNumber = requestNumber + requestNumber;
@@ -506,7 +512,7 @@ const keepAlive = (socket, address) =>{
   if(socket && address){
     if(isPeerConnected(address)){
       var keepAlive = setInterval(()=>{
-        socket.emit('tokenRequest', thisNode)
+        socket.emit('connectionRequest', thisNode)
       }, 30000)
 
     }
@@ -558,7 +564,7 @@ const handleNewClientConnection = (token) =>{
         peer = socket;
 
         if(peer){
-          peer.emit('tokenRequest', thisNode);
+          peer.emit('connectionRequest', thisNode);
         }else{
           log('invalid address');
         }
@@ -781,9 +787,9 @@ const saveBlockchain = (blockchainReceived) => {
 */
 const startMining = (miningAddrToken) => {
 
-  miningAddr = blockchain.getMiningAddress(miningAddrToken);
+    miningAddr = blockchain.getMiningAddress(miningAddrToken);
 
-        if(miningAddr){
+      if(miningAddr){
 
                 miningSuccess = blockchain.minePendingTransactions(miningAddr, (isMiningBlock, finishedBlock)=>{
       if(isMiningBlock && !finishedBlock){

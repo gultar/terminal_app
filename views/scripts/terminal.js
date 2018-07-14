@@ -813,7 +813,7 @@ setTimeout(function(){
   issueClientToken(nodeAddress);
 
     socket  = io(nodeAddress);
-
+    socket.heartbeatTimeout = 30000;
 
 
       socket.on('disconnect', function(){
