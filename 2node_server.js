@@ -864,7 +864,7 @@ const sync = (hash, token) =>{
 const storeToken = (token) =>{
   if(token && blockchain instanceof Blockchain){
 
-    log('TOKEN ADDRESS '+token.address);
+    
     clients[token.address] = token;
 
     if(!blockchain.nodeTokens[token.publicID]){
