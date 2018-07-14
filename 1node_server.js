@@ -864,7 +864,7 @@ const sync = (hash, token) =>{
 const storeToken = (token) =>{
   if(token && blockchain instanceof Blockchain){
 
-    
+
     clients[token.address] = token;
 
     if(!blockchain.nodeTokens[token.publicID]){
@@ -921,7 +921,7 @@ const receiveTransactionFromClient = (transaction, fromEndpointToken) =>{
           var toAddress = blockchain.nodeTokens[transaction.toAddress];
 
           var transactionObj = new Transaction(
-            transaction.fromAddress,
+            thisNode.publicID,
             transaction.toAddress,
             transaction.amount,
             transaction.data,

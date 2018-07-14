@@ -528,7 +528,7 @@ var Terminal = Terminal || function(cmdLineContainer, outputContainer) {
 
           if(args.length > 2){
 
-            sendTransaction('09a6c107f66e4d1eb5b91bdfeb041ed365d446cfb7581141cdb54a61d4b0d501', args[0], args[1], args[2]);
+            sendTransaction(null, args[0], args[1], args[2]);
           }else{
             output('Please enter an <b>address to send to</b>, the <b>amount</b> and some <b>optional data</b>');
             output('All values are delimited by semi-colons like so: ')
