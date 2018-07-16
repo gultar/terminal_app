@@ -604,32 +604,32 @@ const registerEndpoint = (socket, token) =>{
 }
 
 
-// const firstContact = (address) =>{
-//   if(address){
-//     try{
-//       var tempSocket = io(address);
-//       tempSocket.emit('sendYourAddress', thisNode);
-//
-//       tempSocket.on('addressReceived', (token)=>{
-//         if(ipList.indexOf(token.address) == -1){
-//           ipList.push(token.address);
-//           storeToken(token);
-//           // blockchain.addNewToken(peerToken);
-//           // saveBlockchain(blockchain);
-//           initClientSocket(token.address);
-//
-//         }else{
-//
-//           handleNewClientConnection(token);
-//           tempSocket.destroy();
-//         }
-//
-//       })
-//     }catch(err){
-//       log(err);
-//     }
-//   }
-// }
+const firstContact = (address) =>{
+  if(address){
+    try{
+      var tempSocket = io(address);
+      tempSocket.emit('sendYourAddress', thisNode);
+
+      tempSocket.on('addressReceived', (token)=>{
+        if(ipList.indexOf(token.address) == -1){
+          ipList.push(token.address);
+          storeToken(token);
+          // blockchain.addNewToken(peerToken);
+          // saveBlockchain(blockchain);
+          initClientSocket(token.address);
+
+        }else{
+
+          handleNewClientConnection(token);
+          tempSocket.destroy();
+        }
+
+      })
+    }catch(err){
+      log(err);
+    }
+  }
+}
 
 
 const updateIpList = () =>{
@@ -1248,7 +1248,7 @@ const validateFingerprint = (socket, callback) =>{
   let token = socket.handshake.query.token;
 
   if(token){
-    
+
     try{
       token = JSON.parse(token)
     }catch(err){
