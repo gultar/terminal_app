@@ -409,7 +409,7 @@ const initClientSocket = (address) =>{
         });
 
         peerSocket.heartbeatTimeout = 120000;
-        log('Connecting to '+ address+ ' ...');
+        log('Requesting connection to '+ address+ ' ...');
 
       }catch(err){
         console.log(err);
@@ -418,7 +418,7 @@ const initClientSocket = (address) =>{
       peerSocket.on('connect', () =>{
 
         peers.push(peerSocket);
-        log('Connected!')
+        log('Connected to ', address)
         getNumPeers();
         setTimeout(()=>{
 
@@ -1285,7 +1285,10 @@ const validateFingerprint = (socket, callback) =>{
           verify.update(token.publicID + token.timestamp);
 
           //Node
-          callback(verify.verify(token.publicKeyFull, token.fingerprint, 'hex'), false)
+          if(verify.verify(token.publicKeyFull, token.fingerprint, 'hex')){
+            callback(token, false)
+          }
+
 
         }catch(err){
           console.log(err);
@@ -1300,7 +1303,7 @@ const validateFingerprint = (socket, callback) =>{
       }
 
     }else if(token.type == 'endpoint'){
-      callback(false, true); //endpoint
+      callback(false, token); //endpoint
     }
 
   }else{
