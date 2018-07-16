@@ -93,14 +93,16 @@ const startServer = () =>{
   ioServer.on('connection', (socket) => {
 
   let token = socket.handshake.query.token;
-
-  if(token.type == 'node'){
-    if(validateFingerprint(socket, token)){
-      log('TOKEN VALID')
-    }else{
-      log('ERROR: TOKEN NOT VALID')
+  if(token){
+    if(token.type == 'node'){
+      if(validateFingerprint(socket, token)){
+        log('TOKEN VALID')
+      }else{
+        log('ERROR: TOKEN NOT VALID')
+      }
     }
   }
+
 
 
     socket.on('message', (msg) => {
