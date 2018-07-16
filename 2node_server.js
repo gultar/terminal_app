@@ -431,7 +431,7 @@ const initClientSocket = (address) =>{
 
 
 
-        }, 8000)
+        }, 2000)
 
       });
 
