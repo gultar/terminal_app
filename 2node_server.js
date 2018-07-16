@@ -103,7 +103,7 @@ const startServer = () =>{
       }else{
         log('Connection attempt failed. Invalid fingerprint.');
         log('Shutting down connection...');
-        socket.close();
+        socket.disconnect('unauthorized');
       }
     })
 
