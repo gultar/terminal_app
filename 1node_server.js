@@ -95,10 +95,15 @@ const startServer = () =>{
 
     validateFingerprint(socket, (isNode, isEndpoint)=>{
       if(isNode){
+        log('Node is connecting...')
         nodeEventListeners(socket);
       }else if(isEndpoint){
         log('Endpoint connecting...')
         endpointEventListeners(socket);
+      }else{
+        log('Connection attempt failed. Invalid fingerprint.');
+        log('Shutting down connection...');
+        socket.close();
       }
     })
 
@@ -1260,15 +1265,15 @@ const fingerprintGenerator = () =>{
 const validateFingerprint = (socket, callback) =>{
 
   let token = socket.handshake.query.token;
-
+  log(token);
   if(token){
 
     try{
       token = JSON.parse(token)
     }catch(err){
-      socket.destroy();
+
       log(err);
-      return false;
+      callback(false, false)
     }
     if(token.type == 'node'){
       if(token.publicKeyFull && token.fingerprint){
@@ -1279,28 +1284,29 @@ const validateFingerprint = (socket, callback) =>{
           const verify = crypto.createVerify('RSA-SHA256');
           verify.update(token.publicID + token.timestamp);
 
+          //Node
           callback(verify.verify(token.publicKeyFull, token.fingerprint, 'hex'), false)
 
         }catch(err){
           console.log(err);
-          socket.destroy();
-          return false
+
+          callback(false, false)
         }
 
       }else{
         log('ERROR: Invalid Token. Missing fingerprint');
-        socket.destroy();
-        return false;
+
+        callback(false, false)
       }
 
     }else if(token.type == 'endpoint'){
-      callback(false, true);
+      callback(false, true); //endpoint
     }
 
   }else{
     log('ERROR: Missing token from query. Shutting down connection');
-    socket.destroy();
-    return false;
+
+    callback(false, false)
   }
 
 
