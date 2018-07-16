@@ -469,8 +469,8 @@ const connectToPeerNetwork = () => {
     if(ipList[i] != thisNode.address){
 
         var address = ipList[i];
-        // initClientSocket(address);
-        firstContact(address);
+        initClientSocket(address);
+        // firstContact(address);
 
 
     }
