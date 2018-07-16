@@ -118,7 +118,21 @@ const nodeEventListeners = (socket) =>{
               socket.destroy();
       })
 
+      socket.on('sendYourAddress', (token)=>{
 
+        socket.emit('addressReceived', thisNode);
+
+        if(!clients[token.address]){
+          try{
+            blockchain.addNewToken(token);
+            initClientSocket(token.address);
+          }catch(err){
+            log(err);
+          }
+
+        }
+
+      })
 
       socket.on('sync', (hash, token)=>{
         sync(hash, token)
