@@ -92,232 +92,197 @@ const startServer = () =>{
 
   ioServer.on('connection', (socket) => {
 
-  let token = socket.handshake.query.token;
-  if(token){
-    if(token.type == 'node'){
-      if(validateFingerprint(socket, token)){
-        log('TOKEN VALID')
-      }else{
-        log('ERROR: TOKEN NOT VALID')
-      }
-    }
-  }
 
-
-
-    socket.on('message', (msg) => {
-      log('Client:', msg);
-    });
-
-    socket.on('error', (exception)=>{
-            log('Error:',exception);
-            socket.destroy();
-    })
-
-    socket.on('sendYourAddress', (token)=>{
-
-      socket.emit('addressReceived', thisNode);
-
-      if(!clients[token.address]){
-        try{
-          blockchain.addNewToken(token);
-          initClientSocket(token.address);
-        }catch(err){
-          log(err);
-        }
-
-      }
-
-    })
-
-
-    socket.on('sync', (hash, token)=>{
-      sync(hash, token)
-    })
-
-    socket.on('endpointTalk', (msg)=>{
-      log(ipList);
-      // sendMessageToAllEndpoints(msg);
-    })
-
-    socket.on('connectionRequest', (peerToken)=>{
-
-      storeToken(peerToken);
-
-      setTimeout(()=>{
-        handleNewClientConnection(peerToken)
-
-      }, 2000)
-
-    })
-
-    socket.on('storeToken', (token) =>{
-      storeToken(token);
-      // handleNewClientConnection(token);
-    })
-
-    // socket.on('triggerClientConnect', (token)=>{
-    //   handleNewClientConnection(token);
-    // })
-
-
-    socket.on('distributedTransaction', (transaction, fromNodeToken) => {
-      distributeTransaction(transaction, fromNodeToken);
-    })
-
-    socket.on('transaction', (transaction, fromNodeToken) => {
-      receiveTransactionFromClient(transaction, fromNodeToken);
-    });
-
-
-
-    socket.on('miningRequest', () =>{
-      if(!thisNode.isMining){
-        attemptMining(thisNode);
-      }else{
-        cancelMining(true);
-      }
-
-    });
-
-
-    socket.on('newBlock', (newBlock) =>{
-      receiveNewBlock(newBlock);
-    });
-
-    socket.on('peerBuildingBlock', (token) =>{
-      if(token != undefined){
-        if(currentMiners[token.address] == token){
-          log('TOKEN HASH ' + token.hash.substr(0, 10)+ ' has started mining');
-        }
+    validateFingerprint(socket, (isNode, isEndpoint)=>{
+      if(isNode){
+        nodeEventListeners(socket);
+      }else if(isEndpoint){
+        log('Endpoint connecting...')
+        endpointEventListeners(socket);
       }
     })
-
-    socket.on('peerFinishedBlock', (token) =>{
-      if(token != undefined){
-        if(thisNode.isMining){
-          attemptMining(thisNode);
-        }
-      }
-
-    })
-
-    /*
-    * Endpoint Client listeners
-    * Could add a small validation to limit to endpoints only
-    *
-    *
-    */
-
-    socket.on('registerEndpoint', (token)=>{
-      if(token){
-          registerEndpoint(socket, token);
-      }
-    })
-
-    socket.on('getBlockchain', (token) =>{
-      if(token){
-        getBlockchain(socket, token);
-      }
-
-    });
-
-    socket.on('broadcastToken', (token)=>{
-      if(token){
-        log('Broadcasting token...');
-        sendEventToAllPeers('storeToken', thisNode);
-      }
-
-    })
-
-    socket.on('joinNetwork', (token)=>{
-      if(token){
-        connectToPeerNetwork();
-      }
-    })
-
-    socket.on('leaveNetwork', (token)=>{
-      if(token){
-        leaveNetwork();
-      }
-    })
-
-    socket.on('startServer', (token)=>{
-      if(token){
-        startServer();
-      }
-    })
-
-    socket.on('blockchain', (blockchainReceived) => {
-            blockchain = compareBlockchains(blockchain, blockchainReceived);
-    });
-
-    socket.on('broadcastMessage', (msg) =>{
-
-      log('-BROADCAST- '+msg);
-      sendEventToAllPeers('message', msg);
-    })
-
-
-    socket.on('validateChain', (token) =>{
-      if(blockchain != undefined && blockchain instanceof Blockchain){
-        log('Blockchain valid?',blockchain.isChainValid());
-        var validStatus = blockchain.validateAddressToken(thisNode);
-        log(validStatus);
-      }
-    })
-
-    socket.on('firstContact', (address)=>{
-
-      if(address){
-        socket.emit('message', 'Attempting to reach to '+address);
-        if(!isPeerConnected(address)){
-          // initClientSocket(address);
-          initClientSocket(address)
-        }else{
-          log('Peer '+address+' is already connected');
-        }
-
-
-      }
-    })
-
-    socket.on('dropPeer', (address)=>{
-      if(address){
-        dropPeer(address);
-      }
-    })
-
-    socket.on('minerStarted', (miningAddress) =>{
-        if(miningAddress != undefined){
-                currentMiners[miningAddress.hash] = miningAddress;
-        }
-    })
-
-
-
-    socket.on('close', (token) => {
-      if(token){
-        try{
-          if(token.type == 'endpoint'){
-            delete endpoints[token.publicID];
-            log('endpoint disconnected')
-          }else{
-            delete clients[token.address];
-            log('Disconnected clients: ', token.address);
-            getNumPeers();
-          }
-        }catch(err){
-          log(err);
-        }
-      }
-
-    });
-
 
 
   });
 
+}
+
+const nodeEventListeners = (socket) =>{
+
+      socket.on('message', (msg) => {
+        log('Client:', msg);
+      });
+
+      socket.on('error', (exception)=>{
+              log('Error:',exception);
+              socket.destroy();
+      })
+
+
+
+      socket.on('sync', (hash, token)=>{
+        sync(hash, token)
+      })
+
+
+      socket.on('connectionRequest', (peerToken)=>{
+
+        storeToken(peerToken);
+
+        setTimeout(()=>{
+          handleNewClientConnection(peerToken)
+
+        }, 2000)
+
+      })
+
+      socket.on('storeToken', (token) =>{
+        storeToken(token);
+      })
+
+
+
+      socket.on('distributedTransaction', (transaction, fromNodeToken) => {
+        distributeTransaction(transaction, fromNodeToken);
+      })
+
+      socket.on('transaction', (transaction, fromNodeToken) => {
+        receiveTransactionFromClient(transaction, fromNodeToken);
+      });
+
+
+
+      socket.on('miningRequest', () =>{
+        if(!thisNode.isMining){
+          attemptMining(thisNode);
+        }else{
+          cancelMining(true);
+        }
+
+      });
+
+
+      socket.on('newBlock', (newBlock) =>{
+        receiveNewBlock(newBlock);
+      });
+
+      socket.on('peerBuildingBlock', (token) =>{
+        if(token != undefined){
+          if(currentMiners[token.address] == token){
+            log('TOKEN HASH ' + token.publicID.substr(0, 10)+ ' has started mining');
+          }
+        }
+      })
+
+      socket.on('peerFinishedBlock', (token) =>{
+        if(token != undefined){
+          if(thisNode.isMining){
+            attemptMining(thisNode);
+          }
+        }
+
+      })
+
+}
+
+const endpointEventListeners = (socket) =>{
+  /*
+  * Endpoint Client listeners
+  *
+  */
+
+  socket.on('registerEndpoint', (token)=>{
+    if(token){
+        registerEndpoint(socket, token);
+    }
+  })
+
+  socket.on('getBlockchain', (token) =>{
+    if(token){
+      getBlockchain(socket, token);
+    }
+
+  });
+
+
+  socket.on('joinNetwork', (token)=>{
+    if(token){
+      connectToPeerNetwork();
+    }
+  })
+
+  socket.on('leaveNetwork', (token)=>{
+    if(token){
+      leaveNetwork();
+    }
+  })
+
+
+  socket.on('blockchain', (blockchainReceived) => {
+          blockchain = compareBlockchains(blockchain, blockchainReceived);
+  });
+
+  socket.on('broadcastMessage', (msg) =>{
+
+    log('-BROADCAST- '+msg);
+    sendEventToAllPeers('message', msg);
+  })
+
+
+  socket.on('validateChain', (token) =>{
+    if(blockchain != undefined && blockchain instanceof Blockchain){
+      log('Blockchain valid?',blockchain.isChainValid());
+      var validStatus = blockchain.validateAddressToken(thisNode);
+      log(validStatus);
+    }
+  })
+
+  socket.on('firstContact', (address)=>{
+
+    if(address){
+      socket.emit('message', 'Attempting to reach to '+address);
+      if(!isPeerConnected(address)){
+        // initClientSocket(address);
+        initClientSocket(address)
+      }else{
+        log('Peer '+address+' is already connected');
+      }
+
+
+    }
+  })
+
+  socket.on('dropPeer', (address)=>{
+    if(address){
+      dropPeer(address);
+    }
+  })
+
+  socket.on('minerStarted', (miningAddress) =>{
+      if(miningAddress != undefined){
+              currentMiners[miningAddress.hash] = miningAddress;
+      }
+  })
+
+
+
+  socket.on('close', (token) => {
+    if(token){
+      try{
+        if(token.type == 'endpoint'){
+          delete endpoints[token.publicID];
+          log('endpoint disconnected')
+        }else{
+          delete clients[token.address];
+          log('Disconnected clients: ', token.address);
+          getNumPeers();
+        }
+      }catch(err){
+        log(err);
+      }
+    }
+
+  });
 }
 
 /**
@@ -420,7 +385,7 @@ const initClientSocket = (address) =>{
           'reconnection limit' : 1000,
           'max reconnection attempts' : 20,
           'query':{
-            token: thisNode
+            token: JSON.stringify(thisNode)
           }
         });
 
@@ -639,32 +604,32 @@ const registerEndpoint = (socket, token) =>{
 }
 
 
-const firstContact = (address) =>{
-  if(address){
-    try{
-      var tempSocket = io(address);
-      tempSocket.emit('sendYourAddress', thisNode);
-
-      tempSocket.on('addressReceived', (token)=>{
-        if(ipList.indexOf(token.address) == -1){
-          ipList.push(token.address);
-          storeToken(token);
-          // blockchain.addNewToken(peerToken);
-          // saveBlockchain(blockchain);
-          initClientSocket(token.address);
-
-        }else{
-
-          handleNewClientConnection(token);
-          tempSocket.destroy();
-        }
-
-      })
-    }catch(err){
-      log(err);
-    }
-  }
-}
+// const firstContact = (address) =>{
+//   if(address){
+//     try{
+//       var tempSocket = io(address);
+//       tempSocket.emit('sendYourAddress', thisNode);
+//
+//       tempSocket.on('addressReceived', (token)=>{
+//         if(ipList.indexOf(token.address) == -1){
+//           ipList.push(token.address);
+//           storeToken(token);
+//           // blockchain.addNewToken(peerToken);
+//           // saveBlockchain(blockchain);
+//           initClientSocket(token.address);
+//
+//         }else{
+//
+//           handleNewClientConnection(token);
+//           tempSocket.destroy();
+//         }
+//
+//       })
+//     }catch(err){
+//       log(err);
+//     }
+//   }
+// }
 
 
 const updateIpList = () =>{
@@ -1264,35 +1229,67 @@ const fingerprintGenerator = () =>{
           sign.update(thisNode.publicID + timestamp);  // data from your file would go here
           thisNode.fingerprint = sign.sign(key, 'hex');
           thisNode.timestamp = timestamp;
-          log(thisNode);
+          key == null;
+          pem == null;
         }catch(err){
           console.log(err);
         }
 
       }else{
-        log('ERROR: Need to generate a private');
+        log('ERROR: Need to generate a private key');
       }
     })
 
 
 }
 
-const validateFingerprint = (socket, token) =>{
-  if(token.publicKeyFull && token.fingerprint){
+const validateFingerprint = (socket, callback) =>{
+
+  let token = socket.handshake.query.token;
+
+  if(token){
+    
     try{
-
-      const verify = crypto.createVerify('RSA-SHA256');
-      verify.update(token.publicID + token.timestamp);
-
-      return verify.verify(token.publicKeyFull, token.fingerprint, 'hex');
-
+      token = JSON.parse(token)
     }catch(err){
-      console.log(err);
+      socket.destroy();
+      log(err);
       return false;
     }
+    if(token.type == 'node'){
+      if(token.publicKeyFull && token.fingerprint){
+
+        /*Validating the finger which is an RSA-SHA256 signature from a timestamp and the publicID*/
+        try{
+
+          const verify = crypto.createVerify('RSA-SHA256');
+          verify.update(token.publicID + token.timestamp);
+
+          callback(verify.verify(token.publicKeyFull, token.fingerprint, 'hex'), false)
+
+        }catch(err){
+          console.log(err);
+          socket.destroy();
+          return false
+        }
+
+      }else{
+        log('ERROR: Invalid Token. Missing fingerprint');
+        socket.destroy();
+        return false;
+      }
+
+    }else if(token.type == 'endpoint'){
+      callback(false, true);
+    }
+
   }else{
+    log('ERROR: Missing token from query. Shutting down connection');
+    socket.destroy();
     return false;
   }
+
+
 }
 
 

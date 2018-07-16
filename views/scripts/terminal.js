@@ -812,9 +812,11 @@ setTimeout(function(){
 
   issueClientToken(nodeAddress);
 
-    socket  = io(nodeAddress);
+    socket  = io(nodeAddress, {'query':{
+      token: JSON.stringify(endpointToken)
+    }});
     socket.heartbeatTimeout = 30000;
-
+    console.log(socket)
 
       socket.on('disconnect', function(){
         console.log('Node went offline');
