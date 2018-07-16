@@ -39,6 +39,7 @@ const {  encrypt, decrypt, getKeyPair } = require('./backend/keysHandler');
 const cryptico = require('cryptico');
 const merkle = require('merkle');
 const sha256 = require('./backend/sha256');
+var crypto = require('crypto');
 
 let blockchain;
 let dataBuffer;
@@ -50,7 +51,9 @@ let thisNode = {
   'status':'active',
   'publicID' : '',
   'publicKeyFull' : '',
-  'isMining': false //ipList[0]
+  'isMining': false,
+  'fingerprint':'',
+  'timestamp':''
 }
 
 
@@ -88,6 +91,17 @@ const startServer = () =>{
 
 
   ioServer.on('connection', (socket) => {
+
+  let token = socket.handshake.query.token;
+
+  if(token.type == 'node'){
+    if(validateFingerprint(socket, token)){
+      log('TOKEN VALID')
+    }else{
+      log('ERROR: TOKEN NOT VALID')
+    }
+  }
+
 
     socket.on('message', (msg) => {
       log('Client:', msg);
@@ -400,7 +414,14 @@ const initClientSocket = (address) =>{
 
       try{
 
-        var peerSocket = io(address, { 'reconnection limit' : 1000, 'max reconnection attempts' : 20});
+        var peerSocket = io(address, {
+          'reconnection limit' : 1000,
+          'max reconnection attempts' : 20,
+          'query':{
+            token: thisNode
+          }
+        });
+
         peerSocket.heartbeatTimeout = 120000;
         log('Connecting to '+ address+ ' ...');
 
@@ -1227,6 +1248,51 @@ const log = (message, orMessageHere) =>{
   }
 }
 
+const fingerprintGenerator = () =>{
+  var timestamp = Date.now();
+
+  log(timestamp)
+    fs.exists('private.pem', (exists)=>{
+      if(exists){
+        try{
+
+          var pem = fs.readFileSync('private.pem');
+          var key = pem.toString('ascii');
+          var sign = crypto.createSign('RSA-SHA256');
+          sign.update(thisNode.publicID + timestamp);  // data from your file would go here
+          thisNode.fingerprint = sign.sign(key, 'hex');
+          thisNode.timestamp = timestamp;
+          log(thisNode);
+        }catch(err){
+          console.log(err);
+        }
+
+      }else{
+        log('ERROR: Need to generate a private');
+      }
+    })
+
+
+}
+
+const validateFingerprint = (socket, token) =>{
+  if(token.publicKeyFull && token.fingerprint){
+    try{
+
+      const verify = crypto.createVerify('RSA-SHA256');
+      verify.update(token.publicID + token.timestamp);
+
+      return verify.verify(token.publicKeyFull, token.fingerprint, 'hex');
+
+    }catch(err){
+      console.log(err);
+      return false;
+    }
+  }else{
+    return false;
+  }
+}
+
 
 
 initBlockchain();
@@ -1245,7 +1311,7 @@ getKeyPair((keys)=>{
     */
     thisNode.publicKeyFull = keys.publicKey;
     thisNode.publicID = sha256(keys.publicKey + thisAddress);
-
+    fingerprintGenerator();
   }
 
 })
@@ -1256,6 +1322,8 @@ setTimeout(()=>{
   // var godTx = new Transaction('genesis', '1f739a220d91452ff5b4cc740cfb1f28cd4d8dce419c7a222640879128663b74', 100, { coinbase:'port8080'}, null, null, 'coinbase');
   // blockchain.createTransaction(godTx);
   // saveBlockchain(blockchain);
+
+
 }, 12000)
 // setTimeout(()=>{
 //   var myRecord = new BlockbaseRecord('test', 'testTable',thisNode.address, JSON.stringify({  test: 'Setting this will make Tor write an authentication cookie. Anything with' }))
